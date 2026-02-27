@@ -6,6 +6,7 @@ import {
   type ButtonDimensionsConst,
 } from "../../types/costant";
 import { Label } from "./Label";
+import { ColorVariants } from "../../utils/colors";
 
 interface ButtonProps {
   icon?: React.ReactNode;
@@ -27,7 +28,7 @@ export const Button = ({
   colorIcon,
   bgColor,
   fullWidth,
-  borderColor,
+  borderColor = ColorVariants.border.transparent,
   colorLabel,
 }: ButtonProps) => {
   const full = fullWidth ? "w-full" : "";
@@ -35,7 +36,7 @@ export const Button = ({
   return (
     <button
       onClick={onClick}
-      className={`${dimension} flex items-center justify-center rounded-lg ${colorIcon} ${bgColor} border ${borderColor} ${full} outline-none`}
+      className={`${dimension} flex items-center justify-center rounded-lg ${colorIcon} ${bgColor} border ${borderColor} ${full} outline-none cursor-pointer`}
     >
       {icon}
       {label && (
