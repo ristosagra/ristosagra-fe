@@ -5,7 +5,7 @@ export const Pages = {
   RESERVATION: "reservation",
 } as const;
 
-export const CATEGORIES = ["Pizza", "Pasta", "Carne", "Dolci", "Bevande"];
+export const CATEGORIES = ["Antipasti", "Primi", "Secondi", "Dolci", "Bevande"];
 
 export type PagesConst = (typeof Pages)[keyof typeof Pages];
 
