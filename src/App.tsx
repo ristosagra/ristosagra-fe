@@ -1,7 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { CustomerHome } from './pages/CustomerHome/CustomerHome'
-import { CashierLogin } from './pages/CashierLogin/CashierLogin'
-import { CashierDashboard } from './pages/CashierDashboard/CashierDashboard'
+import { CustomerHome } from './pages/CustomerHome'
+import { CashierLogin } from './pages/CashierLogin'
+import { CashierDashboard } from './pages/CashierDashboard'
 import { ProtectedRoute } from './components/general/ProtectedRoute'
 
 function App() {

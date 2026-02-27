@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Input } from "../../components/core/Input";
-import { Container } from "../../components/core/Container";
-import { Label } from "../../components/core/Label";
+import { Input } from "../components/core/Input";
+import { Container } from "../components/core/Container";
+import { Label } from "../components/core/Label";
 import {
   ButtonDimensions,
   LabelTags,
   TextDimensions,
   TextWeight,
-} from "../../types/costant";
-import { Colors } from "../../utils/colors";
-import { Button } from "../../components/core/Button";
+} from "../types/costant";
+import { Button } from "../components/core/Button";
+import { ColorVariants } from "../utils/colors";
 
 const CREDENTIALS = { username: "admin", password: "admin" };
 
@@ -43,7 +43,7 @@ export function CashierLogin() {
           label="Login Cassa"
           tag={LabelTags.h2}
           weight={TextWeight.bold}
-          color={Colors.text.grayDark}
+          color={ColorVariants.text.grayDark}
           size={TextDimensions.xlarge}
           noMargin
         />
@@ -60,13 +60,19 @@ export function CashierLogin() {
           setValue={setPassword}
         />
         {error && (
-          <Label label={error} tag={LabelTags.p} color={Colors.text.red} weight={TextWeight.semibold} noMargin />
+          <Label
+            label={error}
+            tag={LabelTags.p}
+            color={ColorVariants.text.red}
+            weight={TextWeight.semibold}
+            noMargin
+          />
         )}
         <Button
           label="Accedi"
           dimension={ButtonDimensions.large}
-          bgColor={Colors.bg.grayDark}
-          colorLabel={Colors.text.white}
+          bgColor={ColorVariants.bg.grayDark}
+          colorLabel={ColorVariants.text.white}
           onClick={() => {}}
           fullWidth
         />

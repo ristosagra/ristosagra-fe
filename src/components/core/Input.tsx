@@ -12,7 +12,7 @@ export const Input = ({ type, placeholder, value, setValue }: InputProps) => {
       placeholder={placeholder}
       value={value}
       onChange={(e) => setValue(e.target.value)}
-      className="border p-2 rounded"
+      className="border p-2 rounded bg-white"
     />
   );
 };

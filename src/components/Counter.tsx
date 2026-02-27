@@ -4,7 +4,7 @@ import { decrementFunction, incrementFunction } from "../utils/functions";
 import { Button } from "./core/Button";
 import { CounterCard } from "./core/CounterCard";
 import { ButtonDimensions } from "../types/costant";
-import { Colors } from "../utils/colors";
+import { ColorVariants } from "../utils/colors";
 
 export const Counter = ({
   dish,
@@ -28,8 +28,9 @@ export const Counter = ({
       icon={<Plus size={14} />}
       onClick={increment}
       dimension={ButtonDimensions.label}
-      bgColor={Colors.bg.grayDark}
+      bgColor={ColorVariants.bg.grayDark}
       label="Aggiungi"
+      colorIcon={ColorVariants.text.white}
     />
   );
 }

@@ -1,12 +1,11 @@
-import React from "react";
-import type { Dish, MenuProps } from "../../types/types";
-import { useMenu } from "../../hooks/useMenu";
-import { LabelTags, TextDimensions, TextWeight } from "../../types/costant";
-import { Loader } from "../../components/core/Loader";
-import { Container } from "../../components/core/Container";
-import { Label } from "../../components/core/Label";
-import { Colors } from "../../utils/colors";
-import { Card } from "../../components/Card/Card";
+import { Card } from "../components/Card/Card";
+import { Container } from "../components/core/Container";
+import { Label } from "../components/core/Label";
+import { Loader } from "../components/core/Loader";
+import { useMenu } from "../hooks/useMenu";
+import { LabelTags, TextDimensions, TextWeight } from "../types/costant";
+import type { Dish, MenuProps } from "../types/types";
+import { ColorVariants } from "../utils/colors";
 
 export default function Menu({ cartItems, setCartItems }: MenuProps) {
   const { data: dishes, isLoading, isError } = useMenu();
@@ -37,8 +36,8 @@ export default function Menu({ cartItems, setCartItems }: MenuProps) {
         <section key={category}>
           <Label
             label={category}
-            color={Colors.text.orange}
-            colorBorderBottom={Colors.border.grayLight}
+            color={ColorVariants.text.orange}
+            colorBorderBottom={ColorVariants.border.grayLight}
             tag={LabelTags.h2}
             weight={TextWeight.bold}
             size={TextDimensions.xlarge}

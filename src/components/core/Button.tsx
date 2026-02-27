@@ -5,13 +5,6 @@ import {
   TextWeight,
   type ButtonDimensionsConst,
 } from "../../types/costant";
-import {
-  Colors,
-  ColorVariants,
-  type BgColor,
-  type BorderColor,
-  type TextColor,
-} from "../../utils/colors";
 import { Label } from "./Label";
 
 interface ButtonProps {
@@ -19,11 +12,11 @@ interface ButtonProps {
   onClick: () => void;
   dimension: ButtonDimensionsConst;
   label?: string;
-  colorIcon?: TextColor;
-  bgColor?: BgColor;
+  colorIcon?: string;
+  bgColor?: string;
   fullWidth?: boolean;
-  borderColor?: BorderColor;
-  colorLabel?: TextColor;
+  borderColor?: string;
+  colorLabel?: string;
 }
 
 export const Button = ({
@@ -37,17 +30,12 @@ export const Button = ({
   borderColor,
   colorLabel,
 }: ButtonProps) => {
-  const textColor = ColorVariants.text[colorIcon || Colors.text.white];
-  const bgColorIcon = ColorVariants.bg[bgColor || Colors.bg.transparent];
-  const borderColorClass = borderColor
-    ? `border ${ColorVariants.border[borderColor]}`
-    : "";
   const full = fullWidth ? "w-full" : "";
 
   return (
     <button
       onClick={onClick}
-      className={`${dimension} flex items-center justify-center rounded-lg ${textColor} ${bgColorIcon} ${borderColorClass} ${full} outline-none`}
+      className={`${dimension} flex items-center justify-center rounded-lg ${colorIcon} ${bgColor} border ${borderColor} ${full} outline-none`}
     >
       {icon}
       {label && (

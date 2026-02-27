@@ -1,6 +1,14 @@
-import type { setCartProps } from "../types/types";
+import type { CartType, Dish } from "../types/types";
 
-export const incrementFunction = ({ dish, setCartItems }: setCartProps) => {
+interface counterFunctionsProps {
+  dish: Dish;
+  setCartItems: React.Dispatch<React.SetStateAction<CartType[]>>;
+}
+
+export const incrementFunction = ({
+  dish,
+  setCartItems,
+}: counterFunctionsProps) => {
   setCartItems((prev) => {
     const existing = prev.find((i) => i.dish.id === dish.id);
     if (existing)
@@ -11,7 +19,10 @@ export const incrementFunction = ({ dish, setCartItems }: setCartProps) => {
   });
 };
 
-export const decrementFunction = ({ dish, setCartItems }: setCartProps) => {
+export const decrementFunction = ({
+  dish,
+  setCartItems,
+}: counterFunctionsProps) => {
   setCartItems((prev) => {
     const existing = prev.find((i) => i.dish.id === dish.id);
     if (!existing) return prev;

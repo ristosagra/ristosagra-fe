@@ -6,7 +6,7 @@ import {
   TextWeight,
 } from "../../types/costant";
 import type { CartType, Dish } from "../../types/types";
-import { Colors } from "../../utils/colors";
+import { ColorVariants } from "../../utils/colors";
 import { Button } from "../core/Button";
 import { CardContainer } from "../core/CardContainer";
 import { Label } from "../core/Label";
@@ -45,7 +45,7 @@ export const Card = ({
             label={`${dish.name}`}
             tag={LabelTags.h3}
             size={TextDimensions.medium}
-            color={Colors.text.grayDark}
+            color={ColorVariants.text.grayDark}
             weight={TextWeight.semibold}
             noMargin
           />
@@ -54,7 +54,7 @@ export const Card = ({
               label={`€${dish.price.toFixed(2)} × ${findItemDish.quantity}`}
               tag={LabelTags.p}
               size={TextDimensions.small}
-              color={Colors.text.grayLight}
+              color={ColorVariants.text.grayMedium}
               noMargin
             />
           ) : (
@@ -68,8 +68,8 @@ export const Card = ({
             icon={<Trash2 size={18} />}
             onClick={() => removeItem(findItemDish)}
             dimension={ButtonDimensions.small}
-            colorIcon={Colors.text.red}
-            bgColor={Colors.bg.transparent}
+            colorIcon={ColorVariants.text.red}
+            bgColor={ColorVariants.bg.transparent}
           />
         )}
       </div>
@@ -79,7 +79,7 @@ export const Card = ({
           tag={LabelTags.h3}
           size={TextDimensions.medium}
           weight={TextWeight.bold}
-          color={Colors.text.black}
+          color={ColorVariants.text.black}
           noMargin
         />
         <Counter

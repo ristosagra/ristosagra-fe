@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { ShoppingCart, House, NotebookPen } from "lucide-react";
-import { Pages, type PagesConst } from "../../types/costant";
-import Menu from "../Menu/Menu";
-import type { CartType } from "../../types/types";
-import Cart from "../Cart/Cart";
-import { Reservation } from "../Reservation";
+import { Pages, type PagesConst } from "../types/costant";
+import type { CartType } from "../types/types";
+import Cart from "./Cart";
+import { Reservation } from "./Reservation";
+import Menu from "./Menu";
 
 export const CustomerHome = () => {
   const [page, setPage] = useState<PagesConst>(Pages.HOME);

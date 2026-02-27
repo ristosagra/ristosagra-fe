@@ -1,5 +1,5 @@
-import type { CartProps, CartType } from "../../types/types";
-import { Container } from "../../components/core/Container";
+import type { CartType } from "../types/types";
+import { Container } from "../components/core/Container";
 import {
   ButtonDimensions,
   LabelTags,
@@ -7,16 +7,18 @@ import {
   TextDimensions,
   TextWeight,
   type PagesConst,
-} from "../../types/costant";
-import { Colors } from "../../utils/colors";
-import { Label } from "../../components/core/Label";
-import { Card } from "../../components/Card/Card";
-import { Button } from "../../components/core/Button";
+} from "../types/costant";
+import { Label } from "../components/core/Label";
+import { Card } from "../components/Card/Card";
+import { Button } from "../components/core/Button";
 import { type Dispatch, type SetStateAction } from "react";
-import { usePostOrder } from "../../hooks/useNumberOrder";
-import { Loader } from "../../components/core/Loader";
+import { usePostOrder } from "../hooks/useNumberOrder";
+import { Loader } from "../components/core/Loader";
+import { ColorVariants } from "../utils/colors";
 
-interface ConfirmProps {
+interface CartProps {
+  cartItems: CartType[];
+  setCartItems: React.Dispatch<React.SetStateAction<CartType[]>>;
   setPage: Dispatch<SetStateAction<PagesConst>>;
   setOrderNumber: React.Dispatch<React.SetStateAction<number | null>>;
   setConfirmedCart: React.Dispatch<React.SetStateAction<CartType[]>>
@@ -28,7 +30,7 @@ export default function Cart({
   setPage,
   setOrderNumber,
   setConfirmedCart
-}: CartProps & ConfirmProps) {
+}: CartProps) {
   const { mutate: confirmOrder, isPending } = usePostOrder();
 
   const total = cartItems.reduce(
@@ -44,7 +46,7 @@ export default function Cart({
           tag={LabelTags.p}
           size={TextDimensions.large}
           weight={TextWeight.bold}
-          color={Colors.text.white}
+          color={ColorVariants.text.white}
           noMargin
         />
       </div>
@@ -54,7 +56,7 @@ export default function Cart({
   const handleConfirm = async () => {
     confirmOrder(cartItems, {
       onSuccess: ({ orderNumber }) => {
-        setConfirmedCart(cartItems); // salvi lo snapshot
+        setConfirmedCart(cartItems);
         setCartItems([]);
         setOrderNumber(orderNumber);
         setPage(Pages.RESERVATION);
@@ -99,10 +101,10 @@ export default function Cart({
         <Button
           label="Prenota ordine"
           fullWidth
-          borderColor={Colors.border.black}
+          borderColor={ColorVariants.border.black}
           dimension={ButtonDimensions.large}
           onClick={handleConfirm}
-          colorLabel={Colors.text.black}
+          colorLabel={ColorVariants.text.black}
         />
       </div>
     </Container>

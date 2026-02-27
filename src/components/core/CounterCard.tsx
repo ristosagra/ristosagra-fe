@@ -2,7 +2,7 @@ import { ButtonDimensions, LabelTags, TextDimensions, TextWeight } from "../../t
 import { Button } from "./Button";
 import { Minus, Plus } from "lucide-react";
 import { Label } from "./Label";
-import { Colors } from "../../utils/colors";
+import { ColorVariants } from "../../utils/colors";
 
 interface CounterCardProps {
   quantity: number;
@@ -17,13 +17,14 @@ export const CounterCard = ({ quantity, increment, decrement }: CounterCardProps
         icon={<Minus size={14} />}
         onClick={decrement}
         dimension={ButtonDimensions.small}
-        bgColor={Colors.bg.grayDark}
+        bgColor={ColorVariants.bg.grayDark}
+        colorIcon={ColorVariants.text.white}
       />
       <Label
         label={`${quantity}`}
         tag={LabelTags.p}
         size={TextDimensions.medium}
-        color={Colors.text.grayDark}
+        color={ColorVariants.text.grayDark}
         weight={TextWeight.semibold}
         noMargin
       />
@@ -31,7 +32,8 @@ export const CounterCard = ({ quantity, increment, decrement }: CounterCardProps
         icon={<Plus size={14} />}
         onClick={increment}
         dimension={ButtonDimensions.small}
-        bgColor={Colors.bg.grayDark}
+        bgColor={ColorVariants.bg.grayDark}
+        colorIcon={ColorVariants.text.white}
       />
     </div>
   );

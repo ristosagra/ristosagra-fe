@@ -3,7 +3,7 @@ import { Container } from "../components/core/Container"
 import { Label } from "../components/core/Label"
 import { LabelTags, TextDimensions, TextWeight } from "../types/costant"
 import type { CartType } from "../types/types"
-import { Colors } from "../utils/colors"
+import { ColorVariants } from "../utils/colors"
 
 interface ReservationProps {
   cartItems: CartType[],
@@ -25,14 +25,14 @@ export const Reservation = ({cartItems, orderNumber}: ReservationProps) => {
           label="Il tuo numero ordine è"
           tag={LabelTags.p}
           size={TextDimensions.medium}
-          color={Colors.text.white}
+          color={ColorVariants.text.white}
           noMargin
         />
         <Label
           label={`${orderNumber}`}
           tag={LabelTags.p}
           size={TextDimensions.xxxxlarge}
-          color={Colors.text.orange}
+          color={ColorVariants.text.orange}
           weight={TextWeight.bold}
           noMargin
         />
@@ -40,7 +40,7 @@ export const Reservation = ({cartItems, orderNumber}: ReservationProps) => {
           label="Mostralo alla cassa per ritirare il tuo ordine"
           tag={LabelTags.p}
           size={TextDimensions.small}
-          color={Colors.text.white}
+          color={ColorVariants.text.white}
           noMargin
         />
       </div>
@@ -55,7 +55,7 @@ export const Reservation = ({cartItems, orderNumber}: ReservationProps) => {
             tag={LabelTags.p}
             size={TextDimensions.medium}
             weight={TextWeight.bold}
-            color={Colors.text.white}
+            color={ColorVariants.text.white}
             noMargin
           />
           <span className={`text-white transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}>
@@ -72,14 +72,14 @@ export const Reservation = ({cartItems, orderNumber}: ReservationProps) => {
                     label={item.dish.name}
                     tag={LabelTags.p}
                     size={TextDimensions.medium}
-                    color={Colors.text.white}
+                    color={ColorVariants.text.white}
                     noMargin
                   />
                   <Label
                     label={`x${item.quantity}`}
                     tag={LabelTags.p}
                     size={TextDimensions.small}
-                    color={Colors.text.orange}
+                    color={ColorVariants.text.orange}
                     noMargin
                   />
                 </div>
@@ -87,7 +87,7 @@ export const Reservation = ({cartItems, orderNumber}: ReservationProps) => {
                   label={`€${(item.dish.price * item.quantity).toFixed(2)}`}
                   tag={LabelTags.p}
                   size={TextDimensions.medium}
-                  color={Colors.text.white}
+                  color={ColorVariants.text.white}
                   noMargin
                 />
               </div>
@@ -99,7 +99,7 @@ export const Reservation = ({cartItems, orderNumber}: ReservationProps) => {
                 tag={LabelTags.p}
                 size={TextDimensions.large}
                 weight={TextWeight.bold}
-                color={Colors.text.white}
+                color={ColorVariants.text.white}
                 noMargin
               />
               <Label
@@ -107,7 +107,7 @@ export const Reservation = ({cartItems, orderNumber}: ReservationProps) => {
                 tag={LabelTags.p}
                 size={TextDimensions.large}
                 weight={TextWeight.bold}
-                color={Colors.text.orange}
+                color={ColorVariants.text.orange}
                 noMargin
               />
             </div>
