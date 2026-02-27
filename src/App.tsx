@@ -9,9 +9,9 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<CustomerHome />} />
-        <Route path="/cashier" element={<CashierLogin />} />
+        <Route path="/cassa" element={<CashierLogin />} />
         <Route
-          path="/cashier/dashboard"
+          path="/cassa/dashboard"
           element={
             <ProtectedRoute>
               <CashierDashboard />

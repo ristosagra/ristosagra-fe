@@ -27,7 +27,7 @@ export function CashierLogin() {
       password === CREDENTIALS.password
     ) {
       sessionStorage.setItem("cashier_auth", "true");
-      navigate("/cashier/dashboard");
+      navigate("/cassa/dashboard");
     } else {
       setError("Credenziali errate");
     }
