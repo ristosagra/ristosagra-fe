@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { generateFakeDishes } from "../mock/fakeMenu";
-import { MenuService } from "../services/menu";
+import { MenuService } from "../services/api/menu";
 
 export const useMenu = () => {
   const isMocking = import.meta.env.VITE_MOCKING === "true";

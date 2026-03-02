@@ -1,5 +1,5 @@
-import type { CartType, Order } from "../types/types";
-import { httpClient } from "../../client/httpClient";
+import type { CartType, Order } from "../../types/types";
+import { httpClient } from "../client/httpClient";
 
 export const OrdersService = {
   getOrders: (): Promise<Order[]> => httpClient.get("/api/orders"),
