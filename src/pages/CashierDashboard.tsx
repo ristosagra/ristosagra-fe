@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useOrders, useUpdatePayment } from "../hooks/useOrders";
+import { useOrders, useOrderPayment } from "../hooks/useOrders";
 import { Loader } from "../components/core/Loader";
 import { Label } from "../components/core/Label";
 import { LabelTags, TextDimensions, TextWeight } from "../types/costant";
@@ -11,7 +11,7 @@ export const CashierDashboard = () => {
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const { data: orders = [], isLoading } = useOrders();
-  const { mutate: updatePayment } = useUpdatePayment();
+  const { mutate: updatePayment } = useOrderPayment();
 
   const filtered = orders.filter((order) =>
     order.orderNumber.toString().includes(search),

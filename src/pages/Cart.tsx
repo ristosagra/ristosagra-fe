@@ -12,9 +12,9 @@ import { Label } from "../components/core/Label";
 import { Card } from "../components/Card/Card";
 import { Button } from "../components/core/Button";
 import { type Dispatch, type SetStateAction } from "react";
-import { usePostOrder } from "../hooks/useNumberOrder";
 import { Loader } from "../components/core/Loader";
 import { ColorVariants } from "../utils/colors";
+import { useOrderNumber } from "../hooks/useOrders";
 
 interface CartProps {
   cartItems: CartType[];
@@ -31,7 +31,7 @@ export default function Cart({
   setOrderNumber,
   setConfirmedCart
 }: CartProps) {
-  const { mutate: confirmOrder, isPending } = usePostOrder();
+  const { mutate: confirmOrder, isPending } = useOrderNumber();
 
   const total = cartItems.reduce(
     (acc, item) => acc + item.dish.price * item.quantity,
