@@ -54,7 +54,7 @@ export function CashierLogin() {
           setValue={setUsername}
         />
         <Input
-          type={"tepasswordxt"}
+          type={"password"}
           placeholder={"Password"}
           value={password}
           setValue={setPassword}
