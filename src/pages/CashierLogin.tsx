@@ -11,26 +11,30 @@ import {
 } from "../types/costant";
 import { Button } from "../components/core/Button";
 import { ColorVariants } from "../utils/colors";
-
-const CREDENTIALS = { username: "admin", password: "admin" };
+import { useLogin } from "../hooks/useAuth";
 
 export function CashierLogin() {
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
   const navigate = useNavigate();
+  const { mutate: login } = useLogin();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (
-      username === CREDENTIALS.username &&
-      password === CREDENTIALS.password
-    ) {
-      sessionStorage.setItem("cashier_auth", "true");
-      navigate("/cassa/dashboard");
-    } else {
-      setError("Credenziali errate");
-    }
+    login(
+      { username, password },
+      {
+        onSuccess: ({ success }) => {
+          if (success) {
+            sessionStorage.setItem("cashier_auth", "true");
+            navigate("/cassa/dashboard");
+          } else {
+            setError("Credenziali errate");
+          }
+        },
+      },
+    );
   };
 
   return (

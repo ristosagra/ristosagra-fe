@@ -26,3 +26,7 @@ export const generateFakeOrders = (count = 20): Order[] =>
       createdAt: faker.date.recent().toISOString(),
     };
   });
+
+export const generateFakeOrderNumber = (): { orderNumber: number } => ({
+  orderNumber: faker.number.int({ min: 1, max: 999 }),
+});
