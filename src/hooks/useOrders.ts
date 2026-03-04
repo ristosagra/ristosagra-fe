@@ -1,8 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  generateFakeOrderNumber,
-  generateFakeOrders,
-} from "../mock/fakeApiOrder";
+import { generateFakeOrderNumber, generateFakeOrders } from "../mock/fakeOrder";
 import type { CartType, Payment } from "../types/types";
 import { OrdersService } from "../services/api/orders";
 
