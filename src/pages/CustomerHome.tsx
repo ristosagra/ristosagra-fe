@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { ShoppingCart, House, NotebookPen } from "lucide-react";
-import { Pages, type PagesConst } from "../types/costant";
+import { PagesCustomer, type PagesCustomerConst } from "../types/costant";
 import type { CartType } from "../types/types";
 import Cart from "./Cart";
 import { Reservation } from "./Reservation";
 import Menu from "./Menu";
+import { NavBar } from "../components/core/NavBar";
 
 export const CustomerHome = () => {
-  const [page, setPage] = useState<PagesConst>(Pages.HOME);
+  const [page, setPage] = useState<PagesCustomerConst>(PagesCustomer.HOME);
   const [cartItems, setCartItems] = useState<CartType[]>([]);
   const [orderNumber, setOrderNumber] = useState<number | null>(null);
   const [confirmedCart, setConfirmedCart] = useState<CartType[]>([]);
@@ -18,26 +19,38 @@ export const CustomerHome = () => {
   );
 
   return (
-    <div className="min-h-screen min-w-screen">
-      <header className="flex flex-row items-center justify-between py-6 px-4 bg-gray-100 fixed w-full top-0">
-        <House color="black" onClick={() => setPage(Pages.HOME)} />
+    <div className="min-h-screen min-w-screen h-full overflow-hidden flex flex-col">
+      <NavBar>
+        <House
+          color="black"
+          onClick={() => setPage(PagesCustomer.HOME)}
+          className="cursor-pointer"
+        />
         <div className="flex flex-row items-center gap-8">
-          <NotebookPen color="black" onClick={() => setPage(Pages.MENU)} />
+          <NotebookPen
+            color="black"
+            onClick={() => setPage(PagesCustomer.MENU)}
+            className="cursor-pointer"
+          />
           <div className="flex flex-row items-center gap-2">
             {total > 0 && (
               <span className="text-black">{total.toFixed(2)}€</span>
             )}
-            <ShoppingCart color="black" onClick={() => setPage(Pages.CART)} />
+            <ShoppingCart
+              color="black"
+              onClick={() => setPage(PagesCustomer.CART)}
+              className="cursor-pointer"
+            />
           </div>
         </div>
-      </header>
+      </NavBar>
 
-      <main className="flex-1 bg-gray-500 p-4 pt-18">
-        {page === Pages.HOME && <div></div>}
-        {page === Pages.MENU && (
+      <main className="flex-1 overflow-hidden bg-gray-500 pt-18">
+        {page === PagesCustomer.HOME && <div></div>}
+        {page === PagesCustomer.MENU && (
           <Menu cartItems={cartItems} setCartItems={setCartItems} />
         )}
-        {page === Pages.CART && (
+        {page === PagesCustomer.CART && (
           <Cart
             cartItems={cartItems}
             setCartItems={setCartItems}
@@ -46,7 +59,7 @@ export const CustomerHome = () => {
             setConfirmedCart={setConfirmedCart}
           />
         )}
-        {page === Pages.RESERVATION && (
+        {page === PagesCustomer.RESERVATION && (
           <Reservation cartItems={confirmedCart} orderNumber={orderNumber!} />
         )}
       </main>

@@ -18,8 +18,8 @@ export const CashierDashboard = () => {
   );
 
   return (
-    <main className="bg-gray-500">
-      <div className="flex flex-row justify-between fixed w-full top-0 py-6 px-4">
+    <Container additionalClass="flex flex-col h-full overflow-hidden">
+      <div className="flex flex-row justify-between w-full p-5 shrink-0">
         <Label
           label="Ordini"
           tag={LabelTags.h1}
@@ -35,16 +35,18 @@ export const CashierDashboard = () => {
           setValue={setSearch}
         />
       </div>
-      <Container>
+      <div className="flex-1 overflow-y-auto mx-5 mb-5">
         {isLoading ? (
           <Loader />
         ) : (
-          <div className="flex flex-col gap-2 pt-18">
+          <div className="flex flex-col gap-2">
             {filtered.map((order) => (
               <div
                 key={order.id}
                 className={`rounded-2xl overflow-hidden transition-colors ${
-                  order.paid ? ColorVariants.bg.grayLight : "bg-white border border-gray-200"
+                  order.paid
+                    ? ColorVariants.bg.grayLight
+                    : "bg-white border border-gray-200"
                 }`}
               >
                 <div className="flex items-center justify-between p-4 gap-4">
@@ -176,7 +178,7 @@ export const CashierDashboard = () => {
             )}
           </div>
         )}
-      </Container>
-    </main>
+      </div>
+    </Container>
   );
 };

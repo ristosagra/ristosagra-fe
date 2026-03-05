@@ -1,8 +1,8 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { CustomerHome } from './pages/CustomerHome'
-import { CashierLogin } from './pages/CashierLogin'
-import { CashierDashboard } from './pages/CashierDashboard'
-import { ProtectedRoute } from './components/general/ProtectedRoute'
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { CustomerHome } from "./pages/CustomerHome";
+import { CashierLogin } from "./pages/CashierLogin";
+import { ProtectedRoute } from "./components/general/ProtectedRoute";
+import { CashierHome } from "./pages/CashierHome";
 
 function App() {
   return (
@@ -14,13 +14,13 @@ function App() {
           path="/cassa/dashboard"
           element={
             <ProtectedRoute>
-              <CashierDashboard />
+              <CashierHome />
             </ProtectedRoute>
           }
         />
       </Routes>
     </BrowserRouter>
-  )
+  );
 }
 
-export default App
+export default App;

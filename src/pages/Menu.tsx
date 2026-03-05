@@ -33,7 +33,7 @@ export default function Menu({ cartItems, setCartItems }: MenuProps) {
   return (
     <Container>
       {Object.entries(grouped).map(([category, items]) => (
-        <section key={category}>
+        <section key={category} className="px-5 my-5">
           <Label
             label={category}
             color={ColorVariants.text.orange}
@@ -44,7 +44,12 @@ export default function Menu({ cartItems, setCartItems }: MenuProps) {
           />
           <div className="space-y-3">
             {items.map((dish) => (
-              <Card key={dish.id} dish={dish} cartItems={cartItems} setCartItems={setCartItems} />
+              <Card
+                key={dish.id}
+                dish={dish}
+                cartItems={cartItems}
+                setCartItems={setCartItems}
+              />
             ))}
           </div>
         </section>

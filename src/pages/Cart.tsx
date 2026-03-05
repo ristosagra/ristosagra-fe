@@ -3,10 +3,10 @@ import { Container } from "../components/core/Container";
 import {
   ButtonDimensions,
   LabelTags,
-  Pages,
+  PagesCustomer,
   TextDimensions,
   TextWeight,
-  type PagesConst,
+  type PagesCustomerConst,
 } from "../types/costant";
 import { Label } from "../components/core/Label";
 import { Card } from "../components/Card/Card";
@@ -19,9 +19,9 @@ import { useOrderNumber } from "../hooks/useOrders";
 interface CartProps {
   cartItems: CartType[];
   setCartItems: React.Dispatch<React.SetStateAction<CartType[]>>;
-  setPage: Dispatch<SetStateAction<PagesConst>>;
+  setPage: Dispatch<SetStateAction<PagesCustomerConst>>;
   setOrderNumber: React.Dispatch<React.SetStateAction<number | null>>;
-  setConfirmedCart: React.Dispatch<React.SetStateAction<CartType[]>>
+  setConfirmedCart: React.Dispatch<React.SetStateAction<CartType[]>>;
 }
 
 export default function Cart({
@@ -29,7 +29,7 @@ export default function Cart({
   setCartItems,
   setPage,
   setOrderNumber,
-  setConfirmedCart
+  setConfirmedCart,
 }: CartProps) {
   const { mutate: confirmOrder, isPending } = useOrderNumber();
 
@@ -59,13 +59,13 @@ export default function Cart({
         setConfirmedCart(cartItems);
         setCartItems([]);
         setOrderNumber(orderNumber);
-        setPage(Pages.RESERVATION);
+        setPage(PagesCustomer.RESERVATION);
       },
     });
   };
 
   return (
-    <Container>
+    <Container additionalClass="px-5 py-7">
       {isPending && <Loader />}
 
       <div className="space-y-3">
@@ -80,7 +80,7 @@ export default function Cart({
         ))}
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3 mt-3">
         <div className="bg-black p-4 rounded-2xl flex justify-between items-center">
           <Label
             label="Totale"

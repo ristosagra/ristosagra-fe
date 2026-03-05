@@ -1,13 +1,23 @@
-export const Pages = {
+export const PagesCustomer = {
   HOME: "home",
   MENU: "menu",
   CART: "cart",
   RESERVATION: "reservation",
 } as const;
 
-export const CATEGORIES = ["Antipasti", "Primi", "Secondi", "Dolci", "Bevande"];
+export type PagesCustomerConst =
+  (typeof PagesCustomer)[keyof typeof PagesCustomer];
 
-export type PagesConst = (typeof Pages)[keyof typeof Pages];
+export const PagesCashier = {
+  HOME: "home",
+  FLORPLAN: "florplan",
+  CASH: "cash",
+} as const;
+
+export type PagesCashierConst =
+  (typeof PagesCashier)[keyof typeof PagesCashier];
+
+export const CATEGORIES = ["Antipasti", "Primi", "Secondi", "Dolci", "Bevande"];
 
 export const ButtonDimensions = {
   small: "w-10 h-7",
