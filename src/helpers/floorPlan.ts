@@ -12,7 +12,7 @@ import {
   type TableShapeConst,
   type TableSizeConst,
 } from "../constant/floorPlan";
-import type { TableData, WallData } from "../types/floorPlan";
+import type { CoordinateType, TableData, WallData } from "../types/floorPlan";
 
 /** Restituisce il numero massimo di sedie posizionabili su un lato del tavolo.
  *  I tavoli da 4 accettano 1 sedia per lato, quelli da 8 ne accettano 3 su top/bottom e 1 su left/right. */
@@ -95,7 +95,7 @@ export function chairPos(
   c: TableData["chairs"][0],
   shape: TableShapeConst,
   size: TableSizeConst,
-): { x: number; y: number } {
+): CoordinateType {
   const g = 16;
   if (shape === "round" || c.side === "round") {
     const r = (c.offset * Math.PI) / 180;
@@ -330,10 +330,10 @@ export function closestPointOnSeg(
 /** Verifica se due segmenti AB e CD si intersecano.
  *  Usato per rilevare la collisione tra tavoli rettangolari e i segmenti dei muri. */
 export function segsIntersect(
-  a: { x: number; y: number },
-  b: { x: number; y: number },
-  c: { x: number; y: number },
-  d: { x: number; y: number },
+  a: CoordinateType,
+  b: CoordinateType,
+  c: CoordinateType,
+  d: CoordinateType,
 ) {
   const d1x = b.x - a.x,
     d1y = b.y - a.y;
@@ -351,9 +351,9 @@ export function segsIntersect(
  *  Per i rettangolari controlla se gli endpoint del segmento finiscono dentro il bounding box
  *  o se il segmento interseca uno dei 4 lati del rettangolo. */
 function checkSegmentCollision(
-  pos: { x: number; y: number },
-  segA: { x: number; y: number },
-  segB: { x: number; y: number },
+  pos: CoordinateType,
+  segA: CoordinateType,
+  segB: CoordinateType,
   sh: TableShapeConst,
   sz: TableSizeConst,
   helpers: {
@@ -512,3 +512,35 @@ export function hasCollision(
   // ── Tavolo vs Muri ────────────────────────────────────────────────────
   return checkWallCollision(x, y, sz, sh, walls, { circR, rectHW, rectHH });
 }
+
+//funzionr prt svere la dimensione del tavolo
+export const getTableStyle = (
+  table: TableData,
+  selTable: TableData | null | undefined,
+  mergeAnchor: string | null,
+  tables: TableData[],
+  selId: string | null,
+  getGroup: (gid: string) => TableData[],
+) => {
+  const grp = table.groupId ? getGroup(table.groupId) : [table];
+  const isReserved = grp.some((t) => t.reserved);
+  const fill = isReserved ? "#dc2626" : "#16a34a";
+  const strokeClr = isReserved ? "#991b1b" : "#166534";
+  const glow = table.groupId
+    ? isReserved
+      ? "rgba(239,68,68,0.5)"
+      : "rgba(168,85,247,0.5)"
+    : isReserved
+      ? "rgba(239,68,68,0.4)"
+      : "rgba(34,197,94,0.4)";
+  const isSel =
+    selId === table.id ||
+    (selTable?.groupId && selTable.groupId === table.groupId);
+  const isMergeAnc =
+    mergeAnchor === table.id ||
+    (mergeAnchor &&
+      tables.find((t) => t.id === mergeAnchor)?.groupId &&
+      tables.find((t) => t.id === mergeAnchor)?.groupId === table.groupId);
+  const reservedBy = grp.find((t) => t.reservedBy)?.reservedBy;
+  return { fill, strokeClr, glow, isSel, isMergeAnc, reservedBy, isReserved };
+};

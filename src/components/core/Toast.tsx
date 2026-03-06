@@ -13,7 +13,7 @@ export const Toast = () => {
 
   return (
     <div
-      className={`fixed top-5 left-1/2 -translate-x-1/2 z-50 text-white text-xs px-4 py-2 rounded-full shadow-xl border transition-all ${styles[notification.type]}`}
+      className={`fixed top-20 left-1/2 -translate-x-1/2 z-50 text-white px-4 py-2 rounded-xl shadow-xl border transition-all ${styles[notification.type]}`}
     >
       {notification.message}
     </div>

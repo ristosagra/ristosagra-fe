@@ -1,22 +1,24 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useFloorPlan, useSaveFloorPlan } from "../../hooks/useFloorPlan";
+import { useFloorPlan } from "../../hooks/useFloorPlan";
 import { Loader } from "../../components/core/Loader";
 import {
-  addChair,
   chairPos,
   defaultChairs,
+  getTableStyle,
   hasCollision,
-  removeChair,
   sharedEdge,
   snapIncoming,
 } from "../../helpers/floorPlan";
 import type {
-  FloorPlanData,
-  ModeBtn,
+  CoordinateType,
+  DraggingType,
+  PanStartType,
   PlanGroupDrag,
   PlanMode,
   TableData,
   WallData,
+  WallDragType,
+  WallType,
 } from "../../types/floorPlan";
 import {
   PLAN_CHAIR_R,
@@ -29,54 +31,39 @@ import {
 } from "../../constant/floorPlan";
 import { useNotification } from "../../hooks/useNotification";
 import { NotificationType } from "../../types/notification";
-import { SideBar } from "../../components/core/SideBar";
+import { SideBarFloorPlan } from "../../components/FloorPlan/SideBarFloorPlan";
+import { HeaderFloorPlan } from "../../components/FloorPlan/HeaderFloorPlan";
+import { ModalFloorPlan } from "../../components/FloorPlan/ModalFloorPlan";
+import type { ModalType } from "../../types/general";
+import { FooterFloorPlan } from "../../components/FloorPlan/FooterFloorPlan";
 
 // ─── Root Component ──────────────────────────────────────────────────────────
 export default function RestaurantFloorPlan() {
   const { data: savedPlan, isLoading, isError } = useFloorPlan();
-  const { mutate: savePlan, isPending: isSaving } = useSaveFloorPlan();
   const showNotification = useNotification();
 
   const [isEditing, setIsEditing] = useState(false);
   const [tables, setTables] = useState<TableData[]>([]);
   const [walls, setWalls] = useState<WallData[]>([]);
-  const [snapshot, setSnapshot] = useState<{
-    tables: TableData[];
-    walls: WallData[];
-  } | null>(null);
 
   // Editing sub-states
-  const [curWall, setCurWall] = useState<{ x: number; y: number }[] | null>(
-    null,
-  );
+  const [curWall, setCurWall] = useState<WallType>(null);
   const [mode, setMode] = useState<PlanMode>("view");
   const [shape, setShape] = useState<TableShapeConst>(TableShape.Round);
   const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [panStart, setPanStart] = useState<{
-    mx: number;
-    my: number;
-    px: number;
-    py: number;
-  } | null>(null);
-  const [dragging, setDragging] = useState<{
-    id: string;
-    ox: number;
-    oy: number;
-  } | null>(null);
+  const [pan, setPan] = useState<CoordinateType>({ x: 0, y: 0 });
+  const [panStart, setPanStart] = useState<PanStartType>(null);
+  const [dragging, setDragging] = useState<DraggingType>(null);
   const [groupDrag, setGroupDrag] = useState<PlanGroupDrag | null>(null);
-  const [wallDrag, setWallDrag] = useState<{
-    wallId: string;
-    pi: number;
-  } | null>(null);
-  const [cursor, setCursor] = useState({ x: 0, y: 0 });
+  const [wallDrag, setWallDrag] = useState<WallDragType>(null);
+  const [cursor, setCursor] = useState<CoordinateType>({ x: 0, y: 0 });
   const [mergeAnchor, setMergeAnchor] = useState<string | null>(null); // ID of the anchor group/table in merge mode
   const [selId, setSelId] = useState<string | null>(null);
-  const [modal, setModal] = useState({ open: false, tableId: "" });
+  const [modal, setModal] = useState<ModalType>({ open: false, tableId: "" });
   const [guest, setGuest] = useState("");
   const [hoveredTableId, setHoveredTableId] = useState<string | null>(null);
 
-  const mouseDownPos = useRef<{ x: number; y: number } | null>(null);
+  const mouseDownPos = useRef<CoordinateType | null>(null);
   const didDrag = useRef(false);
   const didPan = useRef(false);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -108,42 +95,6 @@ export default function RestaurantFloorPlan() {
     [tables],
   );
 
-  // ── Edit mode control ──
-  const startEditing = () => {
-    setSnapshot({
-      tables: structuredClone(tables),
-      walls: structuredClone(walls),
-    });
-    setIsEditing(true);
-    setMode("view");
-  };
-
-  const cancelEditing = () => {
-    if (snapshot) {
-      setTables(snapshot.tables);
-      setWalls(snapshot.walls);
-    }
-    setIsEditing(false);
-    setSelId(null);
-    setMergeAnchor(null);
-    setCurWall(null);
-    setMode("view");
-  };
-
-  const handleSave = () => {
-    const data: FloorPlanData = { id: savedPlan?.id, tables, walls };
-    savePlan(data, {
-      onSuccess: () => {
-        showNotification("✓ Piantina salvata!", NotificationType.Ok);
-        setIsEditing(false);
-        setSnapshot(null);
-        setMode("view");
-      },
-      onError: () =>
-        showNotification("❌ Errore nel salvataggio", NotificationType.Err),
-    });
-  };
-
   // ── Mouse handlers ──
   const onSVGDown = useCallback(
     (e: React.MouseEvent) => {
@@ -156,18 +107,14 @@ export default function RestaurantFloorPlan() {
   );
 
   const updateWallPoint = useCallback(
-    (
-      point: { x: number; y: number },
-      i: number,
-      w: { x: number; y: number },
-    ) => {
+    (point: CoordinateType, i: number, w: CoordinateType) => {
       return i === wallDrag!.pi ? { x: w.x, y: w.y } : point;
     },
     [wallDrag],
   );
 
   const updateWall = useCallback(
-    (wl: WallData, w: { x: number; y: number }) => {
+    (wl: WallData, w: CoordinateType) => {
       if (wl.id === wallDrag!.wallId) {
         return {
           ...wl,
@@ -180,7 +127,7 @@ export default function RestaurantFloorPlan() {
   );
 
   const handleWallDrag = useCallback(
-    (w: { x: number; y: number }) => {
+    (w: CoordinateType) => {
       if (!wallDrag) return;
       didPan.current = true;
       setWalls((p) => p.map((wl) => updateWall(wl, w)));
@@ -322,14 +269,6 @@ export default function RestaurantFloorPlan() {
     [mode, shape, curWall, toWorld, isEditing, showNotification, tables],
   );
 
-  const finishWall = useCallback(() => {
-    if (curWall && curWall.length >= 2) {
-      setWalls((p) => [...p, { id: `w-${Date.now()}`, points: curWall }]);
-      showNotification("✓ Muro aggiunto!", NotificationType.Ok);
-    }
-    setCurWall(null);
-  }, [curWall, showNotification]);
-
   const onTableDown = useCallback(
     (e: React.MouseEvent, tid: string) => {
       e.stopPropagation();
@@ -342,7 +281,7 @@ export default function RestaurantFloorPlan() {
       const w = toWorld(e.clientX, e.clientY);
       if (t.groupId) {
         const gts = getGroup(t.groupId);
-        const sp: Record<string, { x: number; y: number }> = {};
+        const sp: Record<string, CoordinateType> = {};
         for (const gt of gts) sp[gt.id] = { x: gt.x, y: gt.y };
         setGroupDrag({ groupId: t.groupId, startMouse: w, startPositions: sp });
       } else {
@@ -478,53 +417,9 @@ export default function RestaurantFloorPlan() {
       setWalls((p) => p.filter((w) => w.id !== wallId));
   };
 
-  // ── Booking (available always) ──
-  const confirmBooking = () => {
-    if (!guest.trim()) return;
-    const t = tables.find((tt) => tt.id === modal.tableId);
-    if (!t) return;
-    const ids = t.groupId
-      ? tables.filter((tt) => tt.groupId === t.groupId).map((tt) => tt.id)
-      : [modal.tableId];
-    setTables((p) =>
-      p.map((tt) =>
-        ids.includes(tt.id)
-          ? { ...tt, reserved: true, reservedBy: guest.trim() }
-          : tt,
-      ),
-    );
-    setModal({ open: false, tableId: "" });
-    setGuest("");
-  };
-  const cancelBooking = (id: string) => {
-    const t = tables.find((tt) => tt.id === id);
-    if (!t) return;
-    const ids = t.groupId
-      ? tables.filter((tt) => tt.groupId === t.groupId).map((tt) => tt.id)
-      : [id];
-    setTables((p) =>
-      p.map((tt) =>
-        ids.includes(tt.id)
-          ? { ...tt, reserved: false, reservedBy: undefined }
-          : tt,
-      ),
-    );
-    setSelId(null);
-  };
-
-  // ── Seat editing (available always when selected) ──
-  const editChairs = (id: string, delta: 1 | -1) => {
-    setTables((p) =>
-      p.map((t) =>
-        t.id === id ? (delta === 1 ? addChair(t) : removeChair(t)) : t,
-      ),
-    );
-  };
-
   // ── Derived ──
-  const pts = (arr: { x: number; y: number }[]) =>
+  const pts = (arr: CoordinateType[]) =>
     arr.map((p) => `${p.x},${p.y}`).join(" ");
-  const reserved = tables.filter((t) => t.reserved).length;
   const groupMap = new Map<string, TableData[]>();
   for (const t of tables)
     if (t.groupId) {
@@ -533,54 +428,6 @@ export default function RestaurantFloorPlan() {
     }
 
   const selTable = selId ? tables.find((t) => t.id === selId) : null;
-  const selGroup = selTable?.groupId
-    ? getGroup(selTable.groupId)
-    : selTable
-      ? [selTable]
-      : [];
-  const selSeats = selGroup.reduce((s, t) => s + t.chairs.length, 0);
-  const selReserved = selGroup.some((t) => t.reserved);
-  const selName = selGroup.find((t) => t.reservedBy)?.reservedBy;
-
-  // Helper to compute table colors and state
-  const getTableStyle = (table: TableData) => {
-    const grp = table.groupId ? getGroup(table.groupId) : [table];
-    const isReserved = grp.some((t) => t.reserved);
-    const fill = isReserved ? "#dc2626" : "#16a34a";
-    const strokeClr = isReserved ? "#991b1b" : "#166534";
-    const glow = table.groupId
-      ? isReserved
-        ? "rgba(239,68,68,0.5)"
-        : "rgba(168,85,247,0.5)"
-      : isReserved
-        ? "rgba(239,68,68,0.4)"
-        : "rgba(34,197,94,0.4)";
-    const isSel =
-      selId === table.id ||
-      (selTable?.groupId && selTable.groupId === table.groupId);
-    const isMergeAnc =
-      mergeAnchor === table.id ||
-      (mergeAnchor &&
-        tables.find((t) => t.id === mergeAnchor)?.groupId &&
-        tables.find((t) => t.id === mergeAnchor)?.groupId === table.groupId);
-    const reservedBy = grp.find((t) => t.reservedBy)?.reservedBy;
-    return { fill, strokeClr, glow, isSel, isMergeAnc, reservedBy, isReserved };
-  };
-
-  const modeButtons: ModeBtn[] = [
-    { key: "view", label: "Visualizza", icon: "👁", color: "bg-sky-600" },
-    { key: "add4", label: "Tavolo da 4", icon: "➕", color: "bg-emerald-600" },
-    { key: "add8", label: "Tavolo da 8", icon: "➕", color: "bg-teal-600" },
-    {
-      key: "merge",
-      label: "Unisci tavoli",
-      icon: "🔗",
-      color: "bg-purple-600",
-    },
-    { key: "move", label: "Sposta", icon: "✥", color: "bg-amber-500" },
-    { key: "delete", label: "Elimina", icon: "🗑", color: "bg-rose-600" },
-    { key: "wall", label: "Disegna muro", icon: "🧱", color: "bg-orange-600" },
-  ];
 
   const hints: Record<PlanMode, string> = {
     view: isEditing
@@ -611,17 +458,6 @@ export default function RestaurantFloorPlan() {
       </div>
     );
 
-  const legendSideBar = [
-    { cls: "bg-emerald-500", label: "Libero" },
-    { cls: "bg-rose-500", label: "Prenotato" },
-    { cls: "bg-amber-400", label: "Sedia" },
-    { cls: "bg-purple-500", label: "Uniti" },
-    {
-      cls: "bg-amber-900 border border-amber-700",
-      label: "Muro",
-    },
-  ];
-
   return (
     <>
       {isLoading ? (
@@ -629,199 +465,39 @@ export default function RestaurantFloorPlan() {
       ) : (
         <div className="flex flex-col h-[calc(100vh-73px)] bg-neutral-950 font-mono text-white overflow-hidden w-full">
           {/* ── Header ── */}
-          <div className="bg-neutral-900 border-b border-neutral-700 px-4 py-2 flex items-center justify-between shrink-0">
-            {/* Zoom */}
-            <div className="flex items-center gap-1.5 bg-neutral-800 rounded-lg px-2 py-1 h-full">
-              <button
-                onClick={() => setZoom((z) => Math.max(0.2, z / 1.2))}
-                className="w-8 rounded bg-neutral-700 hover:bg-neutral-600 font-bold flex items-center justify-center transition-colors h-full cursor-pointer"
-              >
-                −
-              </button>
-              <span className="text-xs text-neutral-300 w-12 text-center tabular-nums h-full flex items-center justify-center">
-                <p>{Math.round(zoom * 100)}%</p>
-              </span>
-              <button
-                onClick={() => setZoom((z) => Math.min(5, z * 1.2))}
-                className="w-8 rounded bg-neutral-700 hover:bg-neutral-600 font-bold flex items-center justify-center transition-colors h-full cursor-pointer"
-              >
-                +
-              </button>
-              <div className="w-px bg-neutral-600 mx-1 h-full" />
-              <button
-                onClick={() => {
-                  setZoom(1);
-                  setPan({ x: 0, y: 0 });
-                }}
-                className="text-xs text-neutral-400 hover:text-white px-3 rounded hover:bg-neutral-700 transition-colors h-full cursor-pointer"
-              >
-                Reset
-              </button>
-            </div>
-
-            {/* Stats + Edit controls */}
-            <div className="flex items-center gap-3">
-              <div className="flex gap-2">
-                {[
-                  {
-                    label: "TOTALI",
-                    val: tables.length,
-                    cls: "text-neutral-200",
-                  },
-                  {
-                    label: "LIBERI",
-                    val: tables.length - reserved,
-                    cls: "text-emerald-400",
-                  },
-                  { label: "PRENOTATI", val: reserved, cls: "text-rose-400" },
-                  {
-                    label: "GRUPPI",
-                    val: groupMap.size,
-                    cls: "text-purple-400",
-                  },
-                ].map(({ label, val, cls }) => (
-                  <div
-                    key={label}
-                    className="bg-neutral-800 rounded px-3 py-1 text-center border border-neutral-700"
-                  >
-                    <div className={`text-base font-bold tabular-nums ${cls}`}>
-                      {val}
-                    </div>
-                    <div className="text-neutral-500 text-xs tracking-widest">
-                      {label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Edit / Save / Cancel */}
-              {isEditing ? (
-                <div className="flex gap-2 h-full">
-                  <button
-                    onClick={cancelEditing}
-                    disabled={isSaving}
-                    className="flex items-center gap-1.5 bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 text-white font-bold px-5 py-3 rounded-lg border border-neutral-500 transition-colors h-full cursor-pointer"
-                  >
-                    ✕ Annulla
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold px-5 py-3 rounded-lg border border-emerald-400 transition-colors h-full cursor-pointer"
-                  >
-                    {isSaving ? "⏳ Salvataggio…" : "💾 Salva"}
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={startEditing}
-                  className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold px-5 py-3 rounded-lg border border-amber-400 transition-colors h-full cursor-pointer"
-                >
-                  ✏️ Modifica
-                </button>
-              )}
-            </div>
-          </div>
+          <HeaderFloorPlan
+            tables={tables}
+            setIsEditing={setIsEditing}
+            setMode={setMode}
+            setWalls={setWalls}
+            setMergeAnchor={setMergeAnchor}
+            setSelId={setSelId}
+            setCurWall={setCurWall}
+            isEditing={isEditing}
+            walls={walls}
+            zoom={zoom}
+            savedPlan={savedPlan}
+            groupMap={groupMap}
+            setTables={setTables}
+            setZoom={setZoom}
+            setPan={setPan}
+          />
 
           <div className="flex flex-1 overflow-hidden">
             {/* ── Sidebar (only in edit mode) ── */}
             {isEditing && (
-              <SideBar
-                buttons={modeButtons} // SidebarButton<PlanMode>[]
-                activeKey={mode} // PlanMode
-                onButtonClick={(key) => {
-                  setMode(key);
-                  setSelId(null);
-                  if (key !== "merge") setMergeAnchor(null);
-                  if (key !== "wall" && curWall) finishWall();
-                }}
-              >
-                {/* Merge state */}
-                {mode === "merge" && mergeAnchor && (
-                  <div className="bg-purple-900/60 border border-purple-500 rounded-md px-2 py-2 text-xs">
-                    <div className="text-purple-300 font-bold mb-1">
-                      🔗 In corso…
-                    </div>
-                    <div className="text-purple-400 text-xs mb-2">
-                      Clicca tavoli da aggiungere
-                    </div>
-                    <button
-                      onClick={() => setMergeAnchor(null)}
-                      className="w-full text-xs text-neutral-400 hover:text-white bg-neutral-800 rounded py-1 transition-colors"
-                    >
-                      ✕ Fine unione
-                    </button>
-                  </div>
-                )}
-
-                {/* Shape */}
-                <div className="mt-2 pt-2 border-t border-neutral-700">
-                  <p className="text-neutral-500 text-xs tracking-widest uppercase px-1 pb-1.5">
-                    Forma tavoli
-                  </p>
-                  <div className="flex gap-1">
-                    {(
-                      [
-                        [TableShape.Round, "⭕", "Rotondo"],
-                        [TableShape.Rect, "▬", "Rettang."],
-                      ] as const
-                    ).map(([s, ic, lb]) => (
-                      <button
-                        key={s}
-                        onClick={() => setShape(s)}
-                        className={`flex-1 py-1.5 rounded text-xs font-medium flex flex-col items-center gap-0.5 border transition-all
-                      ${shape === s ? "bg-sky-600 text-white border-sky-400" : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border-neutral-700"}`}
-                      >
-                        <span>{ic}</span>
-                        <span>{lb}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Wall controls */}
-                {mode === "wall" && (
-                  <div className="pt-2 border-t border-neutral-700 space-y-1">
-                    <p className="text-neutral-500 text-xs px-1">
-                      {curWall
-                        ? `📍 ${curWall.length} punto/i`
-                        : "Clicca per iniziare"}
-                    </p>
-                    {curWall && curWall.length >= 2 && (
-                      <button
-                        onClick={finishWall}
-                        className="w-full bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold py-2 rounded-md border border-orange-400 transition-colors"
-                      >
-                        ✓ Termina muro
-                      </button>
-                    )}
-                    {curWall && (
-                      <button
-                        onClick={() => setCurWall(null)}
-                        className="w-full bg-neutral-700 text-neutral-300 text-xs py-1.5 rounded-md transition-colors hover:bg-neutral-600"
-                      >
-                        ✕ Annulla
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Legend */}
-                <div className="mt-auto pt-2 border-t border-neutral-700">
-                  <p className="text-neutral-500 text-xs tracking-widest uppercase px-1 pb-1">
-                    Legenda
-                  </p>
-                  {legendSideBar.map(({ cls, label }) => (
-                    <div
-                      key={label}
-                      className="flex items-center gap-2 px-1 py-0.5 text-xs text-neutral-400"
-                    >
-                      <span className={`w-3 h-3 rounded-sm ${cls} shrink-0`} />
-                      {label}
-                    </div>
-                  ))}
-                </div>
-              </SideBar>
+              <SideBarFloorPlan
+                setShape={setShape}
+                curWall={curWall}
+                setCurWall={setCurWall}
+                mode={mode}
+                mergeAnchor={mergeAnchor}
+                shape={shape}
+                setWalls={setWalls}
+                setMode={setMode}
+                setMergeAnchor={setMergeAnchor}
+                setSelId={setSelId}
+              />
             )}
 
             {/* ── Canvas ── */}
@@ -1049,7 +725,14 @@ export default function RestaurantFloorPlan() {
                       isMergeAnc,
                       reservedBy,
                       isReserved,
-                    } = getTableStyle(table);
+                    } = getTableStyle(
+                      table,
+                      selTable,
+                      mergeAnchor,
+                      tables,
+                      selId,
+                      getGroup,
+                    );
 
                     return (
                       <g
@@ -1202,168 +885,31 @@ export default function RestaurantFloorPlan() {
 
               {/* ── Selection / booking / seat panel ── */}
               {selTable && (
-                <div className="shrink-0 bg-neutral-900 border-t border-neutral-700 px-5 py-3 flex items-center gap-4 w-full">
-                  <div className="min-w-40 shrink-0">
-                    <div className="text-white font-bold text-sm flex items-center gap-2">
-                      {selTable.groupId
-                        ? `Gruppo (${selGroup.length} tavoli)`
-                        : `Tavolo da ${selTable.size}`}
-                      {selReserved && (
-                        <span className="text-xs bg-rose-700 text-rose-200 px-1.5 py-0.5 rounded">
-                          Prenotato
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-neutral-400 text-xs mt-0.5">
-                      {selTable.shape === TableShape.Round
-                        ? "Rotondo"
-                        : selTable.size === 4
-                          ? "Quadrato"
-                          : "Rettangolare"}
-                      {selReserved && (
-                        <span className="text-neutral-300 font-bold ml-1">
-                          · {selName}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Seat controls — always available when selected */}
-                  <div className="flex gap-2 flex-1 overflow-x-auto py-0.5">
-                    {selGroup.map((t) => (
-                      <div
-                        key={t.id}
-                        className="flex items-center gap-1.5 bg-neutral-800 rounded-lg px-3 py-1.5 border border-neutral-700 shrink-0"
-                      >
-                        <span className="text-neutral-400 text-xs font-mono">
-                          {t.size === 4 ? "T4" : "T8"}
-                        </span>
-                        <button
-                          onClick={() => editChairs(t.id, -1)}
-                          className="w-6 h-6 rounded bg-neutral-700 hover:bg-rose-700 text-white font-bold text-sm flex items-center justify-center transition-colors"
-                        >
-                          −
-                        </button>
-                        <span className="text-white font-bold tabular-nums w-5 text-center text-sm">
-                          {t.chairs.length}
-                        </span>
-                        <button
-                          onClick={() => editChairs(t.id, 1)}
-                          className="w-6 h-6 rounded bg-neutral-700 hover:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center transition-colors"
-                        >
-                          +
-                        </button>
-                        <span className="text-neutral-500 text-xs">posti</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {selGroup.length > 1 && (
-                    <div className="text-xs text-neutral-400 font-mono shrink-0">
-                      Totale:{" "}
-                      <span className="text-white font-bold">{selSeats}</span>{" "}
-                      posti
-                    </div>
-                  )}
-
-                  <div className="flex gap-2 shrink-0">
-                    {selReserved ? (
-                      <button
-                        onClick={() => cancelBooking(selId!)}
-                        className="bg-rose-700 hover:bg-rose-600 text-white text-xs font-bold px-4 py-2 rounded-lg border border-rose-500 transition-colors"
-                      >
-                        Cancella prenotazione
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setModal({ open: true, tableId: selId! });
-                          setGuest("");
-                        }}
-                        className="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-lg border border-emerald-500 transition-colors"
-                      >
-                        Prenota
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setSelId(null)}
-                      className="px-3 py-2 rounded-lg border border-neutral-600 text-xs text-neutral-400 hover:bg-neutral-800 transition-colors"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
+                <FooterFloorPlan
+                  selTable={selTable}
+                  getGroup={getGroup}
+                  tables={tables}
+                  setTables={setTables}
+                  setSelId={setSelId}
+                  setGuest={setGuest}
+                  setModal={setModal}
+                  selId={selId}
+                />
               )}
             </div>
           </div>
 
           {/* ── Booking modal ── */}
           {modal.open && (
-            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-              <div className="bg-neutral-900 rounded-2xl shadow-2xl p-7 w-96 border border-neutral-700">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="w-10 h-10 bg-emerald-900 rounded-lg flex items-center justify-center text-xl border border-emerald-700">
-                    📋
-                  </div>
-                  <div>
-                    <h2 className="text-base font-bold text-white">
-                      Nuova Prenotazione
-                    </h2>
-                    {(() => {
-                      const t = tables.find((tt) => tt.id === modal.tableId);
-                      const grp = t?.groupId
-                        ? getGroup(t.groupId)
-                        : t
-                          ? [t]
-                          : [];
-                      const seats = grp.reduce(
-                        (s, tt) => s + tt.chairs.length,
-                        0,
-                      );
-                      return (
-                        <p className="text-xs text-neutral-500 font-mono">
-                          {grp.length > 1
-                            ? `Gruppo di ${grp.length} tavoli · `
-                            : ""}
-                          {seats} posti
-                        </p>
-                      );
-                    })()}
-                  </div>
-                </div>
-                <label
-                  htmlFor="guest-input"
-                  className="block text-xs font-bold text-neutral-400 uppercase tracking-widest mb-2"
-                >
-                  Nome cliente
-                </label>
-                <input
-                  id="guest-input"
-                  type="text"
-                  value={guest}
-                  onChange={(e) => setGuest(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && confirmBooking()}
-                  placeholder="Es. Mario Rossi"
-                  autoFocus
-                  className="w-full bg-neutral-800 border border-neutral-600 rounded-lg px-4 py-2.5 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 mb-5 font-mono"
-                />
-                <div className="flex gap-3">
-                  <button
-                    onClick={confirmBooking}
-                    disabled={!guest.trim()}
-                    className="flex-1 bg-emerald-700 hover:bg-emerald-600 disabled:bg-neutral-700 disabled:text-neutral-500 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-lg text-sm transition-colors border border-emerald-600 disabled:border-neutral-600"
-                  >
-                    Conferma
-                  </button>
-                  <button
-                    onClick={() => setModal({ open: false, tableId: "" })}
-                    className="px-5 py-2.5 rounded-lg border border-neutral-600 text-sm text-neutral-400 hover:bg-neutral-800 transition-colors"
-                  >
-                    Annulla
-                  </button>
-                </div>
-              </div>
-            </div>
+            <ModalFloorPlan
+              tables={tables}
+              guest={guest}
+              modal={modal}
+              setTables={setTables}
+              setModal={setModal}
+              setGuest={setGuest}
+              getGroup={getGroup}
+            />
           )}
         </div>
       )}

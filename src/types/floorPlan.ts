@@ -24,7 +24,7 @@ export interface TableData {
 
 export interface WallData {
   id: string;
-  points: { x: number; y: number }[];
+  points: CoordinateType[];
 }
 
 export interface FloorPlanData {
@@ -46,8 +46,8 @@ export type PlanMode =
 
 export interface PlanGroupDrag {
   groupId: string;
-  startMouse: { x: number; y: number };
-  startPositions: Record<string, { x: number; y: number }>;
+  startMouse: CoordinateType;
+  startPositions: Record<string, CoordinateType>;
 }
 
 export type ModeBtn = {
@@ -56,3 +56,33 @@ export type ModeBtn = {
   icon: string;
   color: string;
 };
+
+export type WallType = CoordinateType[] | null;
+
+export type SnapshotType = {
+  tables: TableData[];
+  walls: WallData[];
+} | null;
+
+export type CoordinateType = {
+  x: number;
+  y: number;
+};
+
+export type DraggingType = {
+  id: string;
+  ox: number;
+  oy: number;
+} | null;
+
+export type PanStartType = {
+  mx: number;
+  my: number;
+  px: number;
+  py: number;
+} | null;
+
+export type WallDragType = {
+  wallId: string;
+  pi: number;
+} | null;
