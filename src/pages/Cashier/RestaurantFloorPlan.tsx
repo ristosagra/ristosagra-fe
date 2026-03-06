@@ -57,7 +57,7 @@ export default function RestaurantFloorPlan() {
   const [groupDrag, setGroupDrag] = useState<PlanGroupDrag | null>(null);
   const [wallDrag, setWallDrag] = useState<WallDragType>(null);
   const [cursor, setCursor] = useState<CoordinateType>({ x: 0, y: 0 });
-  const [mergeAnchor, setMergeAnchor] = useState<string | null>(null); // ID of the anchor group/table in merge mode
+  const [mergeAnchor, setMergeAnchor] = useState<string | null>(null);
   const [selId, setSelId] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalType>({ open: false, tableId: "" });
   const [guest, setGuest] = useState("");
@@ -96,6 +96,8 @@ export default function RestaurantFloorPlan() {
   );
 
   // ── Mouse handlers ──
+  //Gestisce il mousedown sullo sfondo SVG. Se la modalità è pan, view o si usa il tasto centrale del mouse,
+  //salva la posizione iniziale per iniziare il pan della mappa.
   const onSVGDown = useCallback(
     (e: React.MouseEvent) => {
       didPan.current = false;
@@ -106,6 +108,8 @@ export default function RestaurantFloorPlan() {
     [mode, pan],
   );
 
+  //Aggiorna un singolo punto di un muro durante il drag. Se l'indice del punto corrisponde a quello che si sta trascinando,
+  //restituisce le nuove coordinate, altrimenti lascia il punto invariato.
   const updateWallPoint = useCallback(
     (point: CoordinateType, i: number, w: CoordinateType) => {
       return i === wallDrag!.pi ? { x: w.x, y: w.y } : point;
@@ -113,6 +117,8 @@ export default function RestaurantFloorPlan() {
     [wallDrag],
   );
 
+  //Aggiorna un intero muro durante il drag.
+  //Se il muro corrisponde a quello che si sta trascinando, mappa tutti i suoi punti attraverso updateWallPoint, altrimenti lo lascia invariato.
   const updateWall = useCallback(
     (wl: WallData, w: CoordinateType) => {
       if (wl.id === wallDrag!.wallId) {
@@ -126,6 +132,8 @@ export default function RestaurantFloorPlan() {
     [wallDrag, updateWallPoint],
   );
 
+  //Gestisce il trascinamento di un punto di un muro. Se c'è un wallDrag attivo,
+  //aggiorna tutti i muri chiamando updateWall con le nuove coordinate.
   const handleWallDrag = useCallback(
     (w: CoordinateType) => {
       if (!wallDrag) return;
@@ -135,6 +143,12 @@ export default function RestaurantFloorPlan() {
     [wallDrag, updateWall],
   );
 
+  //è il gestore principale del mousemove. Fa più cose in sequenza:
+  //aggiorna la posizione del cursore nel mondo SVG
+  //se c'è un pan attivo, sposta la vista
+  //se si sta draggando un tavolo singolo, lo muove evitando collisioni
+  //se si sta draggando un gruppo di tavoli, li muove tutti insieme evitando collisioni
+  //chiama handleWallDrag per il drag dei muri
   const onMove = useCallback(
     (e: React.MouseEvent) => {
       const w = toWorld(e.clientX, e.clientY);
@@ -208,6 +222,7 @@ export default function RestaurantFloorPlan() {
     [panStart, dragging, groupDrag, tables, toWorld, walls, handleWallDrag],
   );
 
+  //gestisce il mouseup, resetta tutti gli stati di drag attivi (panStart, dragging, groupDrag, wallDrag).
   const onUp = useCallback(() => {
     setPanStart(null);
     setDragging(null);
@@ -215,6 +230,7 @@ export default function RestaurantFloorPlan() {
     setWallDrag(null);
   }, []);
 
+  //gestisce lo zoom con la rotella del mouse. Calcola il nuovo zoom e aggiusta il pan in modo che il punto sotto il cursore rimanga fisso durante lo zoom.
   const onWheel = useCallback(
     (e: React.WheelEvent) => {
       e.preventDefault();
@@ -231,6 +247,10 @@ export default function RestaurantFloorPlan() {
     [zoom],
   );
 
+  //gestisce il click sullo sfondo SVG. In base alla modalità:
+  //add4/add8 — aggiunge un tavolo da 4 o 8 posti dove si clicca (se non ci sono collisioni)
+  //wall — aggiunge un punto al muro in costruzione
+  //view — deseleziona il tavolo selezionato
   const onSVGClick = useCallback(
     (e: React.MouseEvent) => {
       if (didPan.current) return;
@@ -269,6 +289,8 @@ export default function RestaurantFloorPlan() {
     [mode, shape, curWall, toWorld, isEditing, showNotification, tables],
   );
 
+  //gestisce il mousedown su un tavolo. Se la modalità è move,
+  //prepara il drag — singolo se il tavolo non ha gruppo, oppure di gruppo salvando le posizioni iniziali di tutti i tavoli del gruppo.
   const onTableDown = useCallback(
     (e: React.MouseEvent, tid: string) => {
       e.stopPropagation();
@@ -291,6 +313,8 @@ export default function RestaurantFloorPlan() {
     [isEditing, mode, tables, toWorld, getGroup],
   );
 
+  //gestisce il click su un tavolo in modalità delete. Se il tavolo fa parte di un gruppo,
+  //separa tutti i tavoli del gruppo ripristinando le sedie di default. Se è singolo, lo elimina direttamente.
   const handleDeleteMode = useCallback(
     (t: TableData, tid: string) => {
       if (t.groupId) {
@@ -315,6 +339,8 @@ export default function RestaurantFloorPlan() {
     [showNotification],
   );
 
+  //gestisce l'unione di tavoli in modalità merge. Al primo click imposta l'ancora,
+  //ai click successivi unisce i tavoli cliccati al gruppo dell'ancora, usando snapIncoming per agganciare fisicamente i tavoli uno accanto all'altro.
   const handleMergeMode = useCallback(
     (t: TableData, tid: string) => {
       if (!mergeAnchor) {
@@ -385,6 +411,11 @@ export default function RestaurantFloorPlan() {
     [tables, mergeAnchor, showNotification],
   );
 
+  //gestisce il click su un tavolo. In base alla modalità:
+  //view — seleziona il tavolo
+  //delete — chiama handleDeleteMode
+  //merge — chiama handleMergeMode
+  //Ignora il click se c'è stato un drag.
   const onTableClick = useCallback(
     (e: React.MouseEvent, tid: string) => {
       e.stopPropagation();
@@ -411,6 +442,7 @@ export default function RestaurantFloorPlan() {
     [mode, tables, isEditing, handleDeleteMode, handleMergeMode],
   );
 
+  //gestisce il click su un muro. Se si è in modalità delete, elimina il muro cliccato.
   const onWallClick = (wallId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (isEditing && mode === "delete")
