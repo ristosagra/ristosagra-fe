@@ -1,22 +1,20 @@
 import {
-  TextDimensions,
-  TextWeight,
+  LabelDimensions,
+  LabelWeight,
+  type LabelDimensionsConst,
   type LabelTagsConst,
-  type TextDimensionsConst,
-  type TextWeightConst,
-} from "../../types/costant";
-import {
-  ColorVariants,
-} from "../../utils/colors";
+  type LabelWeightConst,
+} from "../../constant/label";
+import { ColorVariants } from "../../constant/colors";
 
 export interface LabelProps {
   label: string;
   color?: string;
   colorBorderBottom?: string;
   tag: LabelTagsConst;
-  size?: TextDimensionsConst;
+  size?: LabelDimensionsConst;
   noMargin?: boolean;
-  weight?: TextWeightConst;
+  weight?: LabelWeightConst;
   additionalClasses?: string;
 }
 
@@ -28,23 +26,23 @@ export const Label = ({
   size,
   noMargin,
   weight,
-  additionalClasses = ""
+  additionalClasses = "",
 }: LabelProps) => {
   const Tag = tag as React.ElementType;
   const borderClass = colorBorderBottom ? "border-b" : "";
-  const textSize = size ?? TextDimensions.medium;
-  const textWeight = weight ?? TextWeight.normal;
+  const textSize = size ?? LabelDimensions.medium;
+  const labelWeight = weight ?? LabelWeight.normal;
   const marginBottom = noMargin
     ? ""
-    : TextDimensions.large
+    : LabelDimensions.large
       ? "mb-6"
-      : TextDimensions.medium
+      : LabelDimensions.medium
         ? "mb-4"
         : "mb-2";
 
   return (
     <Tag
-      className={`${textSize} ${color} ${marginBottom} ${borderClass} ${colorBorderBottom} ${textWeight} ${additionalClasses}`}
+      className={`${textSize} ${color} ${marginBottom} ${borderClass} ${colorBorderBottom} ${labelWeight} ${additionalClasses}`}
     >
       {label}
     </Tag>

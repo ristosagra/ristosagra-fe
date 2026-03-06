@@ -1,4 +1,4 @@
-import type { Dish } from "../../types/types";
+import type { Dish } from "../../types/orders";
 import { httpClient } from "../client/httpClient";
 
 export const MenuService = {

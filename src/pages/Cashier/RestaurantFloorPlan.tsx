@@ -1,340 +1,39 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useFloorPlan, useSaveFloorPlan } from "../../hooks/useFloorPlan";
+import { Loader } from "../../components/core/Loader";
+import {
+  NotificationMessage,
+  type NotificationMessageConst,
+  type Toast,
+} from "../../types/types";
+import {
+  addChair,
+  chairPos,
+  closestPointOnSeg,
+  defaultChairs,
+  removeChair,
+  segsIntersect,
+  sharedEdge,
+  snapIncoming,
+} from "../../helpers/floorPlan";
 import type {
   FloorPlanData,
-  Side,
+  PlanGroupDrag,
+  PlanMode,
   TableData,
-  TableShape,
-  TableSize,
   WallData,
-} from "../services/api/floorPlan";
-import { useFloorPlan, useSaveFloorPlan } from "../hooks/useFloorPlan";
-import { Loader } from "../components/core/Loader";
-
-// ─── Geometry constants ─────────────────────────────────────────────────────
-const TABLE_R: Record<TableSize, number> = { 4: 36, 8: 52 };
-const CHAIR_DIST: Record<TableSize, number> = { 4: 56, 8: 74 };
-const RECT_W: Record<TableSize, number> = { 4: 72, 8: 170 };
-const RECT_H: Record<TableSize, number> = { 4: 72, 8: 68 };
-const CHAIR_R = 11;
-const ALL_SIDES: Side[] = ["top", "right", "bottom", "left"];
-const OPP: Record<Side, Side> = {
-  top: "bottom",
-  bottom: "top",
-  left: "right",
-  right: "left",
-};
-
-type Mode =
-  | "view"
-  | "add4"
-  | "add8"
-  | "move"
-  | "delete"
-  | "pan"
-  | "wall"
-  | "merge";
-interface GroupDrag {
-  groupId: string;
-  startMouse: { x: number; y: number };
-  startPositions: Record<string, { x: number; y: number }>;
-}
-
-// ─── Chair helpers ──────────────────────────────────────────────────────────
-function maxPerSide(side: Side, size: TableSize) {
-  if (size === 4) return 1;
-  return side === "top" || side === "bottom" ? 3 : 1;
-}
-function offsetsForCount(n: number): number[] {
-  if (n <= 0) return [];
-  if (n === 1) return [0];
-  if (n === 2) return [-0.5, 0.5];
-  if (n === 3) return [-0.55, 0, 0.55];
-  return Array.from({ length: n }, (_, i) => -0.6 + (1.2 * i) / (n - 1));
-}
-function setSideChairs(
-  chairs: TableData["chairs"],
-  side: Side,
-  count: number,
-): TableData["chairs"] {
-  return [
-    ...chairs.filter((c) => c.side !== side),
-    ...offsetsForCount(count).map((o) => ({ side, offset: o })),
-  ];
-}
-function redistributeOnBlock(
-  chairs: TableData["chairs"],
-  blocked: Side,
-  allBlocked: Side[],
-  size: TableSize,
-): TableData["chairs"] {
-  const count = chairs.filter((c) => c.side === blocked).length;
-  let result = chairs.filter((c) => c.side !== blocked);
-  let toAdd = count;
-  const order = [
-    OPP[blocked],
-    ...ALL_SIDES.filter((s) => s !== blocked && s !== OPP[blocked]),
-  ].filter((s) => !allBlocked.includes(s));
-  for (const s of order) {
-    if (toAdd <= 0) break;
-    const cur = result.filter((c) => c.side === s).length;
-    const add = Math.min(maxPerSide(s, size) - cur, toAdd);
-    if (add > 0) {
-      result = setSideChairs(result, s, cur + add);
-      toAdd -= add;
-    }
-  }
-  return result;
-}
-function defaultChairs(
-  size: TableSize,
-  shape: TableShape,
-): TableData["chairs"] {
-  if (shape === "round")
-    return Array.from({ length: size }, (_, i) => ({
-      side: "round" as const,
-      offset: (360 / size) * i,
-    }));
-  if (size === 4) return ALL_SIDES.map((side) => ({ side, offset: 0 }));
-  return [
-    ...[-0.55, 0, 0.55].map((o) => ({ side: "top" as Side, offset: o })),
-    ...[-0.55, 0, 0.55].map((o) => ({ side: "bottom" as Side, offset: o })),
-    { side: "left" as Side, offset: 0 },
-    { side: "right" as Side, offset: 0 },
-  ];
-}
-function chairPos(
-  c: TableData["chairs"][0],
-  shape: TableShape,
-  size: TableSize,
-): { x: number; y: number } {
-  const g = 16;
-  if (shape === "round" || c.side === "round") {
-    const r = (c.offset * Math.PI) / 180;
-    return {
-      x: Math.cos(r) * CHAIR_DIST[size],
-      y: Math.sin(r) * CHAIR_DIST[size],
-    };
-  }
-  const hw = RECT_W[size] / 2,
-    hh = RECT_H[size] / 2;
-  switch (c.side) {
-    case "top":
-      return { x: c.offset * (hw * 0.85), y: -(hh + g) };
-    case "bottom":
-      return { x: c.offset * (hw * 0.85), y: hh + g };
-    case "left":
-      return { x: -(hw + g), y: c.offset * (hh * 0.7) };
-    case "right":
-      return { x: hw + g, y: c.offset * (hh * 0.7) };
-  }
-}
-function addChair(t: TableData): TableData {
-  if (t.shape === "round") {
-    const angles = t.chairs.map((c) => c.offset).sort((a, b) => a - b);
-    let best = 0,
-      maxG = 0;
-    if (angles.length === 0) best = 0;
-    else {
-      for (let i = 0; i < angles.length; i++) {
-        const nxt = i === angles.length - 1 ? angles[0] + 360 : angles[i + 1];
-        const g = nxt - angles[i];
-        if (g > maxG) {
-          maxG = g;
-          best = angles[i] + g / 2;
-        }
-      }
-      if (best >= 360) best -= 360;
-    }
-    return {
-      ...t,
-      chairs: [...t.chairs, { side: "round" as const, offset: best }],
-    };
-  }
-  const free = ALL_SIDES.filter((s) => !t.blockedSides.includes(s));
-  let bestSide: Side | null = null,
-    bestCap = 0;
-  for (const s of free) {
-    const cap =
-      maxPerSide(s, t.size) - t.chairs.filter((c) => c.side === s).length;
-    if (cap > bestCap) {
-      bestCap = cap;
-      bestSide = s;
-    }
-  }
-  if (!bestSide) return t;
-  const cur = t.chairs.filter((c) => c.side === bestSide).length;
-  return { ...t, chairs: setSideChairs(t.chairs, bestSide, cur + 1) };
-}
-function removeChair(t: TableData): TableData {
-  if (t.chairs.length === 0) return t;
-  if (t.shape === "round") return { ...t, chairs: t.chairs.slice(0, -1) };
-  const free = ALL_SIDES.filter((s) => !t.blockedSides.includes(s));
-  let maxSide: Side | null = null,
-    maxN = 0;
-  for (const s of free) {
-    const n = t.chairs.filter((c) => c.side === s).length;
-    if (n > maxN) {
-      maxN = n;
-      maxSide = s;
-    }
-  }
-  if (!maxSide || maxN === 0) return { ...t, chairs: t.chairs.slice(0, -1) };
-  return { ...t, chairs: setSideChairs(t.chairs, maxSide, maxN - 1) };
-}
-
-// Snap 'incoming' onto the nearest free side of any table in 'group'
-function snapIncoming(
-  incoming: TableData,
-  group: TableData[],
-): { snapped: TableData; updatedGroup: TableData[] } | null {
-  if (incoming.shape !== "rect") return null;
-  let bestDist = Infinity;
-  let bestResult: ReturnType<typeof snapIncoming> = null;
-
-  for (const target of group) {
-    if (target.shape !== "rect") continue;
-    const hw1 = RECT_W[target.size] / 2,
-      hh1 = RECT_H[target.size] / 2;
-    const hw2 = RECT_W[incoming.size] / 2,
-      hh2 = RECT_H[incoming.size] / 2;
-
-    const candidates = [
-      {
-        s1: "right" as Side,
-        s2: "left" as Side,
-        nx: target.x + hw1 + hw2,
-        ny: target.y,
-      },
-      {
-        s1: "left" as Side,
-        s2: "right" as Side,
-        nx: target.x - hw1 - hw2,
-        ny: target.y,
-      },
-      {
-        s1: "bottom" as Side,
-        s2: "top" as Side,
-        nx: target.x,
-        ny: target.y + hh1 + hh2,
-      },
-      {
-        s1: "top" as Side,
-        s2: "bottom" as Side,
-        nx: target.x,
-        ny: target.y - hh1 - hh2,
-      },
-    ];
-
-    for (const { s1, s2, nx, ny } of candidates) {
-      if (target.blockedSides.includes(s1)) continue;
-      const dist = Math.hypot(incoming.x - nx, incoming.y - ny);
-      if (dist < bestDist) {
-        bestDist = dist;
-        const b1 = [...new Set([...target.blockedSides, s1])];
-        const b2 = [...new Set([...incoming.blockedSides, s2])];
-        bestResult = {
-          snapped: {
-            ...incoming,
-            x: nx,
-            y: ny,
-            blockedSides: b2,
-            chairs: redistributeOnBlock(incoming.chairs, s2, b2, incoming.size),
-          },
-          updatedGroup: group.map((t) =>
-            t.id === target.id
-              ? {
-                  ...t,
-                  blockedSides: b1,
-                  chairs: redistributeOnBlock(t.chairs, s1, b1, t.size),
-                }
-              : t,
-          ),
-        };
-      }
-    }
-  }
-  return bestResult;
-}
-
-function sharedEdge(t1: TableData, t2: TableData) {
-  if (t1.shape !== "rect" || t2.shape !== "rect") return null;
-  const hw1 = RECT_W[t1.size] / 2,
-    hh1 = RECT_H[t1.size] / 2;
-  const hw2 = RECT_W[t2.size] / 2,
-    hh2 = RECT_H[t2.size] / 2;
-  const T = 4;
-  const chkV = (
-    ax: number,
-    bx: number,
-    ay: number,
-    ah: number,
-    by: number,
-    bh: number,
-  ) => {
-    if (Math.abs(ax - bx) > T) return null;
-    const t = Math.max(ay - ah, by - bh),
-      b = Math.min(ay + ah, by + bh);
-    return b > t ? { x1: ax, y1: t, x2: ax, y2: b } : null;
-  };
-  const chkH = (
-    ay: number,
-    by: number,
-    ax: number,
-    aw: number,
-    bx: number,
-    bw: number,
-  ) => {
-    if (Math.abs(ay - by) > T) return null;
-    const l = Math.max(ax - aw, bx - bw),
-      r = Math.min(ax + aw, bx + bw);
-    return r > l ? { x1: l, y1: ay, x2: r, y2: ay } : null;
-  };
-  return (
-    chkV(t1.x + hw1, t2.x - hw2, t1.y, hh1, t2.y, hh2) ||
-    chkV(t1.x - hw1, t2.x + hw2, t1.y, hh1, t2.y, hh2) ||
-    chkH(t1.y + hh1, t2.y - hh2, t1.x, hw1, t2.x, hw2) ||
-    chkH(t1.y - hh1, t2.y + hh2, t1.x, hw1, t2.x, hw2)
-  );
-}
-
-const WALL_HALF = 8; // metà strokeWidth (10) + piccolo margine
-
-function closestPointOnSeg(
-  px: number,
-  py: number,
-  ax: number,
-  ay: number,
-  bx: number,
-  by: number,
-) {
-  const dx = bx - ax,
-    dy = by - ay;
-  const lenSq = dx * dx + dy * dy;
-  if (lenSq === 0) return { x: ax, y: ay };
-  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
-  return { x: ax + t * dx, y: ay + t * dy };
-}
-
-function segsIntersect(
-  ax: number,
-  ay: number,
-  bx: number,
-  by: number,
-  cx: number,
-  cy: number,
-  dx: number,
-  dy: number,
-) {
-  const d1x = bx - ax,
-    d1y = by - ay;
-  const d2x = dx - cx,
-    d2y = dy - cy;
-  const cross = d1x * d2y - d1y * d2x;
-  if (cross === 0) return false;
-  const t = ((cx - ax) * d2y - (cy - ay) * d2x) / cross;
-  const u = ((cx - ax) * d1y - (cy - ay) * d1x) / cross;
-  return t >= 0 && t <= 1 && u >= 0 && u <= 1;
-}
+} from "../../types/floorPlan";
+import {
+  PLAN_CHAIR_DIST,
+  PLAN_CHAIR_R,
+  PLAN_RECT_H,
+  PLAN_RECT_W,
+  PLAN_TABLE_R,
+  PLAN_WALL_HALF,
+  TableShape,
+  type TableShapeConst,
+  type TableSizeConst,
+} from "../../constant/floorPlan";
 
 // ─── Root Component ──────────────────────────────────────────────────────────
 export default function RestaurantFloorPlan() {
@@ -347,14 +46,14 @@ export default function RestaurantFloorPlan() {
   const [snapshot, setSnapshot] = useState<{
     tables: TableData[];
     walls: WallData[];
-  } | null>(null); // for cancel
+  } | null>(null);
 
   // Editing sub-states
   const [curWall, setCurWall] = useState<{ x: number; y: number }[] | null>(
     null,
   );
-  const [mode, setMode] = useState<Mode>("view");
-  const [shape, setShape] = useState<TableShape>("round");
+  const [mode, setMode] = useState<PlanMode>("view");
+  const [shape, setShape] = useState<TableShapeConst>(TableShape.Round);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [panStart, setPanStart] = useState<{
@@ -368,7 +67,7 @@ export default function RestaurantFloorPlan() {
     ox: number;
     oy: number;
   } | null>(null);
-  const [groupDrag, setGroupDrag] = useState<GroupDrag | null>(null);
+  const [groupDrag, setGroupDrag] = useState<PlanGroupDrag | null>(null);
   const [wallDrag, setWallDrag] = useState<{
     wallId: string;
     pi: number;
@@ -378,10 +77,7 @@ export default function RestaurantFloorPlan() {
   const [selId, setSelId] = useState<string | null>(null);
   const [modal, setModal] = useState({ open: false, tableId: "" });
   const [guest, setGuest] = useState("");
-  const [toast, setToast] = useState<{
-    msg: string;
-    type: "ok" | "err" | "info";
-  } | null>(null);
+  const [toast, setToast] = useState<Toast>(null);
   const [hoveredTableId, setHoveredTableId] = useState<string | null>(null);
 
   const mouseDownPos = useRef<{ x: number; y: number } | null>(null);
@@ -398,7 +94,10 @@ export default function RestaurantFloorPlan() {
     }
   }, [savedPlan]);
 
-  const showToast = (msg: string, type: "ok" | "err" | "info" = "ok") => {
+  const showToast = (
+    msg: string,
+    type: NotificationMessageConst = NotificationMessage.Ok,
+  ) => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 2500);
   };
@@ -423,20 +122,23 @@ export default function RestaurantFloorPlan() {
     (
       x: number,
       y: number,
-      sz: TableSize,
-      sh: TableShape,
+      sz: TableSizeConst,
+      sh: TableShapeConst,
       excludeIds: string[] = [],
     ) => {
       const g = 16;
-      const circR = (size: TableSize) => CHAIR_DIST[size] + CHAIR_R;
-      const rectHW = (size: TableSize) => RECT_W[size] / 2 + g + CHAIR_R;
-      const rectHH = (size: TableSize) => RECT_H[size] / 2 + g + CHAIR_R;
+      const circR = (size: TableSizeConst) =>
+        PLAN_CHAIR_DIST[size] + PLAN_CHAIR_R;
+      const rectHW = (size: TableSizeConst) =>
+        PLAN_RECT_W[size] / 2 + g + PLAN_CHAIR_R;
+      const rectHH = (size: TableSizeConst) =>
+        PLAN_RECT_H[size] / 2 + g + PLAN_CHAIR_R;
 
       // ── Tavolo vs Tavolo ──────────────────────────────────────────────────
       const tableHit = tables.some((t) => {
         if (excludeIds.includes(t.id)) return false;
 
-        if (sh === "round" && t.shape === "round")
+        if (sh === TableShape.Round && t.shape === TableShape.Round)
           return Math.hypot(x - t.x, y - t.y) < circR(sz) + circR(t.size);
 
         if (sh === "rect" && t.shape === "rect") {
@@ -453,7 +155,7 @@ export default function RestaurantFloorPlan() {
         }
 
         const [circ, rect] =
-          sh === "round"
+          sh === TableShape.Round
             ? [
                 { cx: x, cy: y, r: circR(sz) },
                 { rx: t.x, ry: t.y, hw: rectHW(t.size), hh: rectHH(t.size) },
@@ -481,19 +183,19 @@ export default function RestaurantFloorPlan() {
           const { x: ax, y: ay } = wl.points[i];
           const { x: bx, y: by } = wl.points[i + 1];
 
-          if (sh === "round") {
+          if (sh === TableShape.Round) {
             // Distanza centro cerchio (incluse sedie) dal segmento
             const cp = closestPointOnSeg(x, y, ax, ay, bx, by);
-            if (Math.hypot(x - cp.x, y - cp.y) < circR(sz) + WALL_HALF)
+            if (Math.hypot(x - cp.x, y - cp.y) < circR(sz) + PLAN_WALL_HALF)
               return true;
           } else {
             // AABB (incluse sedie) vs segmento
             const hw = rectHW(sz),
               hh = rectHH(sz);
-            const left = x - hw - WALL_HALF,
-              right = x + hw + WALL_HALF;
-            const top = y - hh - WALL_HALF,
-              bottom = y + hh + WALL_HALF;
+            const left = x - hw - PLAN_WALL_HALF,
+              right = x + hw + PLAN_WALL_HALF;
+            const top = y - hh - PLAN_WALL_HALF,
+              bottom = y + hh + PLAN_WALL_HALF;
 
             // endpoint del segmento dentro il rect?
             if (ax >= left && ax <= right && ay >= top && ay <= bottom)
@@ -675,7 +377,7 @@ export default function RestaurantFloorPlan() {
         return;
       }
       if (mode === "add4" || mode === "add8") {
-        const sz: TableSize = mode === "add4" ? 4 : 8;
+        const sz: TableSizeConst = mode === "add4" ? 4 : 8;
         if (hasCollision(x, y, sz, shape)) {
           showToast("❌ Sovrapposizione!", "err");
           return;
@@ -920,7 +622,7 @@ export default function RestaurantFloorPlan() {
   const selName = selGroup.find((t) => t.reservedBy)?.reservedBy;
 
   const modeButtons: {
-    key: Mode;
+    key: PlanMode;
     label: string;
     icon: string;
     color: string;
@@ -939,12 +641,12 @@ export default function RestaurantFloorPlan() {
     { key: "wall", label: "Disegna muro", icon: "🧱", color: "bg-orange-600" },
   ];
 
-  const hints: Record<Mode, string> = {
+  const hints: Record<PlanMode, string> = {
     view: isEditing
       ? "Clicca un tavolo per gestirlo"
       : "Clicca un tavolo per vedere dettagli e prenotare",
-    add4: `Aggiungi tavolo da 4 · ${shape === "round" ? "Rotondo" : "Quadrato"}`,
-    add8: `Aggiungi tavolo da 8 · ${shape === "round" ? "Rotondo" : "Rettangolare"}`,
+    add4: `Aggiungi tavolo da 4 · ${shape === TableShape.Round ? "Rotondo" : "Quadrato"}`,
+    add8: `Aggiungi tavolo da 8 · ${shape === TableShape.Round ? "Rotondo" : "Rettangolare"}`,
     merge: mergeAnchor
       ? "Ancora impostata — clicca altri tavoli per unirli, poi Fine unione"
       : "Clicca un tavolo come ancora del gruppo",
@@ -1119,8 +821,8 @@ export default function RestaurantFloorPlan() {
                   <div className="flex gap-1">
                     {(
                       [
-                        ["round", "⭕", "Rotondo"],
-                        ["rect", "▬", "Rettang."],
+                        [TableShape.Round, "⭕", "Rotondo"],
+                        [TableShape.Rect, "▬", "Rettang."],
                       ] as const
                     ).map(([s, ic, lb]) => (
                       <button
@@ -1257,16 +959,16 @@ export default function RestaurantFloorPlan() {
                         fill="none"
                         stroke="rgba(0,0,0,0.4)"
                         strokeWidth="14"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                        strokeLinecap={TableShape.Round}
+                        strokeLinejoin={TableShape.Round}
                       />
                       <polyline
                         points={pts(wl.points)}
                         fill="none"
                         stroke="#92400e"
                         strokeWidth="10"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                        strokeLinecap={TableShape.Round}
+                        strokeLinejoin={TableShape.Round}
                         className={
                           isEditing && mode === "delete" ? "cursor-pointer" : ""
                         }
@@ -1290,8 +992,8 @@ export default function RestaurantFloorPlan() {
                         fill="none"
                         stroke="#d97706"
                         strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                        strokeLinecap={TableShape.Round}
+                        strokeLinejoin={TableShape.Round}
                         opacity="0.5"
                         style={{ pointerEvents: "none" }}
                       />
@@ -1346,8 +1048,8 @@ export default function RestaurantFloorPlan() {
                         fill="none"
                         stroke="#f97316"
                         strokeWidth="8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                        strokeLinecap={TableShape.Round}
+                        strokeLinejoin={TableShape.Round}
                         opacity="0.5"
                         strokeDasharray="12,5"
                         style={{ pointerEvents: "none" }}
@@ -1357,8 +1059,8 @@ export default function RestaurantFloorPlan() {
                         fill="none"
                         stroke="#fb923c"
                         strokeWidth="8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                        strokeLinecap={TableShape.Round}
+                        strokeLinejoin={TableShape.Round}
                         style={{ pointerEvents: "none" }}
                       />
                       {curWall.map((p, i) => (
@@ -1462,9 +1164,9 @@ export default function RestaurantFloorPlan() {
                       >
                         {/* Group ring */}
                         {table.groupId &&
-                          (table.shape === "round" ? (
+                          (table.shape === TableShape.Round ? (
                             <circle
-                              r={TABLE_R[table.size] + 8}
+                              r={PLAN_TABLE_R[table.size] + 8}
                               fill="none"
                               stroke="#a855f7"
                               strokeWidth="2.5"
@@ -1474,10 +1176,10 @@ export default function RestaurantFloorPlan() {
                             />
                           ) : (
                             <rect
-                              x={-RECT_W[table.size] / 2 - 8}
-                              y={-RECT_H[table.size] / 2 - 8}
-                              width={RECT_W[table.size] + 16}
-                              height={RECT_H[table.size] + 16}
+                              x={-PLAN_RECT_W[table.size] / 2 - 8}
+                              y={-PLAN_RECT_H[table.size] / 2 - 8}
+                              width={PLAN_RECT_W[table.size] + 16}
+                              height={PLAN_RECT_H[table.size] + 16}
                               rx="14"
                               fill="none"
                               stroke="#a855f7"
@@ -1496,7 +1198,7 @@ export default function RestaurantFloorPlan() {
                               key={x + y + i}
                               cx={x}
                               cy={y}
-                              r={CHAIR_R}
+                              r={PLAN_CHAIR_R}
                               fill="#d97706"
                               stroke="#92400e"
                               strokeWidth="2"
@@ -1506,19 +1208,19 @@ export default function RestaurantFloorPlan() {
                         })}
 
                         {/* Body */}
-                        {table.shape === "round" ? (
+                        {table.shape === TableShape.Round ? (
                           <>
                             <circle
-                              r={TABLE_R[table.size] + 2}
+                              r={PLAN_TABLE_R[table.size] + 2}
                               fill={strokeClr}
                             />
                             <circle
-                              r={TABLE_R[table.size]}
+                              r={PLAN_TABLE_R[table.size]}
                               fill={fill}
                               style={{ transition: "fill 0.4s" }}
                             />
                             <circle
-                              r={TABLE_R[table.size] - 6}
+                              r={PLAN_TABLE_R[table.size] - 6}
                               fill="none"
                               stroke="rgba(255,255,255,0.15)"
                               strokeWidth="1.5"
@@ -1527,27 +1229,27 @@ export default function RestaurantFloorPlan() {
                         ) : (
                           <>
                             <rect
-                              x={-RECT_W[table.size] / 2 - 2}
-                              y={-RECT_H[table.size] / 2 - 2}
-                              width={RECT_W[table.size] + 4}
-                              height={RECT_H[table.size] + 4}
+                              x={-PLAN_RECT_W[table.size] / 2 - 2}
+                              y={-PLAN_RECT_H[table.size] / 2 - 2}
+                              width={PLAN_RECT_W[table.size] + 4}
+                              height={PLAN_RECT_H[table.size] + 4}
                               rx="10"
                               fill={strokeClr}
                             />
                             <rect
-                              x={-RECT_W[table.size] / 2}
-                              y={-RECT_H[table.size] / 2}
-                              width={RECT_W[table.size]}
-                              height={RECT_H[table.size]}
+                              x={-PLAN_RECT_W[table.size] / 2}
+                              y={-PLAN_RECT_H[table.size] / 2}
+                              width={PLAN_RECT_W[table.size]}
+                              height={PLAN_RECT_H[table.size]}
                               rx="8"
                               fill={fill}
                               style={{ transition: "fill 0.4s" }}
                             />
                             <rect
-                              x={-RECT_W[table.size] / 2 + 6}
-                              y={-RECT_H[table.size] / 2 + 6}
-                              width={RECT_W[table.size] - 12}
-                              height={RECT_H[table.size] - 12}
+                              x={-PLAN_RECT_W[table.size] / 2 + 6}
+                              y={-PLAN_RECT_H[table.size] / 2 + 6}
+                              width={PLAN_RECT_W[table.size] - 12}
+                              height={PLAN_RECT_H[table.size] - 12}
                               rx="4"
                               fill="none"
                               stroke="rgba(255,255,255,0.12)"
@@ -1607,7 +1309,7 @@ export default function RestaurantFloorPlan() {
                       )}
                     </div>
                     <div className="text-neutral-400 text-xs mt-0.5">
-                      {selTable.shape === "round"
+                      {selTable.shape === TableShape.Round
                         ? "Rotondo"
                         : selTable.size === 4
                           ? "Quadrato"

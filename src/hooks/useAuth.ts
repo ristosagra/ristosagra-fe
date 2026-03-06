@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { fakeLogin } from "../mock/fakeLogin";
+import { fakeLogin } from "../mock/login";
 import { AuthService } from "../services/api/auth";
 
 export const useLogin = () => {

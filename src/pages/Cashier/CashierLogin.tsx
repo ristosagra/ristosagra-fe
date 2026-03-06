@@ -1,17 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Input } from "../components/core/Input";
-import { Container } from "../components/core/Container";
-import { Label } from "../components/core/Label";
-import {
-  ButtonDimensions,
-  LabelTags,
-  TextDimensions,
-  TextWeight,
-} from "../types/costant";
-import { Button } from "../components/core/Button";
-import { ColorVariants } from "../utils/colors";
-import { useLogin } from "../hooks/useAuth";
+import { useLogin } from "../../hooks/useAuth";
+import { Container } from "../../components/core/Container";
+import { Label } from "../../components/core/Label";
+import { ColorVariants } from "../../constant/colors";
+import { Input } from "../../components/core/Input";
+import { Button } from "../../components/core/Button";
+import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
+import { ButtonDimensions } from "../../constant/button";
 
 export function CashierLogin() {
   const [username, setUsername] = useState<string>("");
@@ -46,9 +42,9 @@ export function CashierLogin() {
         <Label
           label="Login Cassa"
           tag={LabelTags.h2}
-          weight={TextWeight.bold}
+          weight={LabelWeight.bold}
           color={ColorVariants.text.grayDark}
-          size={TextDimensions.xlarge}
+          size={LabelDimensions.xlarge}
           noMargin
         />
         <Input
@@ -68,7 +64,7 @@ export function CashierLogin() {
             label={error}
             tag={LabelTags.p}
             color={ColorVariants.text.red}
-            weight={TextWeight.semibold}
+            weight={LabelWeight.semibold}
             noMargin
           />
         )}

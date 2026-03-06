@@ -1,11 +1,11 @@
-import { Card } from "../components/Card/Card";
-import { Container } from "../components/core/Container";
-import { Label } from "../components/core/Label";
-import { Loader } from "../components/core/Loader";
-import { useMenu } from "../hooks/useMenu";
-import { LabelTags, TextDimensions, TextWeight } from "../types/costant";
-import type { Dish, MenuProps } from "../types/types";
-import { ColorVariants } from "../utils/colors";
+import { Card } from "../../components/Card";
+import { Container } from "../../components/core/Container";
+import { Label } from "../../components/core/Label";
+import { Loader } from "../../components/core/Loader";
+import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
+import { useMenu } from "../../hooks/useMenu";
+import type { Dish, MenuProps } from "../../types/orders";
+import { ColorVariants } from "../../constant/colors";
 
 export default function Menu({ cartItems, setCartItems }: MenuProps) {
   const { data: dishes, isLoading, isError } = useMenu();
@@ -39,11 +39,11 @@ export default function Menu({ cartItems, setCartItems }: MenuProps) {
             color={ColorVariants.text.orange}
             colorBorderBottom={ColorVariants.border.grayLight}
             tag={LabelTags.h2}
-            weight={TextWeight.bold}
-            size={TextDimensions.xlarge}
+            weight={LabelWeight.bold}
+            size={LabelDimensions.xlarge}
           />
           <div className="space-y-3">
-            {items.map((dish) => (
+            {(items as Dish[]).map((dish) => (
               <Card
                 key={dish.id}
                 dish={dish}

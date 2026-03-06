@@ -1,8 +1,9 @@
-import { ButtonDimensions, LabelTags, TextDimensions, TextWeight } from "../../types/costant";
 import { Button } from "./Button";
 import { Minus, Plus } from "lucide-react";
 import { Label } from "./Label";
-import { ColorVariants } from "../../utils/colors";
+import { ColorVariants } from "../../constant/colors";
+import { LabelTags, LabelDimensions, LabelWeight } from "../../constant/label";
+import { ButtonDimensions } from "../../constant/button";
 
 interface CounterCardProps {
   quantity: number;
@@ -10,7 +11,11 @@ interface CounterCardProps {
   decrement: () => void;
 }
 
-export const CounterCard = ({ quantity, increment, decrement }: CounterCardProps) => {
+export const CounterCard = ({
+  quantity,
+  increment,
+  decrement,
+}: CounterCardProps) => {
   return (
     <div className="flex items-center gap-3 bg-gray-200 rounded-full px-3 py-1">
       <Button
@@ -23,9 +28,9 @@ export const CounterCard = ({ quantity, increment, decrement }: CounterCardProps
       <Label
         label={`${quantity}`}
         tag={LabelTags.p}
-        size={TextDimensions.medium}
+        size={LabelDimensions.medium}
         color={ColorVariants.text.grayDark}
-        weight={TextWeight.semibold}
+        weight={LabelWeight.semibold}
         noMargin
       />
       <Button

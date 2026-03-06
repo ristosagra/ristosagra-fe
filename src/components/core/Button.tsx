@@ -1,12 +1,8 @@
 import React from "react";
-import {
-  LabelTags,
-  TextDimensions,
-  TextWeight,
-  type ButtonDimensionsConst,
-} from "../../types/costant";
 import { Label } from "./Label";
-import { ColorVariants } from "../../utils/colors";
+import { ColorVariants } from "../../constant/colors";
+import type { ButtonDimensionsConst } from "../../constant/button";
+import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
 
 interface ButtonProps {
   icon?: React.ReactNode;
@@ -43,9 +39,9 @@ export const Button = ({
         <Label
           label={label}
           tag={LabelTags.p}
-          size={TextDimensions.medium}
+          size={LabelDimensions.medium}
           noMargin
-          weight={TextWeight.bold}
+          weight={LabelWeight.bold}
           color={colorLabel}
           additionalClasses={icon ? "ml-1" : ""}
         />

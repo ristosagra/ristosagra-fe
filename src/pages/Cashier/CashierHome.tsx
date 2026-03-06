@@ -1,9 +1,9 @@
 import { House, LandPlot, Wallet } from "lucide-react";
-import { NavBar } from "../components/core/NavBar";
+import { NavBar } from "../../components/core/NavBar";
 import { useState } from "react";
-import { PagesCashier, type PagesCashierConst } from "../types/costant";
 import { CashierDashboard } from "./CashierDashboard";
 import RestaurantFloorPlan from "./RestaurantFloorPlan";
+import { PagesCashier, type PagesCashierConst } from "../../constant/pages";
 
 export const CashierHome = () => {
   const [page, setPage] = useState<PagesCashierConst>(PagesCashier.HOME);

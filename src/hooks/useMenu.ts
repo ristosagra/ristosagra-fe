@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { generateFakeDishes } from "../mock/fakeMenu";
+import { generateFakeDishes } from "../mock/menu";
 import { MenuService } from "../services/api/menu";
 
 export const useMenu = () => {

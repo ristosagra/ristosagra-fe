@@ -1,16 +1,12 @@
 import { Trash2 } from "lucide-react";
-import {
-  ButtonDimensions,
-  LabelTags,
-  TextDimensions,
-  TextWeight,
-} from "../../types/costant";
-import type { CartType, Dish } from "../../types/types";
-import { ColorVariants } from "../../utils/colors";
-import { Button } from "../core/Button";
-import { CardContainer } from "../core/CardContainer";
-import { Label } from "../core/Label";
-import { Counter } from "../Counter";
+import { ColorVariants } from "../constant/colors";
+import { Button } from "./core/Button";
+import { CardContainer } from "./core/CardContainer";
+import { Label } from "./core/Label";
+import { Counter } from "./Counter";
+import type { CartType, Dish } from "../types/orders";
+import { LabelDimensions, LabelTags, LabelWeight } from "../constant/label";
+import { ButtonDimensions } from "../constant/button";
 
 interface CardProps {
   dish: Dish;
@@ -44,16 +40,16 @@ export const Card = ({
           <Label
             label={`${dish.name}`}
             tag={LabelTags.h3}
-            size={TextDimensions.medium}
+            size={LabelDimensions.medium}
             color={ColorVariants.text.grayDark}
-            weight={TextWeight.semibold}
+            weight={LabelWeight.semibold}
             noMargin
           />
           {findItemDish ? (
             <Label
               label={`€${dish.price.toFixed(2)} × ${findItemDish.quantity}`}
               tag={LabelTags.p}
-              size={TextDimensions.small}
+              size={LabelDimensions.small}
               color={ColorVariants.text.grayMedium}
               noMargin
             />
@@ -77,8 +73,8 @@ export const Card = ({
         <Label
           label={labelPrice}
           tag={LabelTags.h3}
-          size={TextDimensions.medium}
-          weight={TextWeight.bold}
+          size={LabelDimensions.medium}
+          weight={LabelWeight.bold}
           color={ColorVariants.text.black}
           noMargin
         />

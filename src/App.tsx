@@ -1,8 +1,8 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { CustomerHome } from "./pages/CustomerHome";
-import { CashierLogin } from "./pages/CashierLogin";
-import { ProtectedRoute } from "./components/general/ProtectedRoute";
-import { CashierHome } from "./pages/CashierHome";
+import { CustomerHome } from "./pages/Customer/CustomerHome";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { CashierHome } from "./pages/Cashier/CashierHome";
+import { CashierLogin } from "./pages/Cashier/CashierLogin";
 
 function App() {
   return (

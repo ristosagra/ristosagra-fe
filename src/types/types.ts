@@ -1,25 +1,14 @@
-export interface Dish {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-}
+export type UserLogin = { username: string; password: string };
 
-export type CartType = { dish: Dish; quantity: number };
+export const NotificationMessage = {
+  Ok: "ok",
+  Err: "err",
+  Info: "info",
+} as const;
+export type NotificationMessageConst =
+  (typeof NotificationMessage)[keyof typeof NotificationMessage];
 
-export interface MenuProps {
-  cartItems: CartType[];
-  setCartItems: React.Dispatch<React.SetStateAction<CartType[]>>;
-}
-
-export interface Order {
-  id: number;
-  orderNumber: number;
-  total: number;
-  paid: boolean;
-  items: CartType[];
-  createdAt: string;
-}
-
-export type Payment = { id: number; paid: boolean };
+export type Toast = {
+  msg: string;
+  type: NotificationMessageConst;
+} | null;

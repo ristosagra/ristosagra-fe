@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { generateFakeOrderNumber, generateFakeOrders } from "../mock/fakeOrder";
-import type { CartType, Payment } from "../types/types";
+import { generateFakeOrderNumber, generateFakeOrders } from "../mock/orders";
 import { OrdersService } from "../services/api/orders";
+import type { CartType, Payment } from "../types/orders";
 
 export const useOrders = () => {
   const isMocking = import.meta.env.VITE_MOCKING === "true";

@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useOrders, useOrderPayment } from "../hooks/useOrders";
-import { Loader } from "../components/core/Loader";
-import { Label } from "../components/core/Label";
-import { LabelTags, TextDimensions, TextWeight } from "../types/costant";
-import { Input } from "../components/core/Input";
-import { Container } from "../components/core/Container";
-import { ColorVariants } from "../utils/colors";
+import { useOrderPayment, useOrders } from "../../hooks/useOrders";
+import { Label } from "../../components/core/Label";
+import { Container } from "../../components/core/Container";
+import { Loader } from "lucide-react";
+import { Input } from "../../components/core/Input";
+import { ColorVariants } from "../../constant/colors";
+import type { CartType } from "../../types/orders";
+import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
 
 export const CashierDashboard = () => {
   const [search, setSearch] = useState("");
@@ -23,8 +24,8 @@ export const CashierDashboard = () => {
         <Label
           label="Ordini"
           tag={LabelTags.h1}
-          size={TextDimensions.xlarge}
-          weight={TextWeight.bold}
+          size={LabelDimensions.xlarge}
+          weight={LabelWeight.bold}
           color={ColorVariants.text.orange}
           noMargin
         />
@@ -59,24 +60,24 @@ export const CashierDashboard = () => {
                     <Label
                       label={`#${order.orderNumber}`}
                       tag={LabelTags.p}
-                      size={TextDimensions.xlarge}
-                      weight={TextWeight.bold}
+                      size={LabelDimensions.xlarge}
+                      weight={LabelWeight.bold}
                       color={ColorVariants.text.orange}
                       noMargin
                     />
                     <Label
                       label={order.total.toFixed(2)}
                       tag={LabelTags.p}
-                      size={TextDimensions.medium}
-                      weight={TextWeight.normal}
+                      size={LabelDimensions.medium}
+                      weight={LabelWeight.normal}
                       color={ColorVariants.text.grayDark}
                       noMargin
                     />
                     <Label
                       label="▼"
                       tag={LabelTags.p}
-                      size={TextDimensions.medium}
-                      weight={TextWeight.normal}
+                      size={LabelDimensions.medium}
+                      weight={LabelWeight.normal}
                       color={ColorVariants.text.grayDark}
                       noMargin
                       additionalClasses={`ml-auto transition-transform duration-300 ${
@@ -106,25 +107,25 @@ export const CashierDashboard = () => {
                   <div
                     className={`px-4 pb-4 space-y-2 border-t ${order.paid ? ColorVariants.border.white : ColorVariants.border.grayMedium} pt-3`}
                   >
-                    {order.items.map((item, index) => (
+                    {order.items.map((item: CartType, index: number) => (
                       <div
-                        key={index}
+                        key={item.quantity + index}
                         className="flex justify-between items-center"
                       >
                         <div className="flex gap-2 items-center">
                           <Label
                             label={`x${item.quantity}`}
                             tag={LabelTags.p}
-                            size={TextDimensions.medium}
-                            weight={TextWeight.bold}
+                            size={LabelDimensions.medium}
+                            weight={LabelWeight.bold}
                             color={ColorVariants.text.orange}
                             noMargin
                           />
                           <Label
                             label={item.dish.name}
                             tag={LabelTags.p}
-                            size={TextDimensions.medium}
-                            weight={TextWeight.normal}
+                            size={LabelDimensions.medium}
+                            weight={LabelWeight.normal}
                             color={ColorVariants.text.grayDark}
                             noMargin
                           />
@@ -132,8 +133,8 @@ export const CashierDashboard = () => {
                         <Label
                           label={`€${(item.dish.price * item.quantity).toFixed(2)}`}
                           tag={LabelTags.p}
-                          size={TextDimensions.medium}
-                          weight={TextWeight.normal}
+                          size={LabelDimensions.medium}
+                          weight={LabelWeight.normal}
                           color={ColorVariants.text.grayDark}
                           noMargin
                         />
@@ -145,16 +146,16 @@ export const CashierDashboard = () => {
                       <Label
                         label="Totale"
                         tag={LabelTags.p}
-                        size={TextDimensions.medium}
-                        weight={TextWeight.bold}
+                        size={LabelDimensions.medium}
+                        weight={LabelWeight.bold}
                         color={ColorVariants.text.grayDark}
                         noMargin
                       />
                       <Label
                         label={`€${order.total.toFixed(2)}`}
                         tag={LabelTags.p}
-                        size={TextDimensions.medium}
-                        weight={TextWeight.bold}
+                        size={LabelDimensions.medium}
+                        weight={LabelWeight.bold}
                         color={ColorVariants.text.orange}
                         noMargin
                       />
@@ -169,9 +170,9 @@ export const CashierDashboard = () => {
                 <Label
                   label="Nessun ordine trovato"
                   tag={LabelTags.h1}
-                  size={TextDimensions.large}
+                  size={LabelDimensions.large}
                   color={ColorVariants.text.white}
-                  weight={TextWeight.bold}
+                  weight={LabelWeight.bold}
                   noMargin
                 />
               </div>

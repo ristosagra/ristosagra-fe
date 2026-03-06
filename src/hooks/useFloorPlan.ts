@@ -1,9 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  FloorPlanService,
-  generateFakeFloorPlan,
-  type FloorPlanData,
-} from "../services/api/floorPlan";
+import { FloorPlanService } from "../services/api/floorPlan";
+import { generateFakeFloorPlan } from "../mock/floorPlan";
+import type { FloorPlanData } from "../types/floorPlan";
 
 const QUERY_KEY = ["floor-plan"] as const;
 

@@ -1,14 +1,14 @@
-import type { CartType, Dish } from "../types/types";
+import type { CartType, Dish } from "../types/orders";
 
-interface counterFunctionsProps {
+interface CounterFunctionsProps {
   dish: Dish;
   setCartItems: React.Dispatch<React.SetStateAction<CartType[]>>;
 }
 
-export const incrementFunction = ({
+export const incrementOrderFunction = ({
   dish,
   setCartItems,
-}: counterFunctionsProps) => {
+}: CounterFunctionsProps) => {
   setCartItems((prev) => {
     const existing = prev.find((i) => i.dish.id === dish.id);
     if (existing)
@@ -19,10 +19,10 @@ export const incrementFunction = ({
   });
 };
 
-export const decrementFunction = ({
+export const decrementOrderFunction = ({
   dish,
   setCartItems,
-}: counterFunctionsProps) => {
+}: CounterFunctionsProps) => {
   setCartItems((prev) => {
     const existing = prev.find((i) => i.dish.id === dish.id);
     if (!existing) return prev;

@@ -1,4 +1,4 @@
-import type { CartType, Order } from "../../types/types";
+import type { CartType, Order } from "../../types/orders";
 import { httpClient } from "../client/httpClient";
 
 export const OrdersService = {

@@ -1,20 +1,15 @@
-import type { CartType } from "../types/types";
-import { Container } from "../components/core/Container";
-import {
-  ButtonDimensions,
-  LabelTags,
-  PagesCustomer,
-  TextDimensions,
-  TextWeight,
-  type PagesCustomerConst,
-} from "../types/costant";
-import { Label } from "../components/core/Label";
-import { Card } from "../components/Card/Card";
-import { Button } from "../components/core/Button";
+import { Container } from "../../components/core/Container";
+import { Label } from "../../components/core/Label";
+import { Card } from "../../components/Card";
+import { Button } from "../../components/core/Button";
 import { type Dispatch, type SetStateAction } from "react";
-import { Loader } from "../components/core/Loader";
-import { ColorVariants } from "../utils/colors";
-import { useOrderNumber } from "../hooks/useOrders";
+import { Loader } from "../../components/core/Loader";
+import { ColorVariants } from "../../constant/colors";
+import { useOrderNumber } from "../../hooks/useOrders";
+import type { CartType } from "../../types/orders";
+import { ButtonDimensions } from "../../constant/button";
+import { type PagesCustomerConst, PagesCustomer } from "../../constant/pages";
+import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
 
 interface CartProps {
   cartItems: CartType[];
@@ -40,12 +35,12 @@ export default function Cart({
 
   if (cartItems.length === 0) {
     return (
-      <div className="flex justify-center items-center px-2 py-6 rounded-2xl w-full bg-gray-900">
+      <div className="flex justify-center items-center px-2 py-6 rounded-2xl w-full bg-gray-900 mx-10">
         <Label
           label="Il carrello è vuoto"
           tag={LabelTags.p}
-          size={TextDimensions.large}
-          weight={TextWeight.bold}
+          size={LabelDimensions.large}
+          weight={LabelWeight.bold}
           color={ColorVariants.text.white}
           noMargin
         />
@@ -85,16 +80,16 @@ export default function Cart({
           <Label
             label="Totale"
             tag={LabelTags.h3}
-            size={TextDimensions.large}
+            size={LabelDimensions.large}
             noMargin
-            weight={TextWeight.bold}
+            weight={LabelWeight.bold}
           />
           <Label
             label={`€${total.toFixed(2)}`}
             tag={LabelTags.h3}
-            size={TextDimensions.large}
+            size={LabelDimensions.large}
             noMargin
-            weight={TextWeight.bold}
+            weight={LabelWeight.bold}
           />
         </div>
 

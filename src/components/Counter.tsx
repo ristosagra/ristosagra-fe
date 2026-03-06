@@ -1,10 +1,13 @@
 import { Plus } from "lucide-react";
-import type { Dish, MenuProps } from "../types/types";
-import { decrementFunction, incrementFunction } from "../utils/functions";
 import { Button } from "./core/Button";
 import { CounterCard } from "./core/CounterCard";
-import { ButtonDimensions } from "../types/costant";
-import { ColorVariants } from "../utils/colors";
+import { ColorVariants } from "../constant/colors";
+import type { Dish, MenuProps } from "../types/orders";
+import {
+  decrementOrderFunction,
+  incrementOrderFunction,
+} from "../helpers/orders";
+import { ButtonDimensions } from "../constant/button";
 
 export const Counter = ({
   dish,
@@ -14,8 +17,8 @@ export const Counter = ({
   const item = cartItems.find((i) => i.dish.id === dish.id);
   const quantity = item?.quantity ?? 0;
 
-  const increment = () => incrementFunction({ dish, setCartItems });
-  const decrement = () => decrementFunction({ dish, setCartItems });
+  const increment = () => incrementOrderFunction({ dish, setCartItems });
+  const decrement = () => decrementOrderFunction({ dish, setCartItems });
 
   return quantity > 0 ? (
     <CounterCard
@@ -33,4 +36,4 @@ export const Counter = ({
       colorIcon={ColorVariants.text.white}
     />
   );
-}
+};

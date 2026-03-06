@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
-import type { CartType, Order } from "../types/types";
-import { generateFakeDish } from "./fakeMenu";
+import { generateFakeDish } from "./menu";
+import type { CartType, Order } from "../types/orders";
 
 export const generateFakeOrders = (count = 20): Order[] =>
   Array.from({ length: count }, (_, i) => {
