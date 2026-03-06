@@ -149,25 +149,37 @@ export default function RestaurantFloorPlan() {
     [mode, pan],
   );
 
+  const updateWallPoint = useCallback(
+    (
+      point: { x: number; y: number },
+      i: number,
+      w: { x: number; y: number },
+    ) => {
+      return i === wallDrag!.pi ? { x: w.x, y: w.y } : point;
+    },
+    [wallDrag],
+  );
+
+  const updateWall = useCallback(
+    (wl: WallData, w: { x: number; y: number }) => {
+      if (wl.id === wallDrag!.wallId) {
+        return {
+          ...wl,
+          points: wl.points.map((point, i) => updateWallPoint(point, i, w)),
+        };
+      }
+      return wl;
+    },
+    [wallDrag, updateWallPoint],
+  );
+
   const handleWallDrag = useCallback(
     (w: { x: number; y: number }) => {
       if (!wallDrag) return;
       didPan.current = true;
-      setWalls((p) =>
-        p.map((wl) => {
-          if (wl.id === wallDrag.wallId) {
-            return {
-              ...wl,
-              points: wl.points.map((point, i) =>
-                i === wallDrag.pi ? { x: w.x, y: w.y } : point,
-              ),
-            };
-          }
-          return wl;
-        }),
-      );
+      setWalls((p) => p.map((wl) => updateWall(wl, w)));
     },
-    [wallDrag],
+    [wallDrag, updateWall],
   );
 
   const onMove = useCallback(
@@ -398,9 +410,7 @@ export default function RestaurantFloorPlan() {
         const snap = snapIncoming(liveIncoming, liveGroup);
 
         if (snap) {
-          const groupMap = new Map(
-            snap.updatedGroup.map((tt) => [tt.id, tt]),
-          );
+          const groupMap = new Map(snap.updatedGroup.map((tt) => [tt.id, tt]));
           updatedAll = updatedAll.map((tt) => {
             if (tt.id === snap.snapped.id)
               return { ...snap.snapped, groupId: newGid };
