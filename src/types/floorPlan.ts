@@ -49,3 +49,10 @@ export interface PlanGroupDrag {
   startMouse: { x: number; y: number };
   startPositions: Record<string, { x: number; y: number }>;
 }
+
+export type ModeBtn = {
+  key: PlanMode;
+  label: string;
+  icon: string;
+  color: string;
+};

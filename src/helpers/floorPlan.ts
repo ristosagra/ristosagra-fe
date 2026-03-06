@@ -162,6 +162,7 @@ function addRoundChair(t: TableData): TableData {
  *  altrimenti trova il lato con più spazio disponibile e aggiunge lì. */
 export function addChair(t: TableData): TableData {
   if (t.shape === "round") {
+    if (t.chairs.length >= 12) return t;
     return addRoundChair(t);
   }
   const bestSide = findBestSideForChair(t);
@@ -173,7 +174,7 @@ export function addChair(t: TableData): TableData {
 /** Rimuove una sedia dal tavolo: per i rotondi toglie l'ultima,
  *  per i rettangolari rimuove dal lato con più sedie. */
 export function removeChair(t: TableData): TableData {
-  if (t.chairs.length === 0) return t;
+  if (t.chairs.length === 1) return t;
   if (t.shape === "round") return { ...t, chairs: t.chairs.slice(0, -1) };
   const free = PLAN_ALL_SIDES.filter((s) => !t.blockedSides.includes(s));
   let maxSide: SideConst | null = null,

@@ -12,6 +12,7 @@ import {
 } from "../../helpers/floorPlan";
 import type {
   FloorPlanData,
+  ModeBtn,
   PlanGroupDrag,
   PlanMode,
   TableData,
@@ -28,6 +29,7 @@ import {
 } from "../../constant/floorPlan";
 import { useNotification } from "../../hooks/useNotification";
 import { NotificationType } from "../../types/notification";
+import { SideBar } from "../../components/core/SideBar";
 
 // ─── Root Component ──────────────────────────────────────────────────────────
 export default function RestaurantFloorPlan() {
@@ -88,6 +90,7 @@ export default function RestaurantFloorPlan() {
     }
   }, [savedPlan]);
 
+  //Serve per la posizione del mouse all'interno della piantina
   const toWorld = useCallback(
     (cx: number, cy: number) => {
       const r = svgRef.current!.getBoundingClientRect();
@@ -99,6 +102,7 @@ export default function RestaurantFloorPlan() {
     [pan, zoom],
   );
 
+  //serve per restituire tutti i tavoli che appartengono ad un gruppo
   const getGroup = useCallback(
     (gid: string) => tables.filter((t) => t.groupId === gid),
     [tables],
@@ -113,6 +117,7 @@ export default function RestaurantFloorPlan() {
     setIsEditing(true);
     setMode("view");
   };
+
   const cancelEditing = () => {
     if (snapshot) {
       setTables(snapshot.tables);
@@ -124,6 +129,7 @@ export default function RestaurantFloorPlan() {
     setCurWall(null);
     setMode("view");
   };
+
   const handleSave = () => {
     const data: FloorPlanData = { id: savedPlan?.id, tables, walls };
     savePlan(data, {
@@ -561,12 +567,7 @@ export default function RestaurantFloorPlan() {
     return { fill, strokeClr, glow, isSel, isMergeAnc, reservedBy, isReserved };
   };
 
-  const modeButtons: {
-    key: PlanMode;
-    label: string;
-    icon: string;
-    color: string;
-  }[] = [
+  const modeButtons: ModeBtn[] = [
     { key: "view", label: "Visualizza", icon: "👁", color: "bg-sky-600" },
     { key: "add4", label: "Tavolo da 4", icon: "➕", color: "bg-emerald-600" },
     { key: "add8", label: "Tavolo da 8", icon: "➕", color: "bg-teal-600" },
@@ -609,6 +610,17 @@ export default function RestaurantFloorPlan() {
         </div>
       </div>
     );
+
+  const legendSideBar = [
+    { cls: "bg-emerald-500", label: "Libero" },
+    { cls: "bg-rose-500", label: "Prenotato" },
+    { cls: "bg-amber-400", label: "Sedia" },
+    { cls: "bg-purple-500", label: "Uniti" },
+    {
+      cls: "bg-amber-900 border border-amber-700",
+      label: "Muro",
+    },
+  ];
 
   return (
     <>
@@ -714,32 +726,16 @@ export default function RestaurantFloorPlan() {
           <div className="flex flex-1 overflow-hidden">
             {/* ── Sidebar (only in edit mode) ── */}
             {isEditing && (
-              <aside className="w-60 bg-neutral-900 border-r border-neutral-700 flex flex-col p-2 gap-1 shrink-0 overflow-y-auto">
-                <p className="text-neutral-500 text-xs tracking-widest uppercase px-1 pt-1 pb-0.5">
-                  Strumenti
-                </p>
-                {modeButtons.map(({ key, label, icon, color }) => {
-                  const isActive = mode === key;
-                  const buttonClass = isActive
-                    ? `${color} text-white border-white/20 shadow-lg`
-                    : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700 border-neutral-700";
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => {
-                        setMode(key);
-                        setSelId(null);
-                        if (key !== "merge") setMergeAnchor(null);
-                        if (key !== "wall" && curWall) finishWall();
-                      }}
-                      className={`flex items-center gap-2 px-2.5 py-2 rounded-md text-xs font-medium transition-all border ${buttonClass}`}
-                    >
-                      <span>{icon}</span>
-                      <span>{label}</span>
-                    </button>
-                  );
-                })}
-
+              <SideBar
+                buttons={modeButtons} // SidebarButton<PlanMode>[]
+                activeKey={mode} // PlanMode
+                onButtonClick={(key) => {
+                  setMode(key);
+                  setSelId(null);
+                  if (key !== "merge") setMergeAnchor(null);
+                  if (key !== "wall" && curWall) finishWall();
+                }}
+              >
                 {/* Merge state */}
                 {mode === "merge" && mergeAnchor && (
                   <div className="bg-purple-900/60 border border-purple-500 rounded-md px-2 py-2 text-xs">
@@ -815,16 +811,7 @@ export default function RestaurantFloorPlan() {
                   <p className="text-neutral-500 text-xs tracking-widest uppercase px-1 pb-1">
                     Legenda
                   </p>
-                  {[
-                    { cls: "bg-emerald-500", label: "Libero" },
-                    { cls: "bg-rose-500", label: "Prenotato" },
-                    { cls: "bg-amber-400", label: "Sedia" },
-                    { cls: "bg-purple-500", label: "Uniti" },
-                    {
-                      cls: "bg-amber-900 border border-amber-700",
-                      label: "Muro",
-                    },
-                  ].map(({ cls, label }) => (
+                  {legendSideBar.map(({ cls, label }) => (
                     <div
                       key={label}
                       className="flex items-center gap-2 px-1 py-0.5 text-xs text-neutral-400"
@@ -834,7 +821,7 @@ export default function RestaurantFloorPlan() {
                     </div>
                   ))}
                 </div>
-              </aside>
+              </SideBar>
             )}
 
             {/* ── Canvas ── */}
@@ -1190,7 +1177,7 @@ export default function RestaurantFloorPlan() {
                           }}
                         >
                           {table.groupId ? "🔗" : ""}
-                          {table.size === 4 ? "T·4" : "T·8"}
+                          {`T·${table.chairs.length}`}
                         </text>
                         <text
                           textAnchor="middle"
