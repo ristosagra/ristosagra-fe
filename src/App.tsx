@@ -3,10 +3,12 @@ import { CustomerHome } from "./pages/Customer/CustomerHome";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { CashierHome } from "./pages/Cashier/CashierHome";
 import { CashierLogin } from "./pages/Cashier/CashierLogin";
+import { Toast } from "./components/core/Toast";
 
 function App() {
   return (
     <BrowserRouter>
+      <Toast />
       <Routes>
         <Route path="/" element={<CustomerHome />} />
         <Route path="/cassa" element={<CashierLogin />} />

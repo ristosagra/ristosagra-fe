@@ -2,17 +2,11 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useFloorPlan, useSaveFloorPlan } from "../../hooks/useFloorPlan";
 import { Loader } from "../../components/core/Loader";
 import {
-  NotificationMessage,
-  type NotificationMessageConst,
-  type Toast,
-} from "../../types/types";
-import {
   addChair,
   chairPos,
-  closestPointOnSeg,
   defaultChairs,
+  hasCollision,
   removeChair,
-  segsIntersect,
   sharedEdge,
   snapIncoming,
 } from "../../helpers/floorPlan";
@@ -24,21 +18,22 @@ import type {
   WallData,
 } from "../../types/floorPlan";
 import {
-  PLAN_CHAIR_DIST,
   PLAN_CHAIR_R,
   PLAN_RECT_H,
   PLAN_RECT_W,
   PLAN_TABLE_R,
-  PLAN_WALL_HALF,
   TableShape,
   type TableShapeConst,
   type TableSizeConst,
 } from "../../constant/floorPlan";
+import { useNotification } from "../../hooks/useNotification";
+import { NotificationType } from "../../types/notification";
 
 // ─── Root Component ──────────────────────────────────────────────────────────
 export default function RestaurantFloorPlan() {
   const { data: savedPlan, isLoading, isError } = useFloorPlan();
   const { mutate: savePlan, isPending: isSaving } = useSaveFloorPlan();
+  const showNotification = useNotification();
 
   const [isEditing, setIsEditing] = useState(false);
   const [tables, setTables] = useState<TableData[]>([]);
@@ -77,7 +72,6 @@ export default function RestaurantFloorPlan() {
   const [selId, setSelId] = useState<string | null>(null);
   const [modal, setModal] = useState({ open: false, tableId: "" });
   const [guest, setGuest] = useState("");
-  const [toast, setToast] = useState<Toast>(null);
   const [hoveredTableId, setHoveredTableId] = useState<string | null>(null);
 
   const mouseDownPos = useRef<{ x: number; y: number } | null>(null);
@@ -94,14 +88,6 @@ export default function RestaurantFloorPlan() {
     }
   }, [savedPlan]);
 
-  const showToast = (
-    msg: string,
-    type: NotificationMessageConst = NotificationMessage.Ok,
-  ) => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 2500);
-  };
-
   const toWorld = useCallback(
     (cx: number, cy: number) => {
       const r = svgRef.current!.getBoundingClientRect();
@@ -116,107 +102,6 @@ export default function RestaurantFloorPlan() {
   const getGroup = useCallback(
     (gid: string) => tables.filter((t) => t.groupId === gid),
     [tables],
-  );
-
-  const hasCollision = useCallback(
-    (
-      x: number,
-      y: number,
-      sz: TableSizeConst,
-      sh: TableShapeConst,
-      excludeIds: string[] = [],
-    ) => {
-      const g = 16;
-      const circR = (size: TableSizeConst) =>
-        PLAN_CHAIR_DIST[size] + PLAN_CHAIR_R;
-      const rectHW = (size: TableSizeConst) =>
-        PLAN_RECT_W[size] / 2 + g + PLAN_CHAIR_R;
-      const rectHH = (size: TableSizeConst) =>
-        PLAN_RECT_H[size] / 2 + g + PLAN_CHAIR_R;
-
-      // ── Tavolo vs Tavolo ──────────────────────────────────────────────────
-      const tableHit = tables.some((t) => {
-        if (excludeIds.includes(t.id)) return false;
-
-        if (sh === TableShape.Round && t.shape === TableShape.Round)
-          return Math.hypot(x - t.x, y - t.y) < circR(sz) + circR(t.size);
-
-        if (sh === "rect" && t.shape === "rect") {
-          const hw1 = rectHW(sz),
-            hh1 = rectHH(sz);
-          const hw2 = rectHW(t.size),
-            hh2 = rectHH(t.size);
-          return !(
-            x + hw1 <= t.x - hw2 ||
-            x - hw1 >= t.x + hw2 ||
-            y + hh1 <= t.y - hh2 ||
-            y - hh1 >= t.y + hh2
-          );
-        }
-
-        const [circ, rect] =
-          sh === TableShape.Round
-            ? [
-                { cx: x, cy: y, r: circR(sz) },
-                { rx: t.x, ry: t.y, hw: rectHW(t.size), hh: rectHH(t.size) },
-              ]
-            : [
-                { cx: t.x, cy: t.y, r: circR(t.size) },
-                { rx: x, ry: y, hw: rectHW(sz), hh: rectHH(sz) },
-              ];
-        const nx = Math.max(
-          rect.rx - rect.hw,
-          Math.min(circ.cx, rect.rx + rect.hw),
-        );
-        const ny = Math.max(
-          rect.ry - rect.hh,
-          Math.min(circ.cy, rect.ry + rect.hh),
-        );
-        return Math.hypot(circ.cx - nx, circ.cy - ny) < circ.r;
-      });
-
-      if (tableHit) return true;
-
-      // ── Tavolo vs Muri ────────────────────────────────────────────────────
-      return walls.some((wl) => {
-        for (let i = 0; i < wl.points.length - 1; i++) {
-          const { x: ax, y: ay } = wl.points[i];
-          const { x: bx, y: by } = wl.points[i + 1];
-
-          if (sh === TableShape.Round) {
-            // Distanza centro cerchio (incluse sedie) dal segmento
-            const cp = closestPointOnSeg(x, y, ax, ay, bx, by);
-            if (Math.hypot(x - cp.x, y - cp.y) < circR(sz) + PLAN_WALL_HALF)
-              return true;
-          } else {
-            // AABB (incluse sedie) vs segmento
-            const hw = rectHW(sz),
-              hh = rectHH(sz);
-            const left = x - hw - PLAN_WALL_HALF,
-              right = x + hw + PLAN_WALL_HALF;
-            const top = y - hh - PLAN_WALL_HALF,
-              bottom = y + hh + PLAN_WALL_HALF;
-
-            // endpoint del segmento dentro il rect?
-            if (ax >= left && ax <= right && ay >= top && ay <= bottom)
-              return true;
-            if (bx >= left && bx <= right && by >= top && by <= bottom)
-              return true;
-
-            // segmento interseca uno dei 4 lati?
-            if (
-              segsIntersect(ax, ay, bx, by, left, top, right, top) ||
-              segsIntersect(ax, ay, bx, by, right, top, right, bottom) ||
-              segsIntersect(ax, ay, bx, by, right, bottom, left, bottom) ||
-              segsIntersect(ax, ay, bx, by, left, bottom, left, top)
-            )
-              return true;
-          }
-        }
-        return false;
-      });
-    },
-    [tables, walls], // ← walls aggiunto
   );
 
   // ── Edit mode control ──
@@ -243,12 +128,13 @@ export default function RestaurantFloorPlan() {
     const data: FloorPlanData = { id: savedPlan?.id, tables, walls };
     savePlan(data, {
       onSuccess: () => {
-        showToast("✓ Piantina salvata!", "ok");
+        showNotification("✓ Piantina salvata!", NotificationType.Ok);
         setIsEditing(false);
         setSnapshot(null);
         setMode("view");
       },
-      onError: () => showToast("❌ Errore nel salvataggio", "err"),
+      onError: () =>
+        showNotification("❌ Errore nel salvataggio", NotificationType.Err),
     });
   };
 
@@ -261,6 +147,27 @@ export default function RestaurantFloorPlan() {
         setPanStart({ mx: e.clientX, my: e.clientY, px: pan.x, py: pan.y });
     },
     [mode, pan],
+  );
+
+  const handleWallDrag = useCallback(
+    (w: { x: number; y: number }) => {
+      if (!wallDrag) return;
+      didPan.current = true;
+      setWalls((p) =>
+        p.map((wl) => {
+          if (wl.id === wallDrag.wallId) {
+            return {
+              ...wl,
+              points: wl.points.map((point, i) =>
+                i === wallDrag.pi ? { x: w.x, y: w.y } : point,
+              ),
+            };
+          }
+          return wl;
+        }),
+      );
+    },
+    [wallDrag],
   );
 
   const onMove = useCallback(
@@ -283,7 +190,10 @@ export default function RestaurantFloorPlan() {
         )
           didDrag.current = true;
         const t = tables.find((t) => t.id === dragging.id);
-        if (t && !hasCollision(nx, ny, t.size, t.shape, [dragging.id]))
+        if (
+          t &&
+          !hasCollision(nx, ny, t.size, t.shape, tables, walls, [dragging.id])
+        )
           setTables((p) =>
             p.map((tbl) =>
               tbl.id === dragging.id ? { ...tbl, x: nx, y: ny } : tbl,
@@ -308,6 +218,8 @@ export default function RestaurantFloorPlan() {
             start.y + dy,
             t.size,
             t.shape,
+            tables,
+            walls,
             groupIds, // escludi tutti i tavoli del gruppo
           );
         });
@@ -326,23 +238,9 @@ export default function RestaurantFloorPlan() {
           );
         }
       }
-      if (wallDrag) {
-        didPan.current = true;
-        setWalls((p) =>
-          p.map((wl) =>
-            wl.id === wallDrag.wallId
-              ? {
-                  ...wl,
-                  points: wl.points.map((pt, i) =>
-                    i === wallDrag.pi ? { x: w.x, y: w.y } : pt,
-                  ),
-                }
-              : wl,
-          ),
-        );
-      }
+      handleWallDrag(w);
     },
-    [panStart, dragging, groupDrag, wallDrag, tables, toWorld, hasCollision],
+    [panStart, dragging, groupDrag, tables, toWorld, walls, handleWallDrag],
   );
 
   const onUp = useCallback(() => {
@@ -378,8 +276,8 @@ export default function RestaurantFloorPlan() {
       }
       if (mode === "add4" || mode === "add8") {
         const sz: TableSizeConst = mode === "add4" ? 4 : 8;
-        if (hasCollision(x, y, sz, shape)) {
-          showToast("❌ Sovrapposizione!", "err");
+        if (hasCollision(x, y, sz, shape, tables, [])) {
+          showNotification("❌ Sovrapposizione!", NotificationType.Err);
           return;
         }
         setTables((p) => [
@@ -395,7 +293,7 @@ export default function RestaurantFloorPlan() {
             chairs: defaultChairs(sz, shape),
           },
         ]);
-        showToast("✓ Tavolo aggiunto!", "ok");
+        showNotification("✓ Tavolo aggiunto!", NotificationType.Ok);
       }
       if (mode === "wall") {
         if (curWall) setCurWall((p) => [...(p ?? []), { x, y }]);
@@ -403,16 +301,16 @@ export default function RestaurantFloorPlan() {
       }
       if (mode === "view") setSelId(null);
     },
-    [mode, shape, hasCollision, curWall, toWorld, isEditing],
+    [mode, shape, curWall, toWorld, isEditing, showNotification, tables],
   );
 
   const finishWall = useCallback(() => {
     if (curWall && curWall.length >= 2) {
       setWalls((p) => [...p, { id: `w-${Date.now()}`, points: curWall }]);
-      showToast("✓ Muro aggiunto!", "ok");
+      showNotification("✓ Muro aggiunto!", NotificationType.Ok);
     }
     setCurWall(null);
-  }, [curWall]);
+  }, [curWall, showNotification]);
 
   const onTableDown = useCallback(
     (e: React.MouseEvent, tid: string) => {
@@ -436,6 +334,102 @@ export default function RestaurantFloorPlan() {
     [isEditing, mode, tables, toWorld, getGroup],
   );
 
+  const handleDeleteMode = useCallback(
+    (t: TableData, tid: string) => {
+      if (t.groupId) {
+        setTables((p) =>
+          p.map((tt) =>
+            tt.groupId === t.groupId
+              ? {
+                  ...tt,
+                  groupId: undefined,
+                  blockedSides: [],
+                  chairs: defaultChairs(tt.size, tt.shape),
+                }
+              : tt,
+          ),
+        );
+        showNotification("🔓 Gruppo separato", NotificationType.Info);
+      } else {
+        setTables((p) => p.filter((tt) => tt.id !== tid));
+      }
+      setSelId(null);
+    },
+    [showNotification],
+  );
+
+  const handleMergeMode = useCallback(
+    (t: TableData, tid: string) => {
+      if (!mergeAnchor) {
+        setMergeAnchor(tid);
+        showNotification(
+          "✓ Ancora impostata — clicca altri tavoli per unirli",
+          NotificationType.Info,
+        );
+        return;
+      }
+
+      const anchorTable = tables.find((tt) => tt.id === mergeAnchor)!;
+      if (
+        tid === mergeAnchor ||
+        (t.groupId && t.groupId === anchorTable?.groupId)
+      ) {
+        showNotification("Tavolo già nel gruppo", NotificationType.Info);
+        return;
+      }
+
+      const anchorGid = anchorTable?.groupId;
+      const incomingGid = t.groupId;
+      const newGid = anchorGid ?? incomingGid ?? `g-${Date.now()}`;
+      const incomingTables = incomingGid
+        ? tables.filter((tt) => tt.groupId === incomingGid)
+        : [t];
+
+      let updatedAll = [...tables];
+
+      for (const incoming of incomingTables) {
+        const liveGroup = updatedAll.filter(
+          (tt) =>
+            tt.groupId === newGid ||
+            tt.id === mergeAnchor ||
+            (anchorGid && tt.groupId === anchorGid),
+        );
+        const liveIncoming = updatedAll.find((tt) => tt.id === incoming.id)!;
+        const snap = snapIncoming(liveIncoming, liveGroup);
+
+        if (snap) {
+          const groupMap = new Map(
+            snap.updatedGroup.map((tt) => [tt.id, tt]),
+          );
+          updatedAll = updatedAll.map((tt) => {
+            if (tt.id === snap.snapped.id)
+              return { ...snap.snapped, groupId: newGid };
+            if (groupMap.has(tt.id))
+              return { ...groupMap.get(tt.id)!, groupId: newGid };
+            return tt;
+          });
+        } else {
+          updatedAll = updatedAll.map((tt) =>
+            tt.id === incoming.id ? { ...tt, groupId: newGid } : tt,
+          );
+        }
+
+        updatedAll = updatedAll.map((tt) =>
+          tt.id === mergeAnchor || (anchorGid && tt.groupId === anchorGid)
+            ? { ...tt, groupId: newGid }
+            : tt,
+        );
+      }
+
+      setTables(updatedAll);
+      showNotification(
+        "🔗 Tavolo unito! Clicca altri o premi Fine unione",
+        NotificationType.Ok,
+      );
+    },
+    [tables, mergeAnchor, showNotification],
+  );
+
   const onTableClick = useCallback(
     (e: React.MouseEvent, tid: string) => {
       e.stopPropagation();
@@ -443,7 +437,6 @@ export default function RestaurantFloorPlan() {
       const t = tables.find((t) => t.id === tid);
       if (!t) return;
 
-      // In VIEW mode (both editing and non-editing): select table
       if (mode === "view") {
         setSelId(tid);
         return;
@@ -451,104 +444,16 @@ export default function RestaurantFloorPlan() {
 
       if (!isEditing) return;
 
-      // DELETE
       if (mode === "delete") {
-        if (t.groupId) {
-          setTables((p) =>
-            p.map((tt) =>
-              tt.groupId === t.groupId
-                ? {
-                    ...tt,
-                    groupId: undefined,
-                    blockedSides: [],
-                    chairs: defaultChairs(tt.size, tt.shape),
-                  }
-                : tt,
-            ),
-          );
-          showToast("🔓 Gruppo separato", "info");
-        } else {
-          setTables((p) => p.filter((tt) => tt.id !== tid));
-        }
-        setSelId(null);
+        handleDeleteMode(t, tid);
         return;
       }
 
-      // MERGE — continuous: set anchor on first click, keep merging until user clicks "Fine"
       if (mode === "merge") {
-        if (!mergeAnchor) {
-          // Start merge: this table becomes the anchor
-          setMergeAnchor(tid);
-          showToast(
-            "✓ Ancora impostata — clicca altri tavoli per unirli",
-            "info",
-          );
-          return;
-        }
-
-        // Don't merge with itself
-        const anchorTable = tables.find((tt) => tt.id === mergeAnchor)!;
-        if (
-          tid === mergeAnchor ||
-          (t.groupId && t.groupId === anchorTable?.groupId)
-        ) {
-          showToast("Tavolo già nel gruppo", "info");
-          return;
-        }
-
-        // Determine group id
-        const anchorGid = anchorTable?.groupId;
-        const incomingGid = t.groupId;
-        const newGid = anchorGid ?? incomingGid ?? `g-${Date.now()}`;
-
-        const incomingTables = incomingGid
-          ? tables.filter((tt) => tt.groupId === incomingGid)
-          : [t];
-
-        let updatedAll = [...tables];
-
-        for (const incoming of incomingTables) {
-          // Re-read current group state from updatedAll
-          const liveGroup = updatedAll.filter(
-            (tt) =>
-              tt.groupId === newGid ||
-              tt.id === mergeAnchor ||
-              (anchorGid && tt.groupId === anchorGid),
-          );
-          const liveIncoming = updatedAll.find((tt) => tt.id === incoming.id)!;
-
-          const snap = snapIncoming(liveIncoming, liveGroup);
-          if (snap) {
-            const groupMap = new Map(
-              snap.updatedGroup.map((tt) => [tt.id, tt]),
-            );
-            updatedAll = updatedAll.map((tt) => {
-              if (tt.id === snap.snapped.id)
-                return { ...snap.snapped, groupId: newGid };
-              if (groupMap.has(tt.id))
-                return { ...groupMap.get(tt.id)!, groupId: newGid };
-              return tt;
-            });
-          } else {
-            updatedAll = updatedAll.map((tt) =>
-              tt.id === incoming.id ? { ...tt, groupId: newGid } : tt,
-            );
-          }
-          // Ensure anchor and its group are tagged
-          updatedAll = updatedAll.map((tt) =>
-            tt.id === mergeAnchor || (anchorGid && tt.groupId === anchorGid)
-              ? { ...tt, groupId: newGid }
-              : tt,
-          );
-        }
-
-        setTables(updatedAll);
-        // Update anchor to reflect the group (keep merging)
-        setMergeAnchor(mergeAnchor);
-        showToast("🔗 Tavolo unito! Clicca altri o premi Fine unione", "ok");
+        handleMergeMode(t, tid);
       }
     },
-    [mode, tables, mergeAnchor, isEditing],
+    [mode, tables, isEditing, handleDeleteMode, handleMergeMode],
   );
 
   const onWallClick = (wallId: string, e: React.MouseEvent) => {
@@ -620,6 +525,31 @@ export default function RestaurantFloorPlan() {
   const selSeats = selGroup.reduce((s, t) => s + t.chairs.length, 0);
   const selReserved = selGroup.some((t) => t.reserved);
   const selName = selGroup.find((t) => t.reservedBy)?.reservedBy;
+
+  // Helper to compute table colors and state
+  const getTableStyle = (table: TableData) => {
+    const grp = table.groupId ? getGroup(table.groupId) : [table];
+    const isReserved = grp.some((t) => t.reserved);
+    const fill = isReserved ? "#dc2626" : "#16a34a";
+    const strokeClr = isReserved ? "#991b1b" : "#166534";
+    const glow = table.groupId
+      ? isReserved
+        ? "rgba(239,68,68,0.5)"
+        : "rgba(168,85,247,0.5)"
+      : isReserved
+        ? "rgba(239,68,68,0.4)"
+        : "rgba(34,197,94,0.4)";
+    const isSel =
+      selId === table.id ||
+      (selTable?.groupId && selTable.groupId === table.groupId);
+    const isMergeAnc =
+      mergeAnchor === table.id ||
+      (mergeAnchor &&
+        tables.find((t) => t.id === mergeAnchor)?.groupId &&
+        tables.find((t) => t.id === mergeAnchor)?.groupId === table.groupId);
+    const reservedBy = grp.find((t) => t.reservedBy)?.reservedBy;
+    return { fill, strokeClr, glow, isSel, isMergeAnc, reservedBy, isReserved };
+  };
 
   const modeButtons: {
     key: PlanMode;
@@ -743,14 +673,7 @@ export default function RestaurantFloorPlan() {
               </div>
 
               {/* Edit / Save / Cancel */}
-              {!isEditing ? (
-                <button
-                  onClick={startEditing}
-                  className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold px-5 py-3 rounded-lg border border-amber-400 transition-colors h-full cursor-pointer"
-                >
-                  ✏️ Modifica
-                </button>
-              ) : (
+              {isEditing ? (
                 <div className="flex gap-2 h-full">
                   <button
                     onClick={cancelEditing}
@@ -767,6 +690,13 @@ export default function RestaurantFloorPlan() {
                     {isSaving ? "⏳ Salvataggio…" : "💾 Salva"}
                   </button>
                 </div>
+              ) : (
+                <button
+                  onClick={startEditing}
+                  className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold px-5 py-3 rounded-lg border border-amber-400 transition-colors h-full cursor-pointer"
+                >
+                  ✏️ Modifica
+                </button>
               )}
             </div>
           </div>
@@ -778,22 +708,27 @@ export default function RestaurantFloorPlan() {
                 <p className="text-neutral-500 text-xs tracking-widest uppercase px-1 pt-1 pb-0.5">
                   Strumenti
                 </p>
-                {modeButtons.map(({ key, label, icon, color }) => (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      setMode(key);
-                      setSelId(null);
-                      if (key !== "merge") setMergeAnchor(null);
-                      if (key !== "wall" && curWall) finishWall();
-                    }}
-                    className={`flex items-center gap-2 px-2.5 py-2 rounded-md text-xs font-medium transition-all border
-                  ${mode === key ? `${color} text-white border-white/20 shadow-lg` : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700 border-neutral-700"}`}
-                  >
-                    <span>{icon}</span>
-                    <span>{label}</span>
-                  </button>
-                ))}
+                {modeButtons.map(({ key, label, icon, color }) => {
+                  const isActive = mode === key;
+                  const buttonClass = isActive
+                    ? `${color} text-white border-white/20 shadow-lg`
+                    : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700 border-neutral-700";
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        setMode(key);
+                        setSelId(null);
+                        if (key !== "merge") setMergeAnchor(null);
+                        if (key !== "wall" && curWall) finishWall();
+                      }}
+                      className={`flex items-center gap-2 px-2.5 py-2 rounded-md text-xs font-medium transition-all border ${buttonClass}`}
+                    >
+                      <span>{icon}</span>
+                      <span>{label}</span>
+                    </button>
+                  );
+                })}
 
                 {/* Merge state */}
                 {mode === "merge" && mergeAnchor && (
@@ -900,16 +835,6 @@ export default function RestaurantFloorPlan() {
                   {hints[mode]}
                 </div>
               </div>
-
-              {/* Toast */}
-              {toast && (
-                <div
-                  className={`absolute top-12 left-1/2 -translate-x-1/2 z-30 text-white text-xs px-4 py-2 rounded-full shadow-xl border
-              ${toast.type === "err" ? "bg-rose-700 border-rose-500" : toast.type === "ok" ? "bg-emerald-700 border-emerald-500" : "bg-purple-700 border-purple-500"}`}
-                >
-                  {toast.msg}
-                </div>
-              )}
 
               {/* Empty state */}
               {tables.length === 0 && walls.length === 0 && (
@@ -1119,31 +1044,15 @@ export default function RestaurantFloorPlan() {
 
                   {/* Tables */}
                   {tables.map((table) => {
-                    const grp = table.groupId
-                      ? getGroup(table.groupId)
-                      : [table];
-                    const isReserved = grp.some((t) => t.reserved);
-                    const fill = isReserved ? "#dc2626" : "#16a34a";
-                    const strokeClr = isReserved ? "#991b1b" : "#166534";
-                    const glow = table.groupId
-                      ? isReserved
-                        ? "rgba(239,68,68,0.5)"
-                        : "rgba(168,85,247,0.5)"
-                      : isReserved
-                        ? "rgba(239,68,68,0.4)"
-                        : "rgba(34,197,94,0.4)";
-                    const isSel =
-                      selId === table.id ||
-                      (selTable?.groupId && selTable.groupId === table.groupId);
-                    const isMergeAnc =
-                      mergeAnchor === table.id ||
-                      (mergeAnchor &&
-                        tables.find((t) => t.id === mergeAnchor)?.groupId &&
-                        tables.find((t) => t.id === mergeAnchor)?.groupId ===
-                          table.groupId);
-                    const reservedBy = grp.find(
-                      (t) => t.reservedBy,
-                    )?.reservedBy;
+                    const {
+                      fill,
+                      strokeClr,
+                      glow,
+                      isSel,
+                      isMergeAnc,
+                      reservedBy,
+                      isReserved,
+                    } = getTableStyle(table);
 
                     return (
                       <g
@@ -1425,10 +1334,14 @@ export default function RestaurantFloorPlan() {
                     })()}
                   </div>
                 </div>
-                <label className="block text-xs font-bold text-neutral-400 uppercase tracking-widest mb-2">
+                <label
+                  htmlFor="guest-input"
+                  className="block text-xs font-bold text-neutral-400 uppercase tracking-widest mb-2"
+                >
                   Nome cliente
                 </label>
                 <input
+                  id="guest-input"
                   type="text"
                   value={guest}
                   onChange={(e) => setGuest(e.target.value)}
