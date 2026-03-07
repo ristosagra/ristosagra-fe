@@ -3,9 +3,11 @@ import { Container } from "../../components/core/Container";
 import { Label } from "../../components/core/Label";
 import { Loader } from "../../components/core/Loader";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
-import { useMenu } from "../../hooks/useMenu";
-import type { Dish, MenuProps } from "../../types/orders";
+import { useMenu } from "../../features/menu/hook/useMenu";
+import type { MenuProps } from "../../features/orders/types/orders";
 import { ColorVariants } from "../../constant/colors";
+import type { Dish } from "../../types/menuOrder";
+import { groupDishesByCategory } from "../../features/menu/utils/menuUtils";
 
 export default function Menu({ cartItems, setCartItems }: MenuProps) {
   const { data: dishes, isLoading, isError } = useMenu();
@@ -21,14 +23,7 @@ export default function Menu({ cartItems, setCartItems }: MenuProps) {
     );
   }
 
-  const grouped = dishes!.reduce(
-    (acc, dish) => {
-      if (!acc[dish.category]) acc[dish.category] = [];
-      acc[dish.category].push(dish);
-      return acc;
-    },
-    {} as Record<string, Dish[]>,
-  );
+  const grouped = groupDishesByCategory(dishes!);
 
   return (
     <Container>

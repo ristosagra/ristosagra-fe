@@ -1,5 +1,5 @@
 import { TableShape } from "../constant/floorPlan";
-import type { TableData } from "../../../types/floorPlan";
+import type { TableData } from "../types/floorPlan";
 import type { ModalType } from "../../../types/general";
 import { addChair, removeChair } from "../helpers/chair";
 

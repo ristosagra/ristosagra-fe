@@ -8,7 +8,7 @@ import type {
   WallData,
   WallDragType,
   WallType,
-} from "../../../types/floorPlan";
+} from "../types/floorPlan";
 import type { ModalType } from "../../../types/general";
 import { type TableShapeConst, TableShape } from "../constant/floorPlan";
 

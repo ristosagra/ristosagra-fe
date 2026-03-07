@@ -1,5 +1,5 @@
 import { PLAN_RECT_H, PLAN_RECT_W, Side } from "../constant/floorPlan";
-import type { TableData } from "../../../types/floorPlan";
+import type { TableData } from "../types/floorPlan";
 import { redistributeOnBlock } from "./chair";
 
 /** Aggancia (snap) un tavolo in ingresso al lato più vicino di un tavolo nel gruppo.

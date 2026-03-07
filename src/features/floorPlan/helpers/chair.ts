@@ -9,7 +9,7 @@ import {
   type TableSizeConst,
   type TableShapeConst,
 } from "../constant/floorPlan";
-import type { TableData, CoordinateType } from "../../../types/floorPlan";
+import type { TableData, CoordinateType } from "../types/floorPlan";
 
 /** Trova il lato con più capacità libera su cui aggiungere una sedia.
  *  Ignora i lati bloccati dall'unione con altri tavoli. */

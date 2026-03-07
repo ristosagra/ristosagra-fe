@@ -2,7 +2,7 @@ import { Plus } from "lucide-react";
 import { Button } from "./core/Button";
 import { CounterCard } from "./core/CounterCard";
 import { ColorVariants } from "../constant/colors";
-import type { Dish, MenuProps } from "../types/orders";
+import type { Dish, MenuProps } from "../features/orders/types/orders";
 import {
   decrementFunction,
   incrementFunction,

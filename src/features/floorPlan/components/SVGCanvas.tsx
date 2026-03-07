@@ -7,7 +7,7 @@ import type {
   WallData,
   WallDragType,
   WallType,
-} from "../../../types/floorPlan";
+} from "../types/floorPlan";
 import {
   PLAN_CHAIR_R,
   PLAN_RECT_H,

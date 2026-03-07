@@ -1,5 +1,5 @@
-import type { FloorPlanData } from "../../types/floorPlan";
-import { httpClient } from "../client/httpClient";
+import { httpClient } from "../../../services/client/httpClient";
+import type { FloorPlanData } from "../types/floorPlan";
 
 export const FloorPlanService = {
   getFloorPlan: (): Promise<FloorPlanData | null> =>

@@ -1,6 +1,6 @@
 import React from "react";
 import { BookOpenText } from "lucide-react";
-import type { TableData } from "../../../types/floorPlan";
+import type { TableData } from "../types/floorPlan";
 import { Modal } from "../../../components/core/Modal";
 import type { ModalType } from "../../../types/general";
 

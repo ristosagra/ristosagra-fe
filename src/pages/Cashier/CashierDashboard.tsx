@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { useOrderPayment, useOrders } from "../../hooks/useOrders";
+import {
+  useOrderPayment,
+  useOrders,
+} from "../../features/orders/hook/useOrders";
 import { Label } from "../../components/core/Label";
 import { Container } from "../../components/core/Container";
 import { Loader } from "lucide-react";
 import { Input } from "../../components/core/Input";
 import { ColorVariants } from "../../constant/colors";
-import type { CartType } from "../../types/orders";
+import type { CartType } from "../../features/orders/types/orders";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
 
 export const CashierDashboard = () => {

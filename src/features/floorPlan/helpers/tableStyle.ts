@@ -1,4 +1,4 @@
-import type { TableData } from "../../../types/floorPlan";
+import type { TableData } from "../types/floorPlan";
 
 //funzione per avere la dimensione del tavolo
 export const getTableStyle = (

@@ -8,7 +8,7 @@ import type {
   WallType,
   CoordinateType,
   SnapshotType,
-} from "../../../types/floorPlan";
+} from "../types/floorPlan";
 import { NotificationType } from "../../../types/notification";
 import { useSaveFloorPlan } from "../hook/useSaveFloorPlan";
 

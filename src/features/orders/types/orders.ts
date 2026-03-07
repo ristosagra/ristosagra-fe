@@ -1,10 +1,4 @@
-export interface Dish {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-}
+import type { Dish } from "../../../types/menuOrder";
 
 export type CartType = { dish: Dish; quantity: number };
 

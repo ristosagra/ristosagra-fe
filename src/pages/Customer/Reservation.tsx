@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Container } from "../../components/core/Container";
 import { Label } from "../../components/core/Label";
 import { ColorVariants } from "../../constant/colors";
-import type { CartType } from "../../types/orders";
+import type { CartType } from "../../features/orders/types/orders";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
+import { calcTotal } from "../../helpers/calcTotal";
 
 interface ReservationProps {
   cartItems: CartType[];
@@ -13,10 +14,7 @@ interface ReservationProps {
 export const Reservation = ({ cartItems, orderNumber }: ReservationProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const total = cartItems.reduce(
-    (acc, item) => acc + item.dish.price * item.quantity,
-    0,
-  );
+  const total = calcTotal(cartItems);
 
   return (
     <Container>

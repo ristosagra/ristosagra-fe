@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { FloorPlanService } from "../../../services/api/floorPlan";
-import type { FloorPlanData } from "../../../types/floorPlan";
+import type { FloorPlanData } from "../types/floorPlan";
+import { FloorPlanService } from "../api/floorPlan";
 
 export const useSaveFloorPlan = () => {
   const queryClient = useQueryClient();

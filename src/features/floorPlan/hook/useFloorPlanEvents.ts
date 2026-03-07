@@ -9,7 +9,7 @@ import type {
   WallData,
   WallDragType,
   WallType,
-} from "../../../types/floorPlan";
+} from "../types/floorPlan";
 import type { TableShapeConst, TableSizeConst } from "../constant/floorPlan";
 import { hasCollision } from "../helpers/collision";
 import { NotificationType } from "../../../types/notification";

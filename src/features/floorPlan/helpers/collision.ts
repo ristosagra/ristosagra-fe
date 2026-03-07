@@ -8,11 +8,7 @@ import {
   type TableSizeConst,
   type TableShapeConst,
 } from "../constant/floorPlan";
-import type {
-  CoordinateType,
-  TableData,
-  WallData,
-} from "../../../types/floorPlan";
+import type { CoordinateType, TableData, WallData } from "../types/floorPlan";
 import { closestPointOnSeg, segsIntersect } from "./geometry";
 
 /** Verifica se un singolo segmento di muro (AB) collide con un tavolo nella posizione data.

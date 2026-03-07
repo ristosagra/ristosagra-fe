@@ -5,7 +5,7 @@ import { Reservation } from "./Reservation";
 import Menu from "./Menu";
 import { NavBar } from "../../components/core/NavBar";
 import { PagesCustomer, type PagesCustomerConst } from "../../constant/pages";
-import type { CartType } from "../../types/orders";
+import type { CartType } from "../../features/orders/types/orders";
 
 export const CustomerHome = () => {
   const [page, setPage] = useState<PagesCustomerConst>(PagesCustomer.HOME);

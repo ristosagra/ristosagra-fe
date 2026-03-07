@@ -1,4 +1,4 @@
-import type { FloorPlanData } from "../../../types/floorPlan";
+import type { FloorPlanData } from "../types/floorPlan";
 import { useFloorPlanEvents } from "../hook/useFloorPlanEvents";
 import { useFloorPlanState } from "../hook/useFloorPlanState";
 import { FooterFloorPlan } from "./FooterFloorPlan";

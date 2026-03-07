@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { FloorPlanService } from "../../../services/api/floorPlan";
-import { generateFakeFloorPlan } from "../../../mock/floorPlan";
-import type { FloorPlanData } from "../../../types/floorPlan";
+import { generateFakeFloorPlan } from "../mock/floorPlan";
+import type { FloorPlanData } from "../types/floorPlan";
+import { FloorPlanService } from "../api/floorPlan";
 
 export const useFloorPlan = () => {
   const isMocking = import.meta.env.VITE_MOCKING === "true";

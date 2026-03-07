@@ -5,11 +5,12 @@ import { Button } from "../../components/core/Button";
 import { type Dispatch, type SetStateAction } from "react";
 import { Loader } from "../../components/core/Loader";
 import { ColorVariants } from "../../constant/colors";
-import { useOrderNumber } from "../../hooks/useOrders";
-import type { CartType } from "../../types/orders";
+import { useOrderNumber } from "../../features/orders/hook/useOrders";
+import type { CartType } from "../../features/orders/types/orders";
 import { ButtonDimensions } from "../../constant/button";
 import { type PagesCustomerConst, PagesCustomer } from "../../constant/pages";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
+import { calcTotal } from "../../helpers/calcTotal";
 
 interface CartProps {
   cartItems: CartType[];
@@ -28,10 +29,7 @@ export default function Cart({
 }: CartProps) {
   const { mutate: confirmOrder, isPending } = useOrderNumber();
 
-  const total = cartItems.reduce(
-    (acc, item) => acc + item.dish.price * item.quantity,
-    0,
-  );
+  const total = calcTotal(cartItems);
 
   if (cartItems.length === 0) {
     return (

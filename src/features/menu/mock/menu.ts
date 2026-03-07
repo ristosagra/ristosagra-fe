@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
-import type { Dish } from "../types/orders";
-import { DISH_CATEGORIES } from "../constant/orders";
+import { DISH_CATEGORIES } from "../constant/menu";
+import type { Dish } from "../../../types/menuOrder";
 
 export const generateFakeDish = (): Dish => ({
   id: 1,

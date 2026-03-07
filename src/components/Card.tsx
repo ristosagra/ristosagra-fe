@@ -4,7 +4,7 @@ import { Button } from "./core/Button";
 import { CardContainer } from "./core/CardContainer";
 import { Label } from "./core/Label";
 import { Counter } from "./Counter";
-import type { CartType, Dish } from "../types/orders";
+import type { CartType, Dish } from "../features/orders/types/orders";
 import { LabelDimensions, LabelTags, LabelWeight } from "../constant/label";
 import { ButtonDimensions } from "../constant/button";
 

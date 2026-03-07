@@ -1,4 +1,4 @@
-import type { CartType, Dish } from "../types/orders";
+import type { CartType, Dish } from "../features/orders/types/orders";
 
 interface CounterFunctionsProps {
   dish: Dish;
