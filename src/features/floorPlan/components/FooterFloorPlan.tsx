@@ -58,7 +58,7 @@ export const FooterFloorPlan = ({
   };
 
   return (
-    <div className="shrink-0 bg-neutral-900 border-t border-neutral-700 px-5 py-3 flex items-center gap-4 w-full">
+    <div className="shrink-0 bg-neutral-900 border-t border-neutral-700 px-5 py-3 flex items-center gap-4 w-full bottom-0 absolute">
       <div className="min-w-40 shrink-0">
         <div className="text-white font-bold text-sm flex items-center gap-2">
           {selTable.groupId

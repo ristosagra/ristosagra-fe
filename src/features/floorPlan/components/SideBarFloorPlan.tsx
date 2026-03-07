@@ -49,7 +49,6 @@ export const SideBarFloorPlan = ({
   ];
 
   const modeButtons: ModeBtn[] = [
-    { key: "view", label: "Visualizza", icon: "👁", color: "bg-sky-600" },
     { key: "add4", label: "Tavolo da 4", icon: "➕", color: "bg-emerald-600" },
     { key: "add8", label: "Tavolo da 8", icon: "➕", color: "bg-teal-600" },
     {
