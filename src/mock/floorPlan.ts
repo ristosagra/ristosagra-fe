@@ -1,4 +1,8 @@
-import { Side, TableShape, type SideConst } from "../constant/floorPlan";
+import {
+  Side,
+  TableShape,
+  type SideConst,
+} from "../features/floorPlan/constant/floorPlan";
 import type {
   Chair,
   FloorPlanData,

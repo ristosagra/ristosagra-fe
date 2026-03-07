@@ -2,7 +2,7 @@ import type {
   SideConst,
   TableShapeConst,
   TableSizeConst,
-} from "../constant/floorPlan";
+} from "../features/floorPlan/constant/floorPlan";
 
 export interface Chair {
   side: SideConst | "round";

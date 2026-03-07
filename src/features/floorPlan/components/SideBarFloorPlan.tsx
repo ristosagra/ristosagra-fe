@@ -1,14 +1,14 @@
 import React from "react";
-import { SideBar } from "../core/SideBar";
+import { SideBar } from "../../../components/core/SideBar";
+import { type TableShapeConst, TableShape } from "../constant/floorPlan";
+import { useNotification } from "../../../hooks/useNotification";
 import type {
-  ModeBtn,
+  WallType,
   PlanMode,
   WallData,
-  WallType,
-} from "../../types/floorPlan";
-import { NotificationType } from "../../types/notification";
-import { useNotification } from "../../hooks/useNotification";
-import { TableShape, type TableShapeConst } from "../../constant/floorPlan";
+  ModeBtn,
+} from "../../../types/floorPlan";
+import { NotificationType } from "../../../types/notification";
 
 interface SideBarFloorPlanProps {
   curWall: WallType;

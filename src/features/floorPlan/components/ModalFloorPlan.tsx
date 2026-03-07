@@ -1,8 +1,8 @@
 import React from "react";
-import { Modal } from "../core/Modal";
 import { BookOpenText } from "lucide-react";
-import type { TableData } from "../../types/floorPlan";
-import type { ModalType } from "../../types/general";
+import type { TableData } from "../../../types/floorPlan";
+import { Modal } from "../../../components/core/Modal";
+import type { ModalType } from "../../../types/general";
 
 interface ModalFloorPlanProps {
   tables: TableData[];

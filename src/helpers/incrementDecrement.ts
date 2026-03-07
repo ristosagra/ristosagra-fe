@@ -5,7 +5,7 @@ interface CounterFunctionsProps {
   setCartItems: React.Dispatch<React.SetStateAction<CartType[]>>;
 }
 
-export const incrementOrderFunction = ({
+export const incrementFunction = ({
   dish,
   setCartItems,
 }: CounterFunctionsProps) => {
@@ -19,7 +19,7 @@ export const incrementOrderFunction = ({
   });
 };
 
-export const decrementOrderFunction = ({
+export const decrementFunction = ({
   dish,
   setCartItems,
 }: CounterFunctionsProps) => {
