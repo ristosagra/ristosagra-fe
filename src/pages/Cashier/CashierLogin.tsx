@@ -21,9 +21,10 @@ export function CashierLogin() {
     login(
       { username, password },
       {
-        onSuccess: ({ success }) => {
+        onSuccess: ({ success, token }) => {
+          console.log(token);
           if (success) {
-            sessionStorage.setItem("cashier_auth", "true");
+            localStorage.setItem("auth_token", token);
             navigate("/cassa/dashboard");
           } else {
             setError("Credenziali errate");
