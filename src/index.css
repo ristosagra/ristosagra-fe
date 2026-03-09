@@ -1,63 +1,119 @@
 @import "tailwindcss";
-
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
+@import url("https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap");
 
 html,
 body,
 #root {
   height: 100%;
   overflow: hidden;
-  margin: 0;
-  padding: 0;
 }
 
-main {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  height: 100%;
-  overflow: hidden;
+body {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  transition:
+    background 0.3s,
+    color 0.3s;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  outline: none;
 }
-
+input,
+select,
+textarea {
+  font-family: var(--font-body);
+  outline: none;
+}
+input:focus {
+  outline: none;
+}
 button:focus,
 button:focus-visible {
   outline: none;
 }
 
-input,
-select,
-textarea {
-  border: 1px solid #d1d5db;
-  padding: 0.5em;
-  border-radius: 4px;
-  font-size: 1em;
-  font-family: inherit;
-  color: rgb(47, 47, 47);
+/* ── DARK (default) ── */
+:root,
+[data-theme="dark"] {
+  --bg-base: #0f0e0d;
+  --bg-surface: #181614;
+  --bg-raised: #221f1c;
+  --bg-overlay: #2c2824;
+  --bg-hover: #332e29;
+
+  --brand: #e8712a;
+  --brand-dim: #c45a18;
+  --brand-glow: rgba(232, 113, 42, 0.18);
+  --brand-subtle: rgba(232, 113, 42, 0.08);
+
+  --text-colored: #e8712a;
+  --text-primary: #f5f0eb;
+  --text-secondary: #a89880;
+  --text-muted: #6b5e52;
+  --text-inverse: #0f0e0d;
+
+  --border: rgba(255, 255, 255, 0.25);
+  --border-medium: rgba(255, 255, 255, 0.12);
+  --border-brand: rgba(232, 113, 42, 0.35);
+
+  --success: #3d9e6b;
+  --success-bg: rgba(61, 158, 107, 0.1);
+  --danger: #d95f5f;
+  --danger-bg: rgba(217, 95, 95, 0.1);
+  --info: #5b8fd9;
+  --info-bg: rgba(91, 143, 217, 0.1);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --shadow-brand: 0 4px 20px rgba(232, 113, 42, 0.25);
+
+  --font-display: "DM Serif Display", Georgia, serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
 }
-input:focus {
-  outline: 0.5px solid black;
+
+/* ── LIGHT ── */
+[data-theme="light"] {
+  --bg-base: #faf8f5;
+  --bg-surface: #ffffff;
+  --bg-raised: #f4f0eb;
+  --bg-overlay: #ede8e0;
+  --bg-hover: #e8e0d5;
+
+  --brand: #d4601e;
+  --brand-dim: #b84f14;
+  --brand-glow: rgba(212, 96, 30, 0.15);
+  --brand-subtle: rgba(212, 96, 30, 0.07);
+
+  --text-primary: #1a1614;
+  --text-secondary: #6b5e52;
+  --text-muted: #a89880;
+  --text-inverse: #ffffff;
+
+  --border: rgba(0, 0, 0, 0.08);
+  --border-medium: rgba(0, 0, 0, 0.13);
+  --border-brand: rgba(212, 96, 30, 0.3);
+
+  --success: #2d7d52;
+  --success-bg: rgba(45, 125, 82, 0.08);
+  --danger: #c0392b;
+  --danger-bg: rgba(192, 57, 43, 0.08);
+  --info: #2563b0;
+  --info-bg: rgba(37, 99, 176, 0.08);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.14);
+  --shadow-brand: 0 4px 20px rgba(212, 96, 30, 0.2);
+
+  --font-display: "DM Serif Display", Georgia, serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
 }

@@ -6,6 +6,7 @@ import Menu from "./Menu";
 import { NavBar } from "../../components/core/NavBar";
 import { PagesCustomer, type PagesCustomerConst } from "../../constant/pages";
 import type { CartType } from "../../features/orders/types/orders";
+import { Home } from "./Home";
 
 export const CustomerHome = () => {
   const [page, setPage] = useState<PagesCustomerConst>(PagesCustomer.HOME);
@@ -46,7 +47,7 @@ export const CustomerHome = () => {
       </NavBar>
 
       <main className="flex-1 overflow-hidden bg-gray-500 pt-18">
-        {page === PagesCustomer.HOME && <div></div>}
+        {page === PagesCustomer.HOME && <Home setPage={setPage} />}
         {page === PagesCustomer.MENU && (
           <Menu cartItems={cartItems} setCartItems={setCartItems} />
         )}
