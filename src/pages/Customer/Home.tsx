@@ -1,8 +1,8 @@
 import { NotebookPen } from "lucide-react";
 import { PagesCustomer, type PagesCustomerConst } from "../../constant/pages";
-import { tokens } from "../../constant/tokens";
 import { Button } from "../../components/core/Button";
 import { ButtonDimensions } from "../../constant/button";
+import { ThemeVariants } from "../../constant/colors";
 
 export const Home = ({
   setPage,
@@ -12,29 +12,21 @@ export const Home = ({
   return (
     <div className="h-full flex flex-col items-center justify-center gap-6 p-6">
       <div
-        style={{
-          fontFamily: tokens.font.display,
-        }}
-        className="text-5xl leading-none text-center"
+        className={`text-5xl leading-none text-center ${ThemeVariants.fontFamily.display}`}
       >
         Benvenuto da{" "}
-        <em style={{ color: tokens.brand.default }} className="italic">
+        <em className={`italic ${ThemeVariants.colors.text.brand}`}>
           Ristosagra
         </em>
       </div>
       <p
-        style={{
-          color: tokens.text.secondary,
-          fontSize: 15,
-          textAlign: "center",
-          maxWidth: 360,
-        }}
+        className={`${ThemeVariants.colors.text.secondary} text-[15px] text-center max-w-90`}
       >
         Sfoglia il menù e aggiungi i piatti al carrello.
         <br />
         Quando sei pronto, invia il tuo ordine.
       </p>
-      <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+      <div className="flex gap-2.5 mt-2">
         <Button
           dimension={ButtonDimensions.xlarge}
           onClick={() => setPage(PagesCustomer.MENU)}
