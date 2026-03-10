@@ -5,7 +5,6 @@ import {
   type LabelTagsConst,
   type LabelWeightConst,
 } from "../../constant/label";
-import { ColorVariants } from "../../constant/colors";
 
 export interface LabelProps {
   label: string;
@@ -16,17 +15,19 @@ export interface LabelProps {
   noMargin?: boolean;
   weight?: LabelWeightConst;
   additionalClasses?: string;
+  fontFamily?: string;
 }
 
 export const Label = ({
   label,
-  color = ColorVariants.text.white,
+  color,
   colorBorderBottom,
   tag,
   size,
   noMargin,
   weight,
   additionalClasses = "",
+  fontFamily,
 }: LabelProps) => {
   const Tag = tag as React.ElementType;
   const borderClass = colorBorderBottom ? "border-b" : "";
@@ -42,7 +43,7 @@ export const Label = ({
 
   return (
     <Tag
-      className={`${textSize} ${color} ${marginBottom} ${borderClass} ${colorBorderBottom} ${labelWeight} ${additionalClasses}`}
+      className={`${textSize} ${color} ${marginBottom} ${borderClass} ${colorBorderBottom} ${labelWeight} ${additionalClasses} ${fontFamily}`}
     >
       {label}
     </Tag>

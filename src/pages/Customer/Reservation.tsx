@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Container } from "../../components/core/Container";
 import { Label } from "../../components/core/Label";
-import { ColorVariants } from "../../constant/colors";
 import type { CartType } from "../../features/orders/types/orders";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
 import { calcTotal } from "../../helpers/calcTotal";
+import { ThemeVariants } from "../../constant/colors";
 
 interface ReservationProps {
   cartItems: CartType[];
@@ -18,35 +18,39 @@ export const Reservation = ({ cartItems, orderNumber }: ReservationProps) => {
 
   return (
     <Container>
-      <div className="min-h-full flex flex-col justify-center items-center py-10 px-10">
+      <div className="min-h-full flex flex-col justify-center items-center py-10 px-5">
         {/* Numero ordine */}
-        <div className="flex flex-col items-center justify-center bg-gray-900 rounded-2xl py-10 w-full gap-2">
+        <div
+          className={`${ThemeVariants.colors.bg.surface} ${ThemeVariants.colors.border.all.brand} ${ThemeVariants.borderRadius.xl}  flex flex-col items-center justify-center py-10 w-full gap-2`}
+        >
           <Label
             label="Il tuo numero ordine è"
             tag={LabelTags.p}
             size={LabelDimensions.medium}
-            color={ColorVariants.text.white}
+            color={ThemeVariants.colors.text.white}
             noMargin
           />
           <Label
             label={`${orderNumber}`}
             tag={LabelTags.p}
             size={LabelDimensions.xxxxlarge}
-            color={ColorVariants.text.orange}
+            color={ThemeVariants.colors.text.brand}
             weight={LabelWeight.bold}
             noMargin
           />
           <Label
             label="Mostralo alla cassa per ritirare il tuo ordine"
             tag={LabelTags.p}
-            size={LabelDimensions.small}
-            color={ColorVariants.text.white}
+            size={LabelDimensions.medium}
+            color={ThemeVariants.colors.text.secondary}
             noMargin
           />
         </div>
 
         {/* Riepilogo */}
-        <div className="bg-gray-900 rounded-2xl overflow-hidden w-full mt-5">
+        <div
+          className={`${ThemeVariants.colors.bg.surface} ${ThemeVariants.colors.border.all.brand} ${ThemeVariants.borderRadius.xl} overflow-hidden w-full mt-5`}
+        >
           <button
             onClick={() => setIsOpen(!isOpen)}
             className="w-full flex justify-between items-center p-4"
@@ -56,11 +60,11 @@ export const Reservation = ({ cartItems, orderNumber }: ReservationProps) => {
               tag={LabelTags.p}
               size={LabelDimensions.medium}
               weight={LabelWeight.bold}
-              color={ColorVariants.text.white}
+              color={ThemeVariants.colors.text.white}
               noMargin
             />
             <span
-              className={`text-white transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+              className={`${ThemeVariants.colors.text.white} transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
             >
               ▼
             </span>
@@ -71,21 +75,21 @@ export const Reservation = ({ cartItems, orderNumber }: ReservationProps) => {
               {cartItems.map((item) => (
                 <div
                   key={item.dish.id}
-                  className="flex justify-between items-center border-t border-gray-700 pt-3"
+                  className={`${ThemeVariants.colors.border.top.default} flex justify-between items-center pt-3`}
                 >
                   <div>
                     <Label
                       label={item.dish.name}
                       tag={LabelTags.p}
                       size={LabelDimensions.medium}
-                      color={ColorVariants.text.white}
+                      color={ThemeVariants.colors.text.white}
                       noMargin
                     />
                     <Label
                       label={`x${item.quantity}`}
                       tag={LabelTags.p}
                       size={LabelDimensions.small}
-                      color={ColorVariants.text.orange}
+                      color={ThemeVariants.colors.text.brand}
                       noMargin
                     />
                   </div>
@@ -93,19 +97,21 @@ export const Reservation = ({ cartItems, orderNumber }: ReservationProps) => {
                     label={`€${(item.dish.price * item.quantity).toFixed(2)}`}
                     tag={LabelTags.p}
                     size={LabelDimensions.medium}
-                    color={ColorVariants.text.white}
+                    color={ThemeVariants.colors.text.white}
                     noMargin
                   />
                 </div>
               ))}
 
-              <div className="flex justify-between items-center border-t border-gray-700 pt-3">
+              <div
+                className={`${ThemeVariants.colors.border.top.default} flex justify-between items-center pt-3`}
+              >
                 <Label
                   label="Totale"
                   tag={LabelTags.p}
                   size={LabelDimensions.large}
                   weight={LabelWeight.bold}
-                  color={ColorVariants.text.white}
+                  color={ThemeVariants.colors.text.white}
                   noMargin
                 />
                 <Label
@@ -113,7 +119,7 @@ export const Reservation = ({ cartItems, orderNumber }: ReservationProps) => {
                   tag={LabelTags.p}
                   size={LabelDimensions.large}
                   weight={LabelWeight.bold}
-                  color={ColorVariants.text.orange}
+                  color={ThemeVariants.colors.text.brand}
                   noMargin
                 />
               </div>

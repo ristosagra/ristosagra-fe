@@ -1,6 +1,8 @@
 import { NotebookPen } from "lucide-react";
 import { PagesCustomer, type PagesCustomerConst } from "../../constant/pages";
 import { tokens } from "../../constant/tokens";
+import { Button } from "../../components/core/Button";
+import { ButtonDimensions } from "../../constant/button";
 
 export const Home = ({
   setPage,
@@ -33,10 +35,13 @@ export const Home = ({
         Quando sei pronto, invia il tuo ordine.
       </p>
       <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-        <button onClick={() => setPage(PagesCustomer.MENU)}>
-          <NotebookPen size={16} />
-          Vai al menù
-        </button>
+        <Button
+          dimension={ButtonDimensions.xlarge}
+          onClick={() => setPage(PagesCustomer.MENU)}
+          label="Vai al menù"
+          iconLeft={<NotebookPen size={16} />}
+          variant="primary"
+        />
       </div>
     </div>
   );

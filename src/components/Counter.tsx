@@ -1,13 +1,14 @@
 import { Plus } from "lucide-react";
 import { Button } from "./core/Button";
 import { CounterCard } from "./core/CounterCard";
-import { ColorVariants } from "../constant/colors";
-import type { Dish, MenuProps } from "../features/orders/types/orders";
+import type { MenuProps } from "../features/orders/types/orders";
 import {
   decrementFunction,
   incrementFunction,
 } from "../helpers/incrementDecrement";
 import { ButtonDimensions } from "../constant/button";
+import type { Dish } from "../types/menuOrder";
+import { ThemeVariants } from "../constant/colors";
 
 export const Counter = ({
   dish,
@@ -28,12 +29,12 @@ export const Counter = ({
     />
   ) : (
     <Button
-      icon={<Plus size={14} />}
+      iconLeft={<Plus size={14} />}
       onClick={increment}
-      dimension={ButtonDimensions.label}
-      bgColor={ColorVariants.bg.grayDark}
+      dimension={ButtonDimensions.auto}
       label="Aggiungi"
-      colorIcon={ColorVariants.text.white}
+      variant="secondary"
+      className={`px-5 py-3 ${ThemeVariants.colors.border.all.brand}`}
     />
   );
 };

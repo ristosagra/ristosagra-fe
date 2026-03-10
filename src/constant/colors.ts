@@ -1,27 +1,45 @@
-export const ColorVariants = {
-  text: {
-    orange: "text-orange-300",
-    red: "text-red-500",
-    white: "text-white",
-    black: "text-black",
-    grayLight: "text-gray-300",
-    grayMedium: "text-gray-500",
-    grayDark: "text-gray-900",
+export const ThemeVariants = {
+  colors: {
+    text: {
+      brand: "text-[var(--brand)]",
+      secondary: "text-[var(--text-secondary)]",
+      white: "text-[var(--text-primary)]",
+    },
+    bg: {
+      brand: "bg-[var(--bg-brand)]",
+      base: "bg-[var(--bg-base)]",
+      surface: "bg-[var(--bg-surface)]",
+      hover: "bg-[var(--bg-hover)]",
+      overlay: "bg-[var(--bg-overlay)]",
+      trasparent: "bg-transparent",
+    },
+    border: {
+      all: {
+        brand: "border border-[var(--border-brand)]",
+        default: "border border-[var(--border)]",
+      },
+      top: {
+        default: "border-t border-t-[var(--border)]",
+      },
+      bottom: {
+        default: "border-b border-b-[var(--border)]",
+      },
+    },
   },
-  bg: {
-    grayLight: "bg-gray-300",
-    grayMedium: "bg-gray-500",
-    grayDark: "bg-gray-900",
-    transparent: "bg-transparent",
-    orange: "bg-orange-300",
-    white: "bg-white",
+  fontFamily: {
+    display: "font-[var(--font-display)]",
   },
-  border: {
-    grayLight: "border-gray-300",
-    grayMedium: "border-gray-500",
-    grayDark: "border-gray-900",
-    black: "border-black",
-    white: "border-white",
-    transparent: "border-transparent",
+  borderRadius: {
+    sm: "rounded-[6px]",
+    md: "rounded-[10px]",
+    lg: "rounded-[16px]",
+    xl: "rounded-[22px]",
+    full: "rounded-full",
+  },
+  raw: {
+    brand: "var(--brand)",
+    textPrimary: "var(--text-primary)",
+    textSecondary: "var(--text-secondary)",
+    danger: "var(--danger)",
   },
 } as const;

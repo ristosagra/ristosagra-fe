@@ -3,11 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { useLogin } from "../../hooks/useAuth";
 import { Container } from "../../components/core/Container";
 import { Label } from "../../components/core/Label";
-import { ColorVariants } from "../../constant/colors";
 import { Input } from "../../components/core/Input";
 import { Button } from "../../components/core/Button";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
 import { ButtonDimensions } from "../../constant/button";
+import { ThemeVariants } from "../../constant/colors";
 
 export function CashierLogin() {
   const [username, setUsername] = useState<string>("");
@@ -44,7 +44,7 @@ export function CashierLogin() {
           label="Login Cassa"
           tag={LabelTags.h2}
           weight={LabelWeight.bold}
-          color={ColorVariants.text.grayDark}
+          color={ThemeVariants.colors.text.brand}
           size={LabelDimensions.xlarge}
           noMargin
         />
@@ -64,7 +64,7 @@ export function CashierLogin() {
           <Label
             label={error}
             tag={LabelTags.p}
-            color={ColorVariants.text.red}
+            color={ThemeVariants.colors.text.brand}
             weight={LabelWeight.semibold}
             noMargin
           />
@@ -72,8 +72,6 @@ export function CashierLogin() {
         <Button
           label="Accedi"
           dimension={ButtonDimensions.large}
-          bgColor={ColorVariants.bg.grayDark}
-          colorLabel={ColorVariants.text.white}
           onClick={() => {}}
           fullWidth
         />

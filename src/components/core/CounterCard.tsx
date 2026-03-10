@@ -1,7 +1,7 @@
 import { Button } from "./Button";
 import { Minus, Plus } from "lucide-react";
 import { Label } from "./Label";
-import { ColorVariants } from "../../constant/colors";
+import { ThemeVariants } from "../../constant/colors";
 import { LabelTags, LabelDimensions, LabelWeight } from "../../constant/label";
 import { ButtonDimensions } from "../../constant/button";
 
@@ -17,28 +17,28 @@ export const CounterCard = ({
   decrement,
 }: CounterCardProps) => {
   return (
-    <div className="flex items-center gap-3 bg-gray-200 rounded-full px-3 py-1">
+    <div
+      className={`flex items-center gap-2  px-3 py-1 ${ThemeVariants.borderRadius.full} ${ThemeVariants.colors.bg.hover} ${ThemeVariants.colors.border.all.brand}`}
+    >
       <Button
-        icon={<Minus size={14} />}
+        iconLeft={<Minus size={14} />}
         onClick={decrement}
         dimension={ButtonDimensions.small}
-        bgColor={ColorVariants.bg.grayDark}
-        colorIcon={ColorVariants.text.white}
+        variant="secondary"
       />
       <Label
         label={`${quantity}`}
         tag={LabelTags.p}
         size={LabelDimensions.medium}
-        color={ColorVariants.text.grayDark}
+        color={ThemeVariants.colors.text.brand}
         weight={LabelWeight.semibold}
         noMargin
       />
       <Button
-        icon={<Plus size={14} />}
+        iconLeft={<Plus size={14} />}
         onClick={increment}
         dimension={ButtonDimensions.small}
-        bgColor={ColorVariants.bg.grayDark}
-        colorIcon={ColorVariants.text.white}
+        variant="secondary"
       />
     </div>
   );

@@ -1,51 +1,67 @@
 import React from "react";
 import { Label } from "./Label";
-import { ColorVariants } from "../../constant/colors";
 import type { ButtonDimensionsConst } from "../../constant/button";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
+import { ThemeVariants } from "../../constant/colors";
 
 interface ButtonProps {
-  icon?: React.ReactNode;
+  iconLeft?: React.ReactNode;
+  iconRight?: React.ReactNode;
   onClick: () => void;
   dimension: ButtonDimensionsConst;
-  label?: string;
-  colorIcon?: string;
-  bgColor?: string;
+  label?: string | React.ReactNode;
   fullWidth?: boolean;
-  borderColor?: string;
-  colorLabel?: string;
+  variant: "primary" | "secondary" | "icon" | "active";
+  className?: string;
+  isActive?: boolean;
 }
 
 export const Button = ({
-  icon,
+  iconLeft,
+  iconRight,
   onClick,
   dimension,
   label,
-  colorIcon,
-  bgColor,
-  fullWidth,
-  borderColor = ColorVariants.border.transparent,
-  colorLabel,
+  fullWidth = false,
+  variant,
+  className = "",
+  isActive = false,
 }: ButtonProps) => {
-  const full = fullWidth ? "w-full" : "";
+  const variantClass = {
+    primary: `${ThemeVariants.colors.bg.brand} text-white rounded-md`,
+    secondary: `${ThemeVariants.colors.bg.hover} text-white rounded-md`,
+    icon: `${ThemeVariants.colors.bg.trasparent}`,
+    active: isActive
+      ? `${ThemeVariants.colors.text.brand} ${ThemeVariants.colors.border.all.default} ${ThemeVariants.borderRadius.md} ${ThemeVariants.colors.bg.hover}`
+      : `${ThemeVariants.colors.text.secondary}`,
+  }[variant];
 
   return (
     <button
       onClick={onClick}
-      className={`${dimension} flex items-center justify-center rounded-lg ${colorIcon} ${bgColor} border ${borderColor} ${full} outline-none cursor-pointer`}
+      className={`
+        ${dimension}
+        flex items-center justify-center gap-1.5
+        outline-none cursor-pointer
+        ${variantClass}
+        ${fullWidth ? "w-full" : ""}
+        ${className}
+      `}
     >
-      {icon}
-      {label && (
+      {iconLeft}
+      {typeof label === "string" ? (
         <Label
           label={label}
           tag={LabelTags.p}
           size={LabelDimensions.medium}
           noMargin
           weight={LabelWeight.bold}
-          color={colorLabel}
-          additionalClasses={icon ? "ml-1" : ""}
+          additionalClasses={iconLeft ? "ml-1" : iconRight ? "mr-1" : ""}
         />
+      ) : (
+        label
       )}
+      {iconRight}
     </button>
   );
 };

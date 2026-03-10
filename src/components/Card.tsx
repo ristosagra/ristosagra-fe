@@ -1,12 +1,13 @@
 import { Trash2 } from "lucide-react";
-import { ColorVariants } from "../constant/colors";
+import { ThemeVariants } from "../constant/colors";
 import { Button } from "./core/Button";
 import { CardContainer } from "./core/CardContainer";
 import { Label } from "./core/Label";
 import { Counter } from "./Counter";
-import type { CartType, Dish } from "../features/orders/types/orders";
+import type { CartType } from "../features/orders/types/orders";
 import { LabelDimensions, LabelTags, LabelWeight } from "../constant/label";
 import { ButtonDimensions } from "../constant/button";
+import type { Dish } from "../types/menuOrder";
 
 interface CardProps {
   dish: Dish;
@@ -39,9 +40,8 @@ export const Card = ({
         <div>
           <Label
             label={`${dish.name}`}
-            tag={LabelTags.h3}
-            size={LabelDimensions.medium}
-            color={ColorVariants.text.grayDark}
+            tag={LabelTags.h2}
+            size={LabelDimensions.xlarge}
             weight={LabelWeight.semibold}
             noMargin
           />
@@ -49,23 +49,28 @@ export const Card = ({
             <Label
               label={`€${dish.price.toFixed(2)} × ${findItemDish.quantity}`}
               tag={LabelTags.p}
-              size={LabelDimensions.small}
-              color={ColorVariants.text.grayMedium}
+              size={LabelDimensions.medium}
+              color={ThemeVariants.colors.text.secondary}
               noMargin
             />
           ) : (
-            <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">
-              {dish.description}
-            </p>
+            <Label
+              tag={LabelTags.h3}
+              label={dish.description}
+              size={LabelDimensions.medium}
+              color={ThemeVariants.colors.text.secondary}
+              noMargin
+            />
           )}
         </div>
         {findItemDish && (
           <Button
-            icon={<Trash2 size={18} />}
+            iconLeft={
+              <Trash2 size={18} color={`${ThemeVariants.raw.danger}`} />
+            }
             onClick={() => removeItem(findItemDish)}
             dimension={ButtonDimensions.small}
-            colorIcon={ColorVariants.text.red}
-            bgColor={ColorVariants.bg.transparent}
+            variant="icon"
           />
         )}
       </div>
@@ -73,9 +78,9 @@ export const Card = ({
         <Label
           label={labelPrice}
           tag={LabelTags.h3}
-          size={LabelDimensions.medium}
+          size={LabelDimensions.large}
           weight={LabelWeight.bold}
-          color={ColorVariants.text.black}
+          color={ThemeVariants.colors.text.brand}
           noMargin
         />
         <Counter

@@ -7,9 +7,9 @@ import { Label } from "../../components/core/Label";
 import { Container } from "../../components/core/Container";
 import { Loader } from "lucide-react";
 import { Input } from "../../components/core/Input";
-import { ColorVariants } from "../../constant/colors";
 import type { CartType } from "../../features/orders/types/orders";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
+import { ThemeVariants } from "../../constant/colors";
 
 export const CashierDashboard = () => {
   const [search, setSearch] = useState("");
@@ -29,7 +29,7 @@ export const CashierDashboard = () => {
           tag={LabelTags.h1}
           size={LabelDimensions.xlarge}
           weight={LabelWeight.bold}
-          color={ColorVariants.text.orange}
+          color={ThemeVariants.colors.text.brand}
           noMargin
         />
         <Input
@@ -49,7 +49,7 @@ export const CashierDashboard = () => {
                 key={order.id}
                 className={`rounded-2xl overflow-hidden transition-colors ${
                   order.paid
-                    ? ColorVariants.bg.grayLight
+                    ? ThemeVariants.colors.bg.brand
                     : "bg-white border border-gray-200"
                 }`}
               >
@@ -65,7 +65,7 @@ export const CashierDashboard = () => {
                       tag={LabelTags.p}
                       size={LabelDimensions.xlarge}
                       weight={LabelWeight.bold}
-                      color={ColorVariants.text.orange}
+                      color={ThemeVariants.colors.text.brand}
                       noMargin
                     />
                     <Label
@@ -73,7 +73,7 @@ export const CashierDashboard = () => {
                       tag={LabelTags.p}
                       size={LabelDimensions.medium}
                       weight={LabelWeight.normal}
-                      color={ColorVariants.text.grayDark}
+                      color={ThemeVariants.colors.text.brand}
                       noMargin
                     />
                     <Label
@@ -81,7 +81,7 @@ export const CashierDashboard = () => {
                       tag={LabelTags.p}
                       size={LabelDimensions.medium}
                       weight={LabelWeight.normal}
-                      color={ColorVariants.text.grayDark}
+                      color={ThemeVariants.colors.text.brand}
                       noMargin
                       additionalClasses={`ml-auto transition-transform duration-300 ${
                         expandedId === order.id ? "rotate-180" : ""
@@ -94,12 +94,12 @@ export const CashierDashboard = () => {
                     }
                     className={`relative cursor-pointer w-12 h-6 rounded-full transition-colors outline-none focus:outline-none focus-visible:outline-none ${
                       order.paid
-                        ? `${ColorVariants.bg.orange}`
-                        : `${ColorVariants.bg.grayLight}`
+                        ? `${ThemeVariants.colors.bg.brand}`
+                        : `${ThemeVariants.colors.bg.brand}`
                     }`}
                   >
                     <span
-                      className={`absolute top-1 w-4 h-4 ${ColorVariants.bg.white} rounded-full shadow transition-all ${
+                      className={`absolute top-1 w-4 h-4 ${ThemeVariants.colors.bg.brand} rounded-full shadow transition-all ${
                         order.paid ? "left-7" : "left-1"
                       }`}
                     />
@@ -108,7 +108,7 @@ export const CashierDashboard = () => {
 
                 {expandedId === order.id && (
                   <div
-                    className={`px-4 pb-4 space-y-2 border-t ${order.paid ? ColorVariants.border.white : ColorVariants.border.grayMedium} pt-3`}
+                    className={`px-4 pb-4 space-y-2 border-t ${order.paid ? ThemeVariants.colors.border.all.brand : ThemeVariants.colors.border.all.brand} pt-3`}
                   >
                     {order.items.map((item: CartType, index: number) => (
                       <div
@@ -121,7 +121,7 @@ export const CashierDashboard = () => {
                             tag={LabelTags.p}
                             size={LabelDimensions.medium}
                             weight={LabelWeight.bold}
-                            color={ColorVariants.text.orange}
+                            color={ThemeVariants.colors.text.brand}
                             noMargin
                           />
                           <Label
@@ -129,7 +129,7 @@ export const CashierDashboard = () => {
                             tag={LabelTags.p}
                             size={LabelDimensions.medium}
                             weight={LabelWeight.normal}
-                            color={ColorVariants.text.grayDark}
+                            color={ThemeVariants.colors.text.brand}
                             noMargin
                           />
                         </div>
@@ -138,20 +138,20 @@ export const CashierDashboard = () => {
                           tag={LabelTags.p}
                           size={LabelDimensions.medium}
                           weight={LabelWeight.normal}
-                          color={ColorVariants.text.grayDark}
+                          color={ThemeVariants.colors.text.brand}
                           noMargin
                         />
                       </div>
                     ))}
                     <div
-                      className={`flex justify-between items-center border-t ${order.paid ? ColorVariants.border.white : ColorVariants.border.grayMedium} pt-2 mt-2`}
+                      className={`flex justify-between items-center border-t ${order.paid ? ThemeVariants.colors.border.all.brand : ThemeVariants.colors.border.all.brand} pt-2 mt-2`}
                     >
                       <Label
                         label="Totale"
                         tag={LabelTags.p}
                         size={LabelDimensions.medium}
                         weight={LabelWeight.bold}
-                        color={ColorVariants.text.grayDark}
+                        color={ThemeVariants.colors.text.brand}
                         noMargin
                       />
                       <Label
@@ -159,7 +159,7 @@ export const CashierDashboard = () => {
                         tag={LabelTags.p}
                         size={LabelDimensions.medium}
                         weight={LabelWeight.bold}
-                        color={ColorVariants.text.orange}
+                        color={ThemeVariants.colors.text.brand}
                         noMargin
                       />
                     </div>
@@ -174,7 +174,7 @@ export const CashierDashboard = () => {
                   label="Nessun ordine trovato"
                   tag={LabelTags.h1}
                   size={LabelDimensions.large}
-                  color={ColorVariants.text.white}
+                  color={ThemeVariants.colors.text.brand}
                   weight={LabelWeight.bold}
                   noMargin
                 />

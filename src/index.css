@@ -20,12 +20,6 @@ body {
     color 0.3s;
 }
 
-button {
-  font-family: var(--font-body);
-  cursor: pointer;
-  border: none;
-  outline: none;
-}
 input,
 select,
 textarea {
@@ -43,6 +37,7 @@ button:focus-visible {
 /* ── DARK (default) ── */
 :root,
 [data-theme="dark"] {
+  --bg-brand: #e8712a;
   --bg-base: #0f0e0d;
   --bg-surface: #181614;
   --bg-raised: #221f1c;
@@ -70,11 +65,6 @@ button:focus-visible {
   --danger-bg: rgba(217, 95, 95, 0.1);
   --info: #5b8fd9;
   --info-bg: rgba(91, 143, 217, 0.1);
-
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
-  --shadow-brand: 0 4px 20px rgba(232, 113, 42, 0.25);
 
   --font-display: "DM Serif Display", Georgia, serif;
   --font-body: "DM Sans", system-ui, sans-serif;
@@ -108,11 +98,6 @@ button:focus-visible {
   --danger-bg: rgba(192, 57, 43, 0.08);
   --info: #2563b0;
   --info-bg: rgba(37, 99, 176, 0.08);
-
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.14);
-  --shadow-brand: 0 4px 20px rgba(212, 96, 30, 0.2);
 
   --font-display: "DM Serif Display", Georgia, serif;
   --font-body: "DM Sans", system-ui, sans-serif;

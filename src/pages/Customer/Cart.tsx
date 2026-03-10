@@ -4,13 +4,13 @@ import { Card } from "../../components/Card";
 import { Button } from "../../components/core/Button";
 import { type Dispatch, type SetStateAction } from "react";
 import { Loader } from "../../components/core/Loader";
-import { ColorVariants } from "../../constant/colors";
 import { useOrderNumber } from "../../features/orders/hook/useOrders";
 import type { CartType } from "../../features/orders/types/orders";
 import { ButtonDimensions } from "../../constant/button";
 import { type PagesCustomerConst, PagesCustomer } from "../../constant/pages";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
 import { calcTotal } from "../../helpers/calcTotal";
+import { ThemeVariants } from "../../constant/colors";
 
 interface CartProps {
   cartItems: CartType[];
@@ -33,13 +33,15 @@ export default function Cart({
 
   if (cartItems.length === 0) {
     return (
-      <div className="flex justify-center items-center px-2 py-6 rounded-2xl w-full bg-gray-900 mx-10">
+      <div
+        className={`${ThemeVariants.colors.bg.surface} ${ThemeVariants.colors.border.all.brand} ${ThemeVariants.borderRadius.xl} flex justify-center items-center px-2 py-6 mt-20 mx-10`}
+      >
         <Label
           label="Il carrello è vuoto"
           tag={LabelTags.p}
           size={LabelDimensions.large}
           weight={LabelWeight.bold}
-          color={ColorVariants.text.white}
+          color={ThemeVariants.colors.text.white}
           noMargin
         />
       </div>
@@ -74,7 +76,9 @@ export default function Cart({
       </div>
 
       <div className="space-y-3 mt-3">
-        <div className="bg-black p-4 rounded-2xl flex justify-between items-center">
+        <div
+          className={`${ThemeVariants.colors.border.all.brand} ${ThemeVariants.colors.bg.surface} p-4 rounded-2xl flex justify-between items-center`}
+        >
           <Label
             label="Totale"
             tag={LabelTags.h3}
@@ -94,10 +98,9 @@ export default function Cart({
         <Button
           label="Prenota ordine"
           fullWidth
-          borderColor={ColorVariants.border.black}
           dimension={ButtonDimensions.large}
           onClick={handleConfirm}
-          colorLabel={ColorVariants.text.black}
+          variant="primary"
         />
       </div>
     </Container>
