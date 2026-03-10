@@ -12,7 +12,7 @@ import { ThemeVariants } from "../../constant/colors";
 import { Button } from "../../components/core/Button";
 import { ButtonDimensions } from "../../constant/button";
 import { Label } from "../../components/core/Label";
-import { LabelDimensions, LabelTags } from "../../constant/label";
+import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
 
 export const CustomerHome = () => {
   const [page, setPage] = useState<PagesCustomerConst>(PagesCustomer.HOME);
@@ -74,7 +74,8 @@ export const CustomerHome = () => {
                     <Label
                       label={`€${total.toFixed(2)}`}
                       tag={LabelTags.h2}
-                      size={LabelDimensions.large}
+                      size={LabelDimensions.medium}
+                      weight={LabelWeight.bold}
                       fontFamily={ThemeVariants.fontFamily.display}
                       noMargin
                       color={ThemeVariants.colors.text.brand}
