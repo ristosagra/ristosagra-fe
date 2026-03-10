@@ -44,7 +44,7 @@ export const CashierHome = () => {
         </div>
       </NavBar>
       <main
-        className={`${ThemeVariants.colors.bg.base} flex-1 overflow-hidden pt-16`}
+        className={`${ThemeVariants.colors.bg.base} flex-1 overflow-hidden pt-16 pb-10`}
       >
         {page === PagesCashier.HOME && <div></div>}
         {page === PagesCashier.FLORPLAN && <RestaurantFloorPlan />}

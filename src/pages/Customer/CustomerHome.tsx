@@ -90,7 +90,7 @@ export const CustomerHome = () => {
       </NavBar>
 
       <main
-        className={`${ThemeVariants.colors.bg.base} flex-1 overflow-hidden pt-16`}
+        className={`${ThemeVariants.colors.bg.base} flex-1 overflow-hidden pt-16 pb-10`}
       >
         {page === PagesCustomer.HOME && <Home setPage={setPage} />}
         {page === PagesCustomer.MENU && (
