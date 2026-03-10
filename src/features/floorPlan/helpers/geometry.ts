@@ -1,4 +1,4 @@
-import type { CoordinateType } from "../../types/floorPlan";
+import type { CoordinateType } from "../types/floorPlan";
 
 /** Trova il punto più vicino su un segmento AB rispetto al punto P.
  *  Usato per il calcolo della collisione tra tavoli rotondi e muri. */
