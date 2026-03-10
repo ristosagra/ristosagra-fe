@@ -28,8 +28,8 @@ export const Button = ({
   isActive = false,
 }: ButtonProps) => {
   const variantClass = {
-    primary: `${ThemeVariants.colors.bg.brand} text-white rounded-md`,
-    secondary: `${ThemeVariants.colors.bg.hover} text-white rounded-md`,
+    primary: `${ThemeVariants.colors.bg.brand} ${ThemeVariants.colors.text.white} rounded-md`,
+    secondary: `${ThemeVariants.colors.bg.hover} ${ThemeVariants.colors.text.white} rounded-md`,
     icon: `${ThemeVariants.colors.bg.trasparent}`,
     active: isActive
       ? `${ThemeVariants.colors.text.brand} ${ThemeVariants.colors.border.all.default} ${ThemeVariants.borderRadius.md} ${ThemeVariants.colors.bg.hover}`
