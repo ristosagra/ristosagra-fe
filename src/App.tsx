@@ -11,9 +11,9 @@ function App() {
       <Toast />
       <Routes>
         <Route path="/" element={<CustomerHome />} />
-        <Route path="/cassa" element={<CashierLogin />} />
+        <Route path="/login" element={<CashierLogin />} />
         <Route
-          path="/cassa/dashboard"
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <CashierHome />

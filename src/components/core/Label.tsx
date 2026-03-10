@@ -1,3 +1,4 @@
+import { ThemeVariants } from "../../constant/colors";
 import {
   LabelDimensions,
   LabelWeight,
@@ -16,6 +17,7 @@ export interface LabelProps {
   weight?: LabelWeightConst;
   additionalClasses?: string;
   fontFamily?: string;
+  variant?: "success" | "danger";
 }
 
 export const Label = ({
@@ -28,6 +30,7 @@ export const Label = ({
   weight,
   additionalClasses = "",
   fontFamily,
+  variant,
 }: LabelProps) => {
   const Tag = tag as React.ElementType;
   const borderClass = colorBorderBottom ? "border-b" : "";
@@ -40,10 +43,16 @@ export const Label = ({
       : LabelDimensions.medium
         ? "mb-4"
         : "mb-2";
+  const variantClass = variant
+    ? {
+        success: `${ThemeVariants.colors.bg.success} ${ThemeVariants.colors.text.success} ${ThemeVariants.colors.border.all.success} ${ThemeVariants.borderRadius.xl} px-4`,
+        danger: `${ThemeVariants.colors.bg.danger} ${ThemeVariants.colors.text.danger} ${ThemeVariants.colors.border.all.danger} ${ThemeVariants.borderRadius.xl} px-4`,
+      }[variant]
+    : "";
 
   return (
     <Tag
-      className={`${textSize} ${color} ${marginBottom} ${borderClass} ${colorBorderBottom} ${labelWeight} ${additionalClasses} ${fontFamily}`}
+      className={`${variantClass} ${textSize} ${color} ${marginBottom} ${borderClass} ${colorBorderBottom} ${labelWeight} ${additionalClasses} ${fontFamily}`}
     >
       {label}
     </Tag>

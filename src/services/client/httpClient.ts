@@ -9,7 +9,7 @@ const authHeaders = () => ({
 const handleResponse = async <T>(res: Response): Promise<T> => {
   if (res.status === 401) {
     localStorage.removeItem("auth_token");
-    globalThis.location.href = "/cassa";
+    globalThis.location.href = "/login";
   }
   if (!res.ok) throw new Error(`Errore: ${res.status}`);
   return res.json();

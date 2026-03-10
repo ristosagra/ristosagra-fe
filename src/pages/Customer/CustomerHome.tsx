@@ -7,7 +7,7 @@ import { NavBar } from "../../components/core/NavBar";
 import { PagesCustomer, type PagesCustomerConst } from "../../constant/pages";
 import type { CartType } from "../../features/orders/types/orders";
 import { Home } from "./Home";
-import { useTheme } from "../../hooks/useTheme";
+// import { useTheme } from "../../hooks/useTheme";
 import { ThemeVariants } from "../../constant/colors";
 import { Button } from "../../components/core/Button";
 import { ButtonDimensions } from "../../constant/button";
@@ -19,7 +19,7 @@ export const CustomerHome = () => {
   const [cartItems, setCartItems] = useState<CartType[]>([]);
   const [orderNumber, setOrderNumber] = useState<number | null>(null);
   const [confirmedCart, setConfirmedCart] = useState<CartType[]>([]);
-  const { isDark, toggleTheme } = useTheme();
+  // const { isDark, toggleTheme } = useTheme();
 
   const total = cartItems.reduce(
     (acc, item) => acc + item.dish.price * item.quantity,
@@ -39,7 +39,7 @@ export const CustomerHome = () => {
           className="px-2 py-2"
         />
 
-        <button onClick={toggleTheme}>{isDark ? "☀️ Light" : "🌙 Dark"}</button>
+        {/* <button onClick={toggleTheme}>{isDark ? "☀️ Light" : "🌙 Dark"}</button> */}
 
         <div className="flex flex-row items-center gap-2">
           <Button

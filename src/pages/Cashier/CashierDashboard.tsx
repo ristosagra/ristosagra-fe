@@ -30,6 +30,7 @@ export const CashierDashboard = () => {
           size={LabelDimensions.xlarge}
           weight={LabelWeight.bold}
           color={ThemeVariants.colors.text.brand}
+          fontFamily={ThemeVariants.fontFamily.display}
           noMargin
         />
         <Input
@@ -47,10 +48,10 @@ export const CashierDashboard = () => {
             {filtered.map((order) => (
               <div
                 key={order.id}
-                className={`rounded-2xl overflow-hidden transition-colors ${
+                className={`overflow-hidden transition-colors ${ThemeVariants.borderRadius.xl} ${
                   order.paid
-                    ? ThemeVariants.colors.bg.brand
-                    : "bg-white border border-gray-200"
+                    ? `${ThemeVariants.colors.bg.hover} ${ThemeVariants.colors.border.all.brand}`
+                    : `${ThemeVariants.colors.bg.surface} ${ThemeVariants.colors.border.all.default}`
                 }`}
               >
                 <div className="flex items-center justify-between p-4 gap-4">
@@ -58,35 +59,56 @@ export const CashierDashboard = () => {
                     onClick={() =>
                       setExpandedId(expandedId === order.id ? null : order.id)
                     }
-                    className="flex items-center gap-4 flex-1 text-left outline-none focus:outline-none focus-visible:outline-none cursor-pointer "
+                    className="flex justify-between items-center gap-4 flex-1 text-left outline-none focus:outline-none focus-visible:outline-none cursor-pointer "
                   >
                     <Label
                       label={`#${order.orderNumber}`}
                       tag={LabelTags.p}
                       size={LabelDimensions.xlarge}
                       weight={LabelWeight.bold}
-                      color={ThemeVariants.colors.text.brand}
+                      color={
+                        order.paid
+                          ? ThemeVariants.colors.text.secondary
+                          : ThemeVariants.colors.text.brand
+                      }
                       noMargin
                     />
-                    <Label
-                      label={order.total.toFixed(2)}
-                      tag={LabelTags.p}
-                      size={LabelDimensions.medium}
-                      weight={LabelWeight.normal}
-                      color={ThemeVariants.colors.text.brand}
-                      noMargin
-                    />
-                    <Label
-                      label="▼"
-                      tag={LabelTags.p}
-                      size={LabelDimensions.medium}
-                      weight={LabelWeight.normal}
-                      color={ThemeVariants.colors.text.brand}
-                      noMargin
-                      additionalClasses={`ml-auto transition-transform duration-300 ${
-                        expandedId === order.id ? "rotate-180" : ""
-                      }`}
-                    />
+                    <div className="flex flex-row gap-5">
+                      <Label
+                        label={`${order.total.toFixed(2)} €`}
+                        tag={LabelTags.p}
+                        size={LabelDimensions.medium}
+                        weight={LabelWeight.normal}
+                        color={
+                          order.paid
+                            ? ThemeVariants.colors.text.secondary
+                            : ThemeVariants.colors.text.white
+                        }
+                        noMargin
+                      />
+                      <Label
+                        tag={LabelTags.p}
+                        size={LabelDimensions.small}
+                        label={order.paid ? "Pagato" : "Da pagare"}
+                        variant={order.paid ? "success" : "danger"}
+                        noMargin
+                      />
+                      <Label
+                        label="▼"
+                        tag={LabelTags.p}
+                        size={LabelDimensions.medium}
+                        weight={LabelWeight.normal}
+                        color={
+                          order.paid
+                            ? ThemeVariants.colors.text.secondary
+                            : ThemeVariants.colors.text.white
+                        }
+                        noMargin
+                        additionalClasses={`transition-transform duration-300 ${
+                          expandedId === order.id ? "rotate-180" : ""
+                        }`}
+                      />
+                    </div>
                   </button>
                   <button
                     onClick={() =>
@@ -94,12 +116,12 @@ export const CashierDashboard = () => {
                     }
                     className={`relative cursor-pointer w-12 h-6 rounded-full transition-colors outline-none focus:outline-none focus-visible:outline-none ${
                       order.paid
-                        ? `${ThemeVariants.colors.bg.brand}`
-                        : `${ThemeVariants.colors.bg.brand}`
+                        ? `${ThemeVariants.colors.bg.brand} ${ThemeVariants.colors.border.all.default}`
+                        : `${ThemeVariants.colors.bg.hover} ${ThemeVariants.colors.border.all.default}`
                     }`}
                   >
                     <span
-                      className={`absolute top-1 w-4 h-4 ${ThemeVariants.colors.bg.brand} rounded-full shadow transition-all ${
+                      className={`absolute top-0.75 w-4 h-4 ${ThemeVariants.colors.bg.white} rounded-full shadow transition-all ${
                         order.paid ? "left-7" : "left-1"
                       }`}
                     />
@@ -108,27 +130,27 @@ export const CashierDashboard = () => {
 
                 {expandedId === order.id && (
                   <div
-                    className={`px-4 pb-4 space-y-2 border-t ${order.paid ? ThemeVariants.colors.border.all.brand : ThemeVariants.colors.border.all.brand} pt-3`}
+                    className={`px-4 pb-4 space-y-2 ${order.paid ? ThemeVariants.colors.border.top.brand : ThemeVariants.colors.border.top.default}`}
                   >
                     {order.items.map((item: CartType, index: number) => (
                       <div
                         key={item.quantity + index}
-                        className="flex justify-between items-center"
+                        className={`flex justify-between items-center first:border-t-0 ${order.paid ? ThemeVariants.colors.border.top.brand : ThemeVariants.colors.border.top.default}`}
                       >
-                        <div className="flex gap-2 items-center">
-                          <Label
-                            label={`x${item.quantity}`}
-                            tag={LabelTags.p}
-                            size={LabelDimensions.medium}
-                            weight={LabelWeight.bold}
-                            color={ThemeVariants.colors.text.brand}
-                            noMargin
-                          />
+                        <div className="flex flex-col mt-2">
                           <Label
                             label={item.dish.name}
                             tag={LabelTags.p}
                             size={LabelDimensions.medium}
                             weight={LabelWeight.normal}
+                            color={ThemeVariants.colors.text.white}
+                            noMargin
+                          />
+                          <Label
+                            label={`x${item.quantity}`}
+                            tag={LabelTags.p}
+                            size={LabelDimensions.medium}
+                            weight={LabelWeight.bold}
                             color={ThemeVariants.colors.text.brand}
                             noMargin
                           />
@@ -138,20 +160,20 @@ export const CashierDashboard = () => {
                           tag={LabelTags.p}
                           size={LabelDimensions.medium}
                           weight={LabelWeight.normal}
-                          color={ThemeVariants.colors.text.brand}
+                          color={ThemeVariants.colors.text.secondary}
                           noMargin
                         />
                       </div>
                     ))}
                     <div
-                      className={`flex justify-between items-center border-t ${order.paid ? ThemeVariants.colors.border.all.brand : ThemeVariants.colors.border.all.brand} pt-2 mt-2`}
+                      className={`flex justify-between items-center border-t ${order.paid ? ThemeVariants.colors.border.top.brand : ThemeVariants.colors.border.top.default} pt-3 mt-3`}
                     >
                       <Label
                         label="Totale"
                         tag={LabelTags.p}
                         size={LabelDimensions.medium}
                         weight={LabelWeight.bold}
-                        color={ThemeVariants.colors.text.brand}
+                        color={ThemeVariants.colors.text.white}
                         noMargin
                       />
                       <Label

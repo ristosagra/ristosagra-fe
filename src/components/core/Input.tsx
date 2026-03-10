@@ -1,3 +1,5 @@
+import { ThemeVariants } from "../../constant/colors";
+
 interface InputProps {
   type: string;
   placeholder: string;
@@ -12,7 +14,7 @@ export const Input = ({ type, placeholder, value, setValue }: InputProps) => {
       placeholder={placeholder}
       value={value}
       onChange={(e) => setValue(e.target.value)}
-      className="border p-2 rounded bg-white"
+      className={`p-2 ${ThemeVariants.colors.border.all.brand} ${ThemeVariants.borderRadius.sm} ${ThemeVariants.colors.bg.overlay}`}
     />
   );
 };

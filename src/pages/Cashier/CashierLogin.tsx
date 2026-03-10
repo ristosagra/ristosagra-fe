@@ -25,7 +25,7 @@ export function CashierLogin() {
           console.log(token);
           if (success) {
             localStorage.setItem("auth_token", token);
-            navigate("/cassa/dashboard");
+            navigate("/dashboard");
           } else {
             setError("Credenziali errate");
           }
@@ -41,11 +41,12 @@ export function CashierLogin() {
         className="max-w-sm mx-auto p-8 flex flex-col gap-4"
       >
         <Label
-          label="Login Cassa"
+          label="Login"
           tag={LabelTags.h2}
           weight={LabelWeight.bold}
           color={ThemeVariants.colors.text.brand}
           size={LabelDimensions.xlarge}
+          fontFamily={ThemeVariants.fontFamily.display}
           noMargin
         />
         <Input
@@ -64,7 +65,7 @@ export function CashierLogin() {
           <Label
             label={error}
             tag={LabelTags.p}
-            color={ThemeVariants.colors.text.brand}
+            color={ThemeVariants.colors.text.danger}
             weight={LabelWeight.semibold}
             noMargin
           />
@@ -74,6 +75,7 @@ export function CashierLogin() {
           dimension={ButtonDimensions.large}
           onClick={() => {}}
           fullWidth
+          variant="primary"
         />
       </form>
     </Container>
