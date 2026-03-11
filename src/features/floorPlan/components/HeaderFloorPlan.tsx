@@ -11,6 +11,12 @@ import type {
 } from "../types/floorPlan";
 import { NotificationType } from "../../../types/notification";
 import { useSaveFloorPlan } from "../hook/useSaveFloorPlan";
+import { Button } from "../../../components/core/Button";
+import { Hourglass, Minus, Pencil, Plus, Save, X } from "lucide-react";
+import { ButtonDimensions } from "../../../constant/button";
+import { ThemeVariants } from "../../../constant/colors";
+import { Label } from "../../../components/core/Label";
+import { LabelDimensions, LabelTags } from "../../../constant/label";
 
 interface HeaderFloorPlanProps {
   tables: TableData[];
@@ -93,31 +99,40 @@ export const HeaderFloorPlan = ({
     <div className="bg-neutral-900 border-b border-neutral-700 px-4 py-2 flex items-center justify-between shrink-0">
       {/* Zoom */}
       <div className="flex items-center gap-1.5 bg-neutral-800 rounded-lg px-2 py-1 h-full">
-        <button
+        <Button
           onClick={() => setZoom((z) => Math.max(0.2, z / 1.2))}
-          className="w-8 rounded bg-neutral-700 hover:bg-neutral-600 font-bold flex items-center justify-center transition-colors h-full cursor-pointer"
-        >
-          −
-        </button>
-        <span className="text-xs text-neutral-300 w-12 text-center tabular-nums h-full flex items-center justify-center">
-          <p>{Math.round(zoom * 100)}%</p>
+          iconLeft={<Minus />}
+          variant="icon"
+          dimension={ButtonDimensions.small}
+          className={`cursor-pointer ${ThemeVariants.colors.text.secondary}`}
+        />
+        <span className="w-12 text-center tabular-nums h-full flex items-center justify-center">
+          <Label
+            tag={LabelTags.p}
+            label={`${Math.round(zoom * 100)}%`}
+            size={LabelDimensions.small}
+            color={ThemeVariants.colors.text.secondary}
+            noMargin
+          />
         </span>
-        <button
+        <Button
           onClick={() => setZoom((z) => Math.min(5, z * 1.2))}
-          className="w-8 rounded bg-neutral-700 hover:bg-neutral-600 font-bold flex items-center justify-center transition-colors h-full cursor-pointer"
-        >
-          +
-        </button>
+          iconLeft={<Plus />}
+          variant="icon"
+          dimension={ButtonDimensions.small}
+          className={`cursor-pointer ${ThemeVariants.colors.text.secondary}`}
+        />
         <div className="w-px bg-neutral-600 mx-1 h-full" />
-        <button
+        <Button
           onClick={() => {
             setZoom(1);
             setPan({ x: 0, y: 0 });
           }}
-          className="text-xs text-neutral-400 hover:text-white px-3 rounded hover:bg-neutral-700 transition-colors h-full cursor-pointer"
-        >
-          Reset
-        </button>
+          label="Reset"
+          variant="icon"
+          dimension={ButtonDimensions.medium}
+          className={`cursor-pointer ${ThemeVariants.colors.text.secondary}`}
+        />
       </div>
 
       {/* Stats + Edit controls */}
@@ -158,28 +173,32 @@ export const HeaderFloorPlan = ({
         {/* Edit / Save / Cancel */}
         {isEditing ? (
           <div className="flex gap-2 h-full">
-            <button
+            <Button
+              iconLeft={<X size={16} />}
               onClick={cancelEditing}
-              disabled={isSaving}
-              className="flex items-center gap-1.5 bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 text-white font-bold px-5 py-3 rounded-lg border border-neutral-500 transition-colors h-full cursor-pointer"
-            >
-              ✕ Annulla
-            </button>
-            <button
+              dimension={ButtonDimensions.auto}
+              label="Annulla"
+              variant="secondary"
+              className={`px-5 py-3 ${ThemeVariants.colors.border.all.brand}`}
+            />
+            <Button
+              iconLeft={isSaving ? <Hourglass size={16} /> : <Save size={16} />}
               onClick={handleSave}
-              disabled={isSaving}
-              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold px-5 py-3 rounded-lg border border-emerald-400 transition-colors h-full cursor-pointer"
-            >
-              {isSaving ? "⏳ Salvataggio…" : "💾 Salva"}
-            </button>
+              dimension={ButtonDimensions.auto}
+              label={isSaving ? "Salvataggio…" : "Salva"}
+              variant="success"
+              className={`px-5 py-3 ${ThemeVariants.colors.border.all.brand}`}
+            />
           </div>
         ) : (
-          <button
+          <Button
+            iconLeft={<Pencil size={16} />}
             onClick={startEditing}
-            className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold px-5 py-3 rounded-lg border border-amber-400 transition-colors h-full cursor-pointer"
-          >
-            ✏️ Modifica
-          </button>
+            dimension={ButtonDimensions.auto}
+            label="Modifica"
+            variant="primary"
+            className={`px-5 py-3 ${ThemeVariants.colors.border.all.brand}`}
+          />
         )}
       </div>
     </div>

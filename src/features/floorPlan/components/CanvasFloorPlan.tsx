@@ -16,7 +16,7 @@ export const CanvasFloorPlan = ({
   const events = useFloorPlanEvents(state);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-73px)] bg-neutral-950 font-mono text-white overflow-hidden w-full">
+    <div className="flex flex-col h-[calc(100vh-71px)] bg-neutral-950 font-mono text-white overflow-hidden w-full mt-1.5">
       <HeaderFloorPlan savedPlan={savedPlan} {...state} />
       <div className="flex flex-1 overflow-hidden">
         {state.isEditing && <SideBarFloorPlan {...state} />}

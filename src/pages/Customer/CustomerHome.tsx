@@ -28,7 +28,7 @@ export const CustomerHome = () => {
   const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
-    <div className="min-h-screen min-w-screen h-full overflow-hidden flex flex-col">
+    <div className="min-h-dvh min-w-screen h-full flex flex-col">
       <NavBar>
         <Button
           iconLeft={<House size={24} />}

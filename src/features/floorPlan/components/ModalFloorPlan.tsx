@@ -3,6 +3,9 @@ import { BookOpenText } from "lucide-react";
 import type { TableData } from "../types/floorPlan";
 import { Modal } from "../../../components/core/Modal";
 import type { ModalType } from "../../../types/general";
+import { Label } from "../../../components/core/Label";
+import { LabelDimensions, LabelTags } from "../../../constant/label";
+import { ThemeVariants } from "../../../constant/colors";
 
 interface ModalFloorPlanProps {
   tables: TableData[];
@@ -46,10 +49,13 @@ export const ModalFloorPlan = ({
     const grp = t?.groupId ? getGroup(t.groupId) : t ? [t] : [];
     const seats = grp.reduce((s, tt) => s + tt.chairs.length, 0);
     return (
-      <p className="text-xs text-neutral-500 font-mono">
-        {grp.length > 1 ? `Gruppo di ${grp.length} tavoli · ` : ""}
-        {seats} posti
-      </p>
+      <Label
+        tag={LabelTags.p}
+        label={`${grp.length > 1 ? `Gruppo di ${grp.length} tavoli · ` : ""} ${seats} posti`}
+        color={ThemeVariants.colors.text.secondary}
+        size={LabelDimensions.small}
+        noMargin
+      />
     );
   };
 

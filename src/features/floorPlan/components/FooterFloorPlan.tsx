@@ -2,6 +2,12 @@ import { TableShape } from "../constant/floorPlan";
 import type { TableData } from "../types/floorPlan";
 import type { ModalType } from "../../../types/general";
 import { addChair, removeChair } from "../helpers/chair";
+import { Button } from "../../../components/core/Button";
+import { Minus, Plus, X } from "lucide-react";
+import { ButtonDimensions } from "../../../constant/button";
+import { Label } from "../../../components/core/Label";
+import { LabelDimensions, LabelTags } from "../../../constant/label";
+import { ThemeVariants } from "../../../constant/colors";
 
 interface FooterFloorPlanProps {
   selTable: TableData;
@@ -89,60 +95,85 @@ export const FooterFloorPlan = ({
             key={t.id}
             className="flex items-center gap-1.5 bg-neutral-800 rounded-lg px-3 py-1.5 border border-neutral-700 shrink-0"
           >
-            <span className="text-neutral-400 text-xs font-mono">
-              {t.size === 4 ? "T4" : "T8"}
-            </span>
-            <button
+            <Label
+              tag={LabelTags.p}
+              label={t.id}
+              color={ThemeVariants.colors.text.secondary}
+              size={LabelDimensions.small}
+              noMargin
+              additionalClasses="uppercase"
+            />
+            <Button
+              iconLeft={<Minus />}
               onClick={() => editChairs(t.id, -1)}
-              className="w-6 h-6 rounded bg-neutral-700 hover:bg-rose-700 text-white font-bold text-sm flex items-center justify-center transition-colors"
-            >
-              −
-            </button>
-            <span className="text-white font-bold tabular-nums w-5 text-center text-sm">
-              {t.chairs.length}
-            </span>
-            <button
+              dimension={ButtonDimensions.auto}
+              variant="secondary"
+              className="hover:bg-rose-700 px-1"
+            />
+            <Label
+              tag={LabelTags.p}
+              label={`${t.chairs.length}`}
+              color={ThemeVariants.colors.text.white}
+              size={LabelDimensions.small}
+              noMargin
+            />
+            <Button
+              iconLeft={<Plus />}
               onClick={() => editChairs(t.id, 1)}
-              className="w-6 h-6 rounded bg-neutral-700 hover:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center transition-colors"
-            >
-              +
-            </button>
-            <span className="text-neutral-500 text-xs">posti</span>
+              dimension={ButtonDimensions.auto}
+              variant="secondary"
+              className="hover:bg-emerald-700 px-1"
+            />
+            <Label
+              tag={LabelTags.p}
+              label="Posti"
+              color={ThemeVariants.colors.text.secondary}
+              size={LabelDimensions.small}
+              noMargin
+            />
           </div>
         ))}
       </div>
 
       {selGroup.length > 1 && (
-        <div className="text-xs text-neutral-400 font-mono shrink-0">
-          Totale: <span className="text-white font-bold">{selSeats}</span> posti
-        </div>
+        <Label
+          tag={LabelTags.p}
+          label={`Totale: ${selSeats} posti`}
+          color={ThemeVariants.colors.text.secondary}
+          size={LabelDimensions.small}
+          noMargin
+        />
       )}
 
       <div className="flex gap-2 shrink-0">
         {selReserved ? (
-          <button
+          <Button
+            label="Cancella prenotazione"
             onClick={() => cancelBooking(selId!)}
-            className="bg-rose-700 hover:bg-rose-600 text-white text-xs font-bold px-4 py-2 rounded-lg border border-rose-500 transition-colors"
-          >
-            Cancella prenotazione
-          </button>
+            dimension={ButtonDimensions.auto}
+            variant="danger"
+            className="px-2"
+          />
         ) : (
-          <button
+          <Button
+            label="Prenota"
             onClick={() => {
               setModal({ open: true, tableId: selId! });
               setGuest("");
             }}
-            className="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-lg border border-emerald-500 transition-colors"
-          >
-            Prenota
-          </button>
+            dimension={ButtonDimensions.auto}
+            variant="success"
+            className="px-2"
+          />
         )}
-        <button
+        <Button
+          iconLeft={<X />}
           onClick={() => setSelId(null)}
-          className="px-3 py-2 rounded-lg border border-neutral-600 text-xs text-neutral-400 hover:bg-neutral-800 transition-colors"
-        >
-          ✕
-        </button>
+          dimension={ButtonDimensions.auto}
+          variant="active"
+          isActive
+          className="px-1 py-1"
+        />
       </div>
     </div>
   );

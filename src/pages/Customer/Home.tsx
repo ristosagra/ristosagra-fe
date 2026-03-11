@@ -3,6 +3,8 @@ import { PagesCustomer, type PagesCustomerConst } from "../../constant/pages";
 import { Button } from "../../components/core/Button";
 import { ButtonDimensions } from "../../constant/button";
 import { ThemeVariants } from "../../constant/colors";
+import { LabelDimensions, LabelTags } from "../../constant/label";
+import { Label } from "../../components/core/Label";
 
 export const Home = ({
   setPage,
@@ -12,20 +14,39 @@ export const Home = ({
   return (
     <div className="h-full flex flex-col items-center justify-center gap-6 p-6">
       <div
-        className={`text-5xl leading-none text-center ${ThemeVariants.fontFamily.display}`}
+        className={`leading-none text-center ${ThemeVariants.fontFamily.display}`}
       >
-        Benvenuto da{" "}
-        <em className={`italic ${ThemeVariants.colors.text.brand}`}>
-          Ristosagra
-        </em>
-      </div>
-      <p
-        className={`${ThemeVariants.colors.text.secondary} text-[15px] text-center max-w-90`}
-      >
-        Sfoglia il menù e aggiungi i piatti al carrello.
+        <Label
+          tag={LabelTags.p}
+          label="Benvenuto da"
+          size={LabelDimensions.xxlarge}
+          noMargin
+        />{" "}
+        <Label
+          tag={LabelTags.p}
+          label="Ristosagra"
+          size={LabelDimensions.xxxlarge}
+          color={ThemeVariants.colors.text.brand}
+          additionalClasses="italic"
+          noMargin
+        />
         <br />
-        Quando sei pronto, invia il tuo ordine.
-      </p>
+        <Label
+          tag={LabelTags.p}
+          label="Sfoglia il menù e aggiungi i piatti al carrello."
+          color={ThemeVariants.colors.text.secondary}
+          size={LabelDimensions.medium}
+          noMargin
+        />
+        <Label
+          tag={LabelTags.p}
+          label="Quando sei pronto, invia il tuo ordine."
+          color={ThemeVariants.colors.text.secondary}
+          size={LabelDimensions.medium}
+          noMargin
+        />
+      </div>
+      {/* </p> */}
       <div className="flex gap-2.5 mt-2">
         <Button
           dimension={ButtonDimensions.xlarge}

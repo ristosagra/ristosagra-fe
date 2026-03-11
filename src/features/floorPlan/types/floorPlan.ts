@@ -54,7 +54,6 @@ export type ModeBtn = {
   key: PlanMode;
   label: string;
   icon: string;
-  color: string;
 };
 
 export type WallType = CoordinateType[] | null;

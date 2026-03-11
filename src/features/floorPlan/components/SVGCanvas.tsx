@@ -18,6 +18,9 @@ import {
 import { chairPos } from "../helpers/chair";
 import { getTableStyle } from "../helpers/tableStyle";
 import { sharedEdge } from "../helpers/snap";
+import { Label } from "../../../components/core/Label";
+import { LabelDimensions, LabelTags } from "../../../constant/label";
+import { ThemeVariants } from "../../../constant/colors";
 
 interface SVGCanvasProps {
   isEditing: boolean;
@@ -101,11 +104,17 @@ export const SVGCanvas = ({
         {tables.length === 0 && walls.length === 0 && (
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
             <div className="text-7xl mb-4 opacity-10">🍴</div>
-            <p className="text-neutral-600 text-sm">
-              {isEditing
-                ? "Usa gli strumenti per creare la piantina"
-                : "Nessuna piantina salvata"}
-            </p>
+            <Label
+              tag={LabelTags.p}
+              label={
+                isEditing
+                  ? "Usa gli strumenti per creare la piantina"
+                  : "Nessuna piantina salvata"
+              }
+              color={ThemeVariants.colors.text.secondary}
+              size={LabelDimensions.small}
+              noMargin
+            />
           </div>
         )}
 

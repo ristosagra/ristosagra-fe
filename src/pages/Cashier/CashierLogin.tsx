@@ -22,7 +22,6 @@ export function CashierLogin() {
       { username, password },
       {
         onSuccess: ({ success, token }) => {
-          console.log(token);
           if (success) {
             localStorage.setItem("auth_token", token);
             navigate("/dashboard");

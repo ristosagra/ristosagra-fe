@@ -4,6 +4,9 @@ import { type TableShapeConst, TableShape } from "../constant/floorPlan";
 import { useNotification } from "../../../hooks/useNotification";
 import type { WallType, PlanMode, WallData, ModeBtn } from "../types/floorPlan";
 import { NotificationType } from "../../../types/notification";
+import { Label } from "../../../components/core/Label";
+import { LabelDimensions, LabelTags } from "../../../constant/label";
+import { ThemeVariants } from "../../../constant/colors";
 
 interface SideBarFloorPlanProps {
   curWall: WallType;
@@ -44,17 +47,16 @@ export const SideBarFloorPlan = ({
   ];
 
   const modeButtons: ModeBtn[] = [
-    { key: "add4", label: "Tavolo da 4", icon: "➕", color: "bg-emerald-600" },
-    { key: "add8", label: "Tavolo da 8", icon: "➕", color: "bg-teal-600" },
+    { key: "add4", label: "Tavolo da 4", icon: "➕" },
+    { key: "add8", label: "Tavolo da 8", icon: "➕" },
     {
       key: "merge",
       label: "Unisci tavoli",
       icon: "🔗",
-      color: "bg-purple-600",
     },
-    { key: "move", label: "Sposta", icon: "✥", color: "bg-amber-500" },
-    { key: "delete", label: "Elimina", icon: "🗑", color: "bg-rose-600" },
-    { key: "wall", label: "Disegna muro", icon: "🧱", color: "bg-orange-600" },
+    { key: "move", label: "Sposta", icon: "✥" },
+    { key: "delete", label: "Elimina", icon: "🗑" },
+    { key: "wall", label: "Disegna muro", icon: "🧱" },
   ];
 
   function finishWall() {
@@ -94,9 +96,14 @@ export const SideBarFloorPlan = ({
 
       {/* Shape */}
       <div className="mt-2 pt-2 border-t border-neutral-700">
-        <p className="text-neutral-500 text-xs tracking-widest uppercase px-1 pb-1.5">
-          Forma tavoli
-        </p>
+        <Label
+          tag={LabelTags.p}
+          label="Forma tavoli"
+          color={ThemeVariants.colors.text.secondary}
+          size={LabelDimensions.small}
+          noMargin
+          additionalClasses="uppercase px-1 pb-1.5"
+        />
         <div className="flex gap-1">
           {(
             [
@@ -120,9 +127,16 @@ export const SideBarFloorPlan = ({
       {/* Wall controls */}
       {mode === "wall" && (
         <div className="pt-2 border-t border-neutral-700 space-y-1">
-          <p className="text-neutral-500 text-xs px-1">
-            {curWall ? `📍 ${curWall.length} punto/i` : "Clicca per iniziare"}
-          </p>
+          <Label
+            tag={LabelTags.p}
+            label={
+              curWall ? `📍 ${curWall.length} punto/i` : "Clicca per iniziare"
+            }
+            color={ThemeVariants.colors.text.secondary}
+            size={LabelDimensions.small}
+            noMargin
+            additionalClasses="px-1"
+          />
           {curWall && curWall.length >= 2 && (
             <button
               onClick={finishWall}
@@ -144,9 +158,14 @@ export const SideBarFloorPlan = ({
 
       {/* Legend */}
       <div className="mt-auto pt-2 border-t border-neutral-700">
-        <p className="text-neutral-500 text-xs tracking-widest uppercase px-1 pb-1">
-          Legenda
-        </p>
+        <Label
+          tag={LabelTags.p}
+          label="Legenda"
+          color={ThemeVariants.colors.text.secondary}
+          size={LabelDimensions.small}
+          noMargin
+          additionalClasses="uppercase px-1 pb-1"
+        />
         {legendSideBar.map(({ cls, label }) => (
           <div
             key={label}

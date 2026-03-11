@@ -16,6 +16,7 @@ export const LabelDimensions = {
   large: "text-lg",
   xlarge: "text-2xl",
   xxlarge: "text-4xl",
+  xxxlarge: "text-6xl",
   xxxxlarge: "text-8xl",
 } as const;
 

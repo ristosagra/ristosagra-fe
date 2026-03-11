@@ -1,7 +1,7 @@
 import React from "react";
 import { Label } from "./Label";
 import type { ButtonDimensionsConst } from "../../constant/button";
-import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
+import { LabelDimensions, LabelTags } from "../../constant/label";
 import { ThemeVariants } from "../../constant/colors";
 
 interface ButtonProps {
@@ -11,9 +11,10 @@ interface ButtonProps {
   dimension: ButtonDimensionsConst;
   label?: string | React.ReactNode;
   fullWidth?: boolean;
-  variant: "primary" | "secondary" | "icon" | "active";
+  variant: "primary" | "secondary" | "icon" | "active" | "success" | "danger";
   className?: string;
   isActive?: boolean;
+  disabled?: boolean;
 }
 
 export const Button = ({
@@ -26,19 +27,23 @@ export const Button = ({
   variant,
   className = "",
   isActive = false,
+  disabled = false,
 }: ButtonProps) => {
   const variantClass = {
-    primary: `${ThemeVariants.colors.bg.brand} ${ThemeVariants.colors.text.white} rounded-md`,
-    secondary: `${ThemeVariants.colors.bg.hover} ${ThemeVariants.colors.text.white} rounded-md`,
-    icon: `${ThemeVariants.colors.bg.trasparent}`,
+    primary: `${ThemeVariants.colors.bg.brand} ${ThemeVariants.colors.text.white} rounded-md font-bold`,
+    secondary: `${ThemeVariants.colors.bg.hover} ${ThemeVariants.colors.text.white} rounded-md font-bold`,
+    success: `${ThemeVariants.colors.bg.success} ${ThemeVariants.colors.border.all.success} ${ThemeVariants.colors.text.white} rounded-md font-bold`,
+    danger: `${ThemeVariants.colors.bg.danger} ${ThemeVariants.colors.border.all.danger} ${ThemeVariants.colors.text.white} rounded-md font-bold`,
+    icon: `${ThemeVariants.colors.bg.trasparent} font-normal`,
     active: isActive
-      ? `${ThemeVariants.colors.text.brand} ${ThemeVariants.colors.border.all.default} ${ThemeVariants.borderRadius.md} ${ThemeVariants.colors.bg.hover}`
-      : `${ThemeVariants.colors.text.secondary}`,
+      ? `${ThemeVariants.colors.text.brand} ${ThemeVariants.colors.border.all.default} ${ThemeVariants.borderRadius.md} ${ThemeVariants.colors.bg.hover} font-bold`
+      : `${ThemeVariants.colors.text.secondary} font-bold`,
   }[variant];
 
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={`
         ${dimension}
         flex items-center justify-center gap-1.5
@@ -55,7 +60,6 @@ export const Button = ({
           tag={LabelTags.p}
           size={LabelDimensions.medium}
           noMargin
-          weight={LabelWeight.bold}
           additionalClasses={iconLeft ? "ml-1" : iconRight ? "mr-1" : ""}
         />
       ) : (
