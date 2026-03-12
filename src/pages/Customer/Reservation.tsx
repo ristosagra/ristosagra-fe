@@ -52,7 +52,7 @@ export const Reservation = ({ cartItems, orderNumber }: ReservationProps) => {
         <div
           className={`${ThemeVariants.colors.bg.surface} ${ThemeVariants.colors.border.all.brand} ${ThemeVariants.borderRadius.xl} overflow-hidden w-full mt-5`}
         >
-          <Accordion onClick={() => setIsOpen(!isOpen)}>
+          <Accordion onClick={() => setIsOpen(!isOpen)} className="p-4">
             <Label
               label="Riepilogo ordine"
               tag={LabelTags.p}

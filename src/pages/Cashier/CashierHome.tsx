@@ -7,9 +7,14 @@ import { PagesCashier, type PagesCashierConst } from "../../constant/pages";
 import { ThemeVariants } from "../../constant/colors";
 import { Button } from "../../components/core/Button";
 import { ButtonDimensions } from "../../constant/button";
+import { Toggle } from "../../components/core/Toogle";
+import { Label } from "../../components/core/Label";
+import { LabelTags } from "../../constant/label";
+import { useTheme } from "../../hooks/useTheme";
 
 export const CashierHome = () => {
   const [page, setPage] = useState<PagesCashierConst>(PagesCashier.HOME);
+  const { isDark, toggleTheme } = useTheme();
 
   return (
     <div className="min-h-screen min-w-screen h-full overflow-hidden flex flex-col">
@@ -22,6 +27,16 @@ export const CashierHome = () => {
           isActive={page === PagesCashier.HOME}
           className="px-2 py-2 cursor-pointer"
         />
+        <div
+          className={`${ThemeVariants.borderRadius.lg} ${ThemeVariants.colors.border.all.default} flex flex-row gap-3 px-3 py-1`}
+        >
+          <Toggle value={isDark} onChange={toggleTheme} variant="secondary" />
+          <Label
+            tag={LabelTags.p}
+            label={isDark ? "🌙 Dark" : "☀️ Light"}
+            noMargin
+          />
+        </div>
         <div className="flex flex-row items-center gap-8">
           <Button
             iconLeft={<LandPlot size={24} />}
