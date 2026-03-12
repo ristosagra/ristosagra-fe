@@ -10,6 +10,8 @@ import { Input } from "../../components/core/Input";
 import type { CartType } from "../../features/orders/types/orders";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
 import { ThemeVariants } from "../../constant/colors";
+import { Accordion } from "../../components/core/Accordion";
+import { Toggle } from "../../components/core/Toogle";
 
 export const CashierDashboard = () => {
   const [search, setSearch] = useState("");
@@ -55,11 +57,10 @@ export const CashierDashboard = () => {
                 }`}
               >
                 <div className="flex items-center justify-between p-4 gap-4">
-                  <button
+                  <Accordion
                     onClick={() =>
                       setExpandedId(expandedId === order.id ? null : order.id)
                     }
-                    className="flex justify-between items-center gap-4 flex-1 text-left outline-none focus:outline-none focus-visible:outline-none cursor-pointer "
                   >
                     <Label
                       label={`#${order.orderNumber}`}
@@ -109,23 +110,13 @@ export const CashierDashboard = () => {
                         }`}
                       />
                     </div>
-                  </button>
-                  <button
-                    onClick={() =>
+                  </Accordion>
+                  <Toggle
+                    value={order.paid}
+                    onChange={() =>
                       updatePayment({ id: order.id, paid: !order.paid })
                     }
-                    className={`relative cursor-pointer w-12 h-6 rounded-full transition-colors outline-none focus:outline-none focus-visible:outline-none ${
-                      order.paid
-                        ? `${ThemeVariants.colors.bg.brand} ${ThemeVariants.colors.border.all.default}`
-                        : `${ThemeVariants.colors.bg.hover} ${ThemeVariants.colors.border.all.default}`
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.75 w-4 h-4 ${ThemeVariants.colors.bg.white} rounded-full shadow transition-all ${
-                        order.paid ? "left-7" : "left-1"
-                      }`}
-                    />
-                  </button>
+                  />
                 </div>
 
                 {expandedId === order.id && (

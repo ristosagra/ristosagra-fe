@@ -7,6 +7,9 @@ import { NotificationType } from "../../../types/notification";
 import { Label } from "../../../components/core/Label";
 import { LabelDimensions, LabelTags } from "../../../constant/label";
 import { ThemeVariants } from "../../../constant/colors";
+import { Button } from "../../../components/core/Button";
+import { ButtonDimensions } from "../../../constant/button";
+import { Check, Link, X } from "lucide-react";
 
 interface SideBarFloorPlanProps {
   curWall: WallType;
@@ -81,16 +84,32 @@ export const SideBarFloorPlan = ({
       {/* Merge state */}
       {mode === "merge" && mergeAnchor && (
         <div className="bg-purple-900/60 border border-purple-500 rounded-md px-2 py-2 text-xs">
-          <div className="text-purple-300 font-bold mb-1">🔗 In corso…</div>
-          <div className="text-purple-400 text-xs mb-2">
-            Clicca tavoli da aggiungere
+          <div className="text-purple-300 font-bold mb-1">
+            <Label
+              tag={LabelTags.p}
+              iconLeft={<Link size={14} />}
+              label="In corso…"
+              size={LabelDimensions.small}
+              noMargin
+            />
           </div>
-          <button
+          <div className="text-purple-400 mb-2">
+            <Label
+              tag={LabelTags.p}
+              label="Clicca tavoli da aggiungere"
+              size={LabelDimensions.small}
+              noMargin
+            />
+          </div>
+          <Button
             onClick={() => setMergeAnchor(null)}
-            className="w-full text-xs text-neutral-400 hover:text-white bg-neutral-800 rounded py-1 transition-colors"
-          >
-            ✕ Fine unione
-          </button>
+            variant="secondary"
+            dimension={ButtonDimensions.auto}
+            iconLeft={<X size={14} />}
+            label="Fine unione"
+            className="py-1"
+            fullWidth
+          />
         </div>
       )}
 
@@ -111,15 +130,16 @@ export const SideBarFloorPlan = ({
               [TableShape.Rect, "▬", "Rettang."],
             ] as const
           ).map(([s, ic, lb]) => (
-            <button
+            <Button
               key={s}
               onClick={() => setShape(s)}
-              className={`flex-1 py-1.5 rounded text-xs font-medium flex flex-col items-center gap-0.5 border transition-all
-                          ${shape === s ? "bg-sky-600 text-white border-sky-400" : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border-neutral-700"}`}
-            >
-              <span>{ic}</span>
-              <span>{lb}</span>
-            </button>
+              variant={shape === s ? "primary" : "secondary"}
+              dimension={ButtonDimensions.auto}
+              iconLeft={ic}
+              label={lb}
+              className="flex flex-col py-1"
+              fullWidth
+            />
           ))}
         </div>
       </div>
@@ -138,20 +158,26 @@ export const SideBarFloorPlan = ({
             additionalClasses="px-1"
           />
           {curWall && curWall.length >= 2 && (
-            <button
+            <Button
               onClick={finishWall}
-              className="w-full bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold py-2 rounded-md border border-orange-400 transition-colors"
-            >
-              ✓ Termina muro
-            </button>
+              variant="primary"
+              dimension={ButtonDimensions.auto}
+              iconLeft={<Check size={15} />}
+              label="Termina muro"
+              className="py-2"
+              fullWidth
+            />
           )}
           {curWall && (
-            <button
-              onClick={() => setCurWall(null)}
-              className="w-full bg-neutral-700 text-neutral-300 text-xs py-1.5 rounded-md transition-colors hover:bg-neutral-600"
-            >
-              ✕ Annulla
-            </button>
+            <Button
+              onClick={finishWall}
+              variant="secondary"
+              dimension={ButtonDimensions.auto}
+              iconLeft={<X size={14} />}
+              label="Annulla"
+              className="py-1"
+              fullWidth
+            />
           )}
         </div>
       )}

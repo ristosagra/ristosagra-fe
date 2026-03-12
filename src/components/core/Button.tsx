@@ -46,7 +46,7 @@ export const Button = ({
       disabled={disabled}
       className={`
         ${dimension}
-        flex items-center justify-center gap-1.5
+        flex items-center justify-center
         outline-none cursor-pointer
         ${variantClass}
         ${fullWidth ? "w-full" : ""}

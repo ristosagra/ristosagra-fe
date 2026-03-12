@@ -18,6 +18,7 @@ export interface LabelProps {
   additionalClasses?: string;
   fontFamily?: string;
   variant?: "success" | "danger";
+  iconLeft?: React.ReactNode;
 }
 
 export const Label = ({
@@ -31,6 +32,7 @@ export const Label = ({
   additionalClasses = "",
   fontFamily,
   variant,
+  iconLeft,
 }: LabelProps) => {
   const Tag = tag as React.ElementType;
   const borderClass = colorBorderBottom ? "border-b" : "";
@@ -52,8 +54,9 @@ export const Label = ({
 
   return (
     <Tag
-      className={`${variantClass} ${textSize} ${color} ${marginBottom} ${borderClass} ${colorBorderBottom} ${labelWeight} ${additionalClasses} ${fontFamily}`}
+      className={`${variantClass} ${textSize} ${color} ${marginBottom} ${borderClass} ${colorBorderBottom} ${labelWeight} ${additionalClasses} ${fontFamily} flex flex-row items-center ${iconLeft && "gap-1"}`}
     >
+      {iconLeft}
       {label}
     </Tag>
   );

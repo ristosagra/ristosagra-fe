@@ -5,6 +5,7 @@ import type { CartType } from "../../features/orders/types/orders";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
 import { calcTotal } from "../../helpers/calcTotal";
 import { ThemeVariants } from "../../constant/colors";
+import { Accordion } from "../../components/core/Accordion";
 
 interface ReservationProps {
   cartItems: CartType[];
@@ -51,10 +52,7 @@ export const Reservation = ({ cartItems, orderNumber }: ReservationProps) => {
         <div
           className={`${ThemeVariants.colors.bg.surface} ${ThemeVariants.colors.border.all.brand} ${ThemeVariants.borderRadius.xl} overflow-hidden w-full mt-5`}
         >
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="w-full flex justify-between items-center p-4"
-          >
+          <Accordion onClick={() => setIsOpen(!isOpen)}>
             <Label
               label="Riepilogo ordine"
               tag={LabelTags.p}
@@ -68,7 +66,7 @@ export const Reservation = ({ cartItems, orderNumber }: ReservationProps) => {
             >
               ▼
             </span>
-          </button>
+          </Accordion>
 
           {isOpen && (
             <div className="px-4 pb-4 space-y-3">
