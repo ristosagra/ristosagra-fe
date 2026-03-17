@@ -11,6 +11,7 @@ import { Toggle } from "../../components/core/Toogle";
 import { Label } from "../../components/core/Label";
 import { LabelTags } from "../../constant/label";
 import { useTheme } from "../../hooks/useTheme";
+import { Home } from "./Home";
 
 export const CashierHome = () => {
   const [page, setPage] = useState<PagesCashierConst>(PagesCashier.HOME);
@@ -61,7 +62,7 @@ export const CashierHome = () => {
       <main
         className={`${ThemeVariants.colors.bg.base} flex-1 overflow-hidden pt-16 pb-10`}
       >
-        {page === PagesCashier.HOME && <div></div>}
+        {page === PagesCashier.HOME && <Home />}
         {page === PagesCashier.FLORPLAN && <RestaurantFloorPlan />}
         {page === PagesCashier.CASH && <CashierDashboard />}
       </main>

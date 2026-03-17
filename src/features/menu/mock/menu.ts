@@ -18,3 +18,9 @@ export const generateFakeDishes = (count = 15): Dish[] =>
     price: Number.parseFloat(faker.commerce.price({ min: 4, max: 20 })),
     category: DISH_CATEGORIES[i % DISH_CATEGORIES.length],
   }));
+
+export const fakeCreateMenu = (dishes: Dish[]): Promise<Dish[]> =>
+  Promise.resolve(dishes);
+
+export const fakeUpdateMenu = (dishes: Dish[]): Promise<Dish[]> =>
+  Promise.resolve(dishes);
