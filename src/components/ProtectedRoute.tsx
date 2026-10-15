@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
+import { hasSession } from "../services/auth/session";
 
+//Protegge solo la navigazione: i dati della cassa li deve proteggere il backend
 export function ProtectedRoute({ children }: { children: ReactNode }) {
-  const token = localStorage.getItem("auth_token");
-  if (!token) return <Navigate to="/login" replace />;
+  if (!hasSession()) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }

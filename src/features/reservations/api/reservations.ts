@@ -20,8 +20,8 @@ export const ReservationsService = {
     id,
     ...changes
   }: ReservationUpdate): Promise<Reservation> =>
-    httpClient.patch(`/api/reservations/${id}`, changes),
+    httpClient.patch(`/api/reservations/${encodeURIComponent(id)}`, changes),
 
   deleteReservation: (id: string): Promise<void> =>
-    httpClient.delete(`/api/reservations/${id}`),
+    httpClient.delete(`/api/reservations/${encodeURIComponent(id)}`),
 };

@@ -14,6 +14,7 @@ import { tableLabel } from "../helpers/chair";
 import { useReservations } from "../../reservations/hook/useReservations";
 import { SeatRequest } from "../../reservations/types/reservations";
 import { SeatRequestTags } from "../../reservations/components/SeatRequestTags";
+import { PERSON_NAME_MAX } from "../../../constant/limits";
 import {
   addHeadChair,
   addableHeads,
@@ -44,12 +45,12 @@ const CheckRow = ({
   label: string;
   icon?: React.ReactNode;
 }) => (
-  <label className="flex items-center gap-2 cursor-pointer select-none">
+  <label className="flex items-center gap-2 py-1 cursor-pointer select-none">
     <input
       type="checkbox"
       checked={checked}
       onChange={(e) => onChange(e.target.checked)}
-      className="w-4 h-4 accent-emerald-500 cursor-pointer"
+      className="w-5 h-5 sm:w-4 sm:h-4 shrink-0 accent-emerald-500 cursor-pointer"
     />
     <Label
       tag={LabelTags.p}
@@ -83,7 +84,7 @@ const OneOrTwo = ({
         dimension={ButtonDimensions.auto}
         variant={value === n ? "primary" : "secondary"}
         disabled={n > max}
-        className="px-2.5 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+        className="px-2.5 py-2 sm:py-1 disabled:opacity-40 disabled:cursor-not-allowed"
       />
     ))}
   </div>
@@ -189,6 +190,7 @@ export const ModalFloorPlan = ({
 
   return (
     <Modal
+      onClose={closeModal}
       icon={<BookOpenText />}
       title={reservation ? "Sistema prenotazione online" : "Nuova Prenotazione"}
       subTitle={
@@ -254,6 +256,8 @@ export const ModalFloorPlan = ({
             placeholder="Es. Mario Rossi"
             value={guest}
             setValue={setGuest}
+            maxLength={PERSON_NAME_MAX}
+            ariaLabel="Nome cliente"
             variant="secondary"
             className="w-full focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 mb-5"
             autoFocus
@@ -272,6 +276,7 @@ export const ModalFloorPlan = ({
             placeholder="20:30"
             value={arrival}
             setValue={setArrival}
+            ariaLabel="Orario di arrivo"
             variant="secondary"
             className="w-32 [color-scheme:dark] focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 mb-5"
           />
@@ -367,14 +372,14 @@ export const ModalFloorPlan = ({
           dimension={ButtonDimensions.auto}
           variant="success"
           disabled={!canConfirm}
-          className="px-3 py-2 disabled:bg-neutral-700 disabled:text-neutral-500 disabled:cursor-not-allowed disabled:border-neutral-500"
+          className="px-4 h-10 max-sm:flex-1 disabled:bg-neutral-700 disabled:text-neutral-500 disabled:cursor-not-allowed disabled:border-neutral-500"
         />
         <Button
           label="Annulla"
           onClick={closeModal}
           dimension={ButtonDimensions.auto}
           variant="secondary"
-          className="px-3 py-2"
+          className="px-4 h-10 max-sm:flex-1"
         />
       </div>
     </Modal>

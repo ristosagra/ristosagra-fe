@@ -24,14 +24,14 @@ export const TakeawaySettingsBox = () => {
           onClick={() => save({ ...settings, mode: PickupMode.Fixed })}
           dimension={ButtonDimensions.auto}
           variant={isFixed ? "primary" : "secondary"}
-          className="px-3 py-1.5"
+          className="px-3 py-2"
         />
         <Button
           label={<span className="text-sm">Scelto dal cliente</span>}
           onClick={() => save({ ...settings, mode: PickupMode.Custom })}
           dimension={ButtonDimensions.auto}
           variant={isFixed ? "secondary" : "primary"}
-          className="px-3 py-1.5"
+          className="px-3 py-2"
         />
       </div>
       {isFixed ? (
@@ -43,13 +43,12 @@ export const TakeawaySettingsBox = () => {
             type="time"
             placeholder="19:30"
             value={settings.fixedTime}
-            setValue={(v) => {
-              const fixedTime =
-                typeof v === "function" ? v(settings.fixedTime) : v;
-              if (fixedTime) save({ ...settings, fixedTime });
-            }}
+            setValue={(fixedTime) =>
+              fixedTime && save({ ...settings, fixedTime })
+            }
             variant="secondary"
             className="w-28 text-sm py-1"
+            ariaLabel="Orario unico di ritiro"
           />
         </div>
       ) : (

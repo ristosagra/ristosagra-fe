@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { isSmallScreen } from "../helpers/view";
 import type {
   CoordinateType,
   FloorPlanData,
@@ -47,15 +48,15 @@ export const useFloorPlanState = (
   const [hoveredTableId, setHoveredTableId] = useState<string | null>(null);
   const [hoveredBookingId, setHoveredBookingId] = useState<string | null>(null);
   //pannello aperto a destra: prenotazioni ai tavoli o prenotazioni online
-  const [rightPanel, setRightPanel] = useState<RightPanelConst | null>(
-    RightPanel.Bookings,
+  //(sul cellulare coprirebbe la piantina, quindi parte chiuso)
+  const [rightPanel, setRightPanel] = useState<RightPanelConst | null>(() =>
+    isSmallScreen() ? null : RightPanel.Bookings,
   );
   //prenotazione online in attesa di essere sistemata con un clic su un tavolo
   const [placingReservationId, setPlacingReservationId] = useState<
     string | null
   >(null);
 
-  const didPan = useRef(false);
   const svgRef = useRef<SVGSVGElement>(null);
 
   const selTable = selId ? tables.find((t) => t.id === selId) : null;
@@ -85,8 +86,8 @@ export const useFloorPlanState = (
   } · clicca un tavolo per selezionarlo`;
   const hints: Record<PlanMode, string> = {
     view: isEditing
-      ? "Clicca un tavolo per gestirlo"
-      : "Clicca un tavolo per vedere dettagli e prenotare",
+      ? "Seleziona un tavolo per gestirlo"
+      : "Seleziona un tavolo per vedere dettagli e prenotare",
     add: addHint,
     merge: mergeAnchor
       ? "Ancora impostata — clicca altri tavoli per unirli, poi Fine unione"
@@ -94,7 +95,7 @@ export const useFloorPlanState = (
     move: "Trascina tavoli (i gruppi si muovono insieme) · 🟡 per muri · clic = seleziona",
     delete:
       "Clic tavolo = elimina · Clic gruppo = separa · Clic muro = elimina",
-    pan: "Trascina per navigare · Rotellina per zoom",
+    pan: "Trascina per navigare · Rotellina o due dita per lo zoom",
     wall: curWall
       ? `${curWall.length} punto/i · Clicca o Termina muro`
       : "Clicca per iniziare un muro",
@@ -150,6 +151,5 @@ export const useFloorPlanState = (
     setWallDrag,
     // ref
     svgRef,
-    didPan,
   };
 };

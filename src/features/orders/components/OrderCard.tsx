@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { Check, Clock, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Clock,
+  Minus,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Label } from "../../../components/core/Label";
 import { Accordion } from "../../../components/core/Accordion";
 import { Toggle } from "../../../components/core/Toogle";
@@ -100,8 +109,12 @@ export const OrderCard = ({
           : `${ThemeVariants.colors.bg.surface} ${ThemeVariants.colors.border.all.default}`
       }`}
     >
-      <div className="flex items-center justify-between p-4 gap-4">
-        <Accordion onClick={onToggleExpand}>
+      <div className="flex items-center justify-between p-3 sm:p-4 gap-3 sm:gap-4">
+        <Accordion
+          onClick={onToggleExpand}
+          expanded={expanded}
+          className="flex-wrap gap-x-3 gap-y-1 min-w-0"
+        >
           <div className="flex flex-col items-start min-w-0">
             <Label
               label={`#${order.orderNumber}`}
@@ -124,10 +137,11 @@ export const OrderCard = ({
                 weight={LabelWeight.semibold}
                 color={ThemeVariants.colors.text.white}
                 noMargin
+                additionalClasses="[overflow-wrap:anywhere]"
               />
             )}
           </div>
-          <div className="flex flex-row gap-5 items-center">
+          <div className="flex flex-row gap-2 sm:gap-5 items-center ml-auto">
             <Label
               label={`${total.toFixed(2)} €`}
               tag={LabelTags.p}
@@ -147,31 +161,26 @@ export const OrderCard = ({
               variant={order.paid ? "success" : "danger"}
               noMargin
             />
-            <Label
-              label="▼"
-              tag={LabelTags.p}
-              size={LabelDimensions.medium}
-              weight={LabelWeight.normal}
-              color={
+            <ChevronDown
+              size={20}
+              aria-hidden
+              className={`shrink-0 transition-transform duration-300 ${
                 order.paid
                   ? ThemeVariants.colors.text.secondary
                   : ThemeVariants.colors.text.white
-              }
-              noMargin
-              additionalClasses={`transition-transform duration-300 ${
-                expanded ? "rotate-180" : ""
-              }`}
+              } ${expanded ? "rotate-180" : ""}`}
             />
           </div>
         </Accordion>
         <Toggle
           value={order.paid}
           onChange={() => updatePayment({ id: order.id, paid: !order.paid })}
+          ariaLabel={`Ordine #${order.orderNumber} pagato`}
         />
       </div>
 
       {expanded && (
-        <div className={`px-4 pb-4 space-y-2 ${borderTop}`}>
+        <div className={`px-3 sm:px-4 pb-4 space-y-2 ${borderTop}`}>
           {items.map((item, index) => (
             <div
               key={`${item.dish.id}-${index}`}
@@ -211,6 +220,12 @@ export const OrderCard = ({
                     onClick={() => changeQuantity(index, -1)}
                     dimension={ButtonDimensions.small}
                     variant="secondary"
+                    className="max-sm:h-9"
+                    ariaLabel={
+                      item.quantity === 1
+                        ? `Togli ${item.dish.name}`
+                        : `Diminuisci ${item.dish.name}`
+                    }
                   />
                   <Label
                     label={`${item.quantity}`}
@@ -226,6 +241,8 @@ export const OrderCard = ({
                     onClick={() => changeQuantity(index, 1)}
                     dimension={ButtonDimensions.small}
                     variant="secondary"
+                    className="max-sm:h-9"
+                    ariaLabel={`Aumenta ${item.dish.name}`}
                   />
                 </div>
               ) : (
@@ -247,6 +264,7 @@ export const OrderCard = ({
               <select
                 value={dishToAdd}
                 onChange={(e) => setDishToAdd(e.target.value)}
+                aria-label="Piatto da aggiungere"
                 className={`flex-1 min-w-0 px-2 py-2 text-sm ${ThemeVariants.colors.border.all.default} ${ThemeVariants.colors.bg.surface} ${ThemeVariants.borderRadius.sm} ${ThemeVariants.colors.text.white}`}
               >
                 <option value="">Aggiungi un piatto…</option>

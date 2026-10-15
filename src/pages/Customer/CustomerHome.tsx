@@ -1,106 +1,130 @@
-import { useState } from "react";
-import { ShoppingCart, House } from "lucide-react";
+import { CalendarClock, House, NotebookPen, ShoppingCart } from "lucide-react";
 import Cart, { type ConfirmedOrder } from "./Cart";
 import { BookTable } from "./BookTable";
 import { Reservation } from "./Reservation";
 import Menu from "./Menu";
-import { NavBar } from "../../components/core/NavBar";
+import { NavBar, NavGroup, NavItem } from "../../components/core/NavBar";
 import { PagesCustomer, type PagesCustomerConst } from "../../constant/pages";
 import type { CartType } from "../../features/orders/types/orders";
 import { Home } from "./Home";
 import { ThemeVariants } from "../../constant/colors";
-import { Button } from "../../components/core/Button";
-import { ButtonDimensions } from "../../constant/button";
-import { Label } from "../../components/core/Label";
-import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
+import { calcTotal } from "../../helpers/calcTotal";
+import { usePersistentState } from "../../hooks/usePersistentState";
+
+//Dopo questo tempo il numero dell'ultimo ordine non viene più riproposto
+const ORDER_TTL_MS = 12 * 60 * 60 * 1000;
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null;
+
+const isPage = (v: unknown): v is PagesCustomerConst =>
+  Object.values(PagesCustomer).includes(v as PagesCustomerConst);
+
+const isCart = (v: unknown): v is CartType[] =>
+  Array.isArray(v) &&
+  v.every(
+    (item) =>
+      isRecord(item) &&
+      typeof item.quantity === "number" &&
+      item.quantity > 0 &&
+      isRecord(item.dish) &&
+      typeof item.dish.id === "number" &&
+      typeof item.dish.name === "string" &&
+      typeof item.dish.price === "number",
+  );
+
+const isRecentOrder = (v: unknown): v is ConfirmedOrder | null =>
+  v === null ||
+  (isRecord(v) &&
+    typeof v.orderNumber === "number" &&
+    isCart(v.items) &&
+    typeof v.confirmedAt === "string" &&
+    Date.now() - Date.parse(v.confirmedAt) < ORDER_TTL_MS);
 
 export const CustomerHome = () => {
-  const [page, setPage] = useState<PagesCustomerConst>(PagesCustomer.HOME);
-  const [cartItems, setCartItems] = useState<CartType[]>([]);
-  const [confirmedOrder, setConfirmedOrder] = useState<ConfirmedOrder | null>(
-    null,
+  //Pagina e carrello restano finché la scheda è aperta, anche se il telefono la ricarica
+  const [page, setPage] = usePersistentState<PagesCustomerConst>(
+    "ristosagra.page",
+    PagesCustomer.HOME,
+    { storage: "session", validate: isPage },
   );
+  const [cartItems, setCartItems] = usePersistentState<CartType[]>(
+    "ristosagra.cart",
+    [],
+    { storage: "session", validate: isCart },
+  );
+  //Il numero d'ordine serve alla cassa: resta salvato anche chiudendo il browser
+  const [confirmedOrder, setConfirmedOrder] =
+    usePersistentState<ConfirmedOrder | null>("ristosagra.lastOrder", null, {
+      validate: isRecentOrder,
+    });
 
-  const total = cartItems.reduce(
-    (acc, item) => acc + item.dish.price * item.quantity,
-    0,
-  );
+  const total = calcTotal(cartItems);
   const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
+  const totalLabel = `€${total.toFixed(2)}`;
+  const showOrder = page === PagesCustomer.RESERVATION && confirmedOrder;
 
   return (
-    <div className="min-h-dvh min-w-screen h-full flex flex-col">
+    <div className="h-dvh flex flex-col overflow-hidden">
       <NavBar>
-        <Button
-          iconLeft={<House size={24} />}
-          dimension={ButtonDimensions.auto}
+        <NavItem
+          icon={<House size={22} />}
+          label="Home"
+          desktopLabel={null}
+          ariaLabel="Home"
           onClick={() => setPage(PagesCustomer.HOME)}
-          variant="active"
-          isActive={page === PagesCustomer.HOME}
-          className="px-2 py-2"
+          active={page === PagesCustomer.HOME}
         />
-
-        <div className="flex flex-row items-center gap-2">
-          <Button
-            isActive={page === PagesCustomer.BOOK_TABLE}
+        <NavGroup>
+          <NavItem
+            icon={<CalendarClock size={22} />}
+            label="Prenota"
+            desktopLabel="Prenota un tavolo"
             onClick={() => setPage(PagesCustomer.BOOK_TABLE)}
-            label="Prenota un tavolo"
-            dimension={ButtonDimensions.auto}
-            variant="active"
-            className="px-3 py-2"
+            active={page === PagesCustomer.BOOK_TABLE}
           />
-          <Button
-            isActive={page === PagesCustomer.MENU}
-            onClick={() => setPage(PagesCustomer.MENU)}
+          <NavItem
+            icon={<NotebookPen size={22} />}
             label="Menù"
-            dimension={ButtonDimensions.auto}
-            variant="active"
-            className="px-3 py-2"
+            onClick={() => setPage(PagesCustomer.MENU)}
+            active={page === PagesCustomer.MENU}
           />
-          <div className="flex flex-row items-center">
-            <div style={{ position: "relative", display: "flex" }}>
-              <Button
-                dimension={ButtonDimensions.auto}
-                onClick={() => setPage(PagesCustomer.CART)}
-                variant="active"
-                isActive={page === PagesCustomer.CART}
-                iconRight={
-                  <>
-                    <ShoppingCart size={24} />
-                    {cartCount > 0 && (
-                      <span
-                        className={`absolute w-4 h-4 right-1 top-0.5 ${ThemeVariants.borderRadius.full} ${ThemeVariants.colors.bg.brand} text-white text-[9px] font-bold flex items-center justify-center leading-none`}
-                      >
-                        {cartCount > 9 ? "9+" : cartCount}
-                      </span>
-                    )}
-                  </>
-                }
-                label={
-                  total > 0 && (
-                    <Label
-                      label={`€${total.toFixed(2)}`}
-                      tag={LabelTags.h2}
-                      size={LabelDimensions.medium}
-                      weight={LabelWeight.bold}
-                      fontFamily={ThemeVariants.fontFamily.display}
-                      noMargin
-                      color={ThemeVariants.colors.text.brand}
-                    />
-                  )
-                }
-                className={`px-3 py-2 ${cartCount > 0 ? ThemeVariants.colors.border.all.brand : ""} ${ThemeVariants.borderRadius.md}`}
-              />
-            </div>
-          </div>
-        </div>
+          <NavItem
+            icon={<ShoppingCart size={22} />}
+            badge={cartCount}
+            label={total > 0 ? totalLabel : "Carrello"}
+            desktopLabel={
+              total > 0 ? (
+                <span
+                  className={`${ThemeVariants.fontFamily.display} ${ThemeVariants.colors.text.brand}`}
+                >
+                  {totalLabel}
+                </span>
+              ) : null
+            }
+            ariaLabel={`Carrello: ${cartCount} ${cartCount === 1 ? "articolo" : "articoli"}`}
+            onClick={() => setPage(PagesCustomer.CART)}
+            active={page === PagesCustomer.CART}
+          />
+        </NavGroup>
       </NavBar>
 
       <main
-        className={`${ThemeVariants.colors.bg.base} flex-1 overflow-hidden pt-16 pb-10`}
+        className={`${ThemeVariants.colors.bg.base} flex-1 min-h-0 overflow-hidden`}
       >
-        {page === PagesCustomer.HOME && <Home setPage={setPage} />}
+        {(page === PagesCustomer.HOME ||
+          (page === PagesCustomer.RESERVATION && !confirmedOrder)) && (
+          <Home
+            setPage={setPage}
+            lastOrderNumber={confirmedOrder?.orderNumber}
+          />
+        )}
         {page === PagesCustomer.MENU && (
-          <Menu cartItems={cartItems} setCartItems={setCartItems} />
+          <Menu
+            cartItems={cartItems}
+            setCartItems={setCartItems}
+            onGoToCart={() => setPage(PagesCustomer.CART)}
+          />
         )}
         {page === PagesCustomer.CART && (
           <Cart
@@ -110,9 +134,7 @@ export const CustomerHome = () => {
             setConfirmedOrder={setConfirmedOrder}
           />
         )}
-        {page === PagesCustomer.RESERVATION && confirmedOrder && (
-          <Reservation order={confirmedOrder} />
-        )}
+        {showOrder && <Reservation order={confirmedOrder} />}
         {page === PagesCustomer.BOOK_TABLE && <BookTable />}
       </main>
     </div>

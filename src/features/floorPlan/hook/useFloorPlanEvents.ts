@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   CoordinateType,
   DraggingType,
@@ -21,7 +21,19 @@ import { defaultChairs, nextTableName } from "../helpers/chair";
 import { snapIncoming } from "../helpers/snap";
 import { useNotification } from "../../../hooks/useNotification";
 import { getUnit, hasBookings, unitOccupancy } from "../helpers/booking";
+import { clampZoom } from "../helpers/view";
 import type { ModalType } from "../../../types/general";
+
+//Spostamento minimo (px) perché un tocco o un clic diventi un trascinamento
+const DRAG_THRESHOLD = 5;
+
+//Gesto a due dita in corso: distanza e punto medio iniziali, con zoom e pan di partenza
+interface PinchStart {
+  dist: number;
+  mid: CoordinateType;
+  zoom: number;
+  pan: CoordinateType;
+}
 
 interface UseFloorPlanEventsProps {
   mode: PlanMode;
@@ -95,6 +107,76 @@ export const useFloorPlanEvents = ({
   const mouseDownPos = useRef<CoordinateType | null>(null);
   const didDrag = useRef(false);
   const didPan = useRef(false);
+  //dita (o puntatori) appoggiati sulla piantina, per il pizzico a due dita
+  const pointers = useRef(new Map<number, CoordinateType>());
+  const pinch = useRef<PinchStart | null>(null);
+
+  //Zoom con la rotellina (e con il pizzico sul trackpad, che arriva come ctrl+rotellina).
+  //Listener nativo perché quelli di React sono passivi e non possono bloccare lo scroll/zoom della pagina.
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const r = svg.getBoundingClientRect();
+      const mx = e.clientX - r.left,
+        my = e.clientY - r.top;
+      const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      const step = Math.max(-100, Math.min(100, dy));
+      const nz = clampZoom(
+        zoom * Math.exp(-step * (e.ctrlKey ? 0.01 : 0.0015)),
+      );
+      setPan((p) => ({
+        x: mx - (mx - p.x) * (nz / zoom),
+        y: my - (my - p.y) * (nz / zoom),
+      }));
+      setZoom(nz);
+    };
+    //Safari: il pizzico non deve zoomare tutta la pagina
+    const preventGesture = (e: Event) => e.preventDefault();
+    svg.addEventListener("wheel", onWheel, { passive: false });
+    svg.addEventListener("gesturestart", preventGesture);
+    return () => {
+      svg.removeEventListener("wheel", onWheel);
+      svg.removeEventListener("gesturestart", preventGesture);
+    };
+  }, [svgRef, zoom, setPan, setZoom]);
+
+  //Distanza e punto medio (rispetto alla piantina) delle prime due dita
+  const pinchGeometry = () => {
+    const [a, b] = [...pointers.current.values()];
+    const r = svgRef.current!.getBoundingClientRect();
+    return {
+      dist: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+      mid: { x: (a.x + b.x) / 2 - r.left, y: (a.y + b.y) / 2 - r.top },
+    };
+  };
+
+  //Registra ogni dito appoggiato (in fase di cattura, prima che tavoli e muri fermino l'evento).
+  //Con il secondo dito parte il pizzico: si annullano trascinamenti e pan con un dito.
+  const onPointerDownCapture = (e: React.PointerEvent) => {
+    // primo dito (o mouse): eventuali puntatori rimasti da gesti precedenti non contano più
+    if (e.isPrimary) pointers.current.clear();
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size !== 2) return;
+    didPan.current = true;
+    setPanStart(null);
+    setDragging(null);
+    setGroupDrag(null);
+    setWallDrag(null);
+    pinch.current = { ...pinchGeometry(), zoom, pan };
+  };
+
+  //Pizzico in corso: zoom in base alla distanza delle dita, pan seguendo il punto medio
+  const handlePinch = () => {
+    const start = pinch.current!;
+    const { dist, mid } = pinchGeometry();
+    const nz = clampZoom((start.zoom * dist) / start.dist);
+    const wx = (start.mid.x - start.pan.x) / start.zoom,
+      wy = (start.mid.y - start.pan.y) / start.zoom;
+    setZoom(nz);
+    setPan({ x: mid.x - wx * nz, y: mid.y - wy * nz });
+  };
 
   //Serve per la posizione del mouse all'interno della piantina
   const toWorld = (cx: number, cy: number) => {
@@ -105,9 +187,10 @@ export const useFloorPlanEvents = ({
     };
   };
 
-  //Gestisce il mousedown sullo sfondo SVG. Se la modalità è pan, view o si usa il tasto centrale del mouse,
-  //salva la posizione iniziale per iniziare il pan della mappa.
-  const onSVGDown = (e: React.MouseEvent) => {
+  //Gestisce il pointerdown sullo sfondo SVG (mouse, dito o penna). Se la modalità è pan, view
+  //o si usa il tasto centrale del mouse, salva la posizione iniziale per iniziare il pan della mappa.
+  const onSVGDown = (e: React.PointerEvent) => {
+    if (pointers.current.size > 1) return;
     didPan.current = false;
     // Pan su sfondo in qualsiasi modalità "view" (editing o meno) o modalità "pan" esplicita
     if (mode === "pan" || mode === "view" || e.button === 1)
@@ -144,26 +227,15 @@ export const useFloorPlanEvents = ({
     setWalls((p) => p.map((wl) => updateWall(wl, w)));
   };
 
-  //gestisce il mouseup, resetta tutti gli stati di drag attivi (panStart, dragging, groupDrag, wallDrag).
-  const onUp = () => {
+  //gestisce il pointerup (o l'uscita dalla piantina), resetta tutti gli stati di drag attivi
+  //(panStart, dragging, groupDrag, wallDrag) e chiude il pizzico se resta meno di due dita.
+  const onUp = (e: React.PointerEvent) => {
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size < 2) pinch.current = null;
     setPanStart(null);
     setDragging(null);
     setGroupDrag(null);
     setWallDrag(null);
-  };
-
-  //gestisce lo zoom con la rotella del mouse. Calcola il nuovo zoom e aggiusta il pan in modo che il punto sotto il cursore rimanga fisso durante lo zoom.
-  const onWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const r = svgRef.current!.getBoundingClientRect();
-    const mx = e.clientX - r.left,
-      my = e.clientY - r.top;
-    const nz = Math.min(5, Math.max(0.2, zoom * (e.deltaY < 0 ? 1.12 : 0.9)));
-    setPan((p) => ({
-      x: mx - (mx - p.x) * (nz / zoom),
-      y: my - (my - p.y) * (nz / zoom),
-    }));
-    setZoom(nz);
   };
 
   //gestisce il click sullo sfondo SVG. In base alla modalità:
@@ -209,14 +281,16 @@ export const useFloorPlanEvents = ({
     if (mode === "view") setSelId(null);
   };
 
-  //gestisce il mousedown su un tavolo. Se la modalità è move,
+  //gestisce il pointerdown su un tavolo. Se la modalità è move,
   //prepara il drag — singolo se il tavolo non ha gruppo, oppure di gruppo salvando le posizioni iniziali di tutti i tavoli del gruppo.
-  const onTableDown = (e: React.MouseEvent, tid: string) => {
-    e.stopPropagation();
+  //Nelle altre modalità l'evento arriva allo sfondo: trascinando da un tavolo si sposta la vista (utile sul cellulare).
+  const onTableDown = (e: React.PointerEvent, tid: string) => {
+    if (pointers.current.size > 1) return;
     didDrag.current = false;
-    didPan.current = false;
     mouseDownPos.current = { x: e.clientX, y: e.clientY };
     if (!isEditing || mode !== "move") return;
+    e.stopPropagation();
+    didPan.current = false;
     const t = tables.find((t) => t.id === tid);
     if (!t) return;
     const w = toWorld(e.clientX, e.clientY);
@@ -383,6 +457,19 @@ export const useFloorPlanEvents = ({
     }
   };
 
+  //gestisce il pointerdown su un punto di un muro: in modalità move o wall inizia a trascinarlo
+  const onWallPointDown = (
+    e: React.PointerEvent,
+    wallId: string,
+    pi: number,
+  ) => {
+    if (!isEditing || (mode !== "move" && mode !== "wall")) return;
+    if (pointers.current.size > 1) return;
+    e.stopPropagation();
+    didPan.current = false;
+    setWallDrag({ wallId, pi });
+  };
+
   //gestisce il click su un muro. Se si è in modalità delete, elimina il muro cliccato.
   const onWallClick = (
     wallId: string,
@@ -394,28 +481,38 @@ export const useFloorPlanEvents = ({
       setWalls((p) => p.filter((w) => w.id !== wallId));
   };
 
-  //è il gestore principale del mousemove. Fa più cose in sequenza:
-  //aggiorna la posizione del cursore nel mondo SVG
+  //è il gestore principale del pointermove. Fa più cose in sequenza:
+  //con due dita gestisce il pizzico (zoom + pan) e basta
+  //aggiorna la posizione del cursore nel mondo SVG (solo quando serve: anteprima del tavolo o del muro,
+  //così negli altri casi muovere il mouse non ridisegna la piantina)
   //se c'è un pan attivo, sposta la vista
   //se si sta draggando un tavolo singolo, lo muove evitando collisioni
   //se si sta draggando un gruppo di tavoli, li muove tutti insieme evitando collisioni
   //chiama handleWallDrag per il drag dei muri
-  const onMove = (e: React.MouseEvent) => {
+  const onMove = (e: React.PointerEvent) => {
+    if (pointers.current.has(e.pointerId))
+      pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch.current && pointers.current.size >= 2) {
+      handlePinch();
+      return;
+    }
     const w = toWorld(e.clientX, e.clientY);
-    setCursor(w);
+    if (isEditing && (mode === "add" || mode === "wall")) setCursor(w);
     if (panStart) {
       const dx = e.clientX - panStart.mx,
         dy = e.clientY - panStart.my;
-      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didPan.current = true;
-      setPan({ x: panStart.px + dx, y: panStart.py + dy });
+      if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)
+        didPan.current = true;
+      // finché non supera la soglia non si sposta: un tocco su un tavolo resta un clic
+      if (didPan.current) setPan({ x: panStart.px + dx, y: panStart.py + dy });
     }
     if (dragging) {
       const nx = w.x - dragging.ox,
         ny = w.y - dragging.oy;
       if (
         mouseDownPos.current &&
-        (Math.abs(e.clientX - mouseDownPos.current.x) > 4 ||
-          Math.abs(e.clientY - mouseDownPos.current.y) > 4)
+        (Math.abs(e.clientX - mouseDownPos.current.x) > DRAG_THRESHOLD ||
+          Math.abs(e.clientY - mouseDownPos.current.y) > DRAG_THRESHOLD)
       )
         didDrag.current = true;
       const t = tables.find((t) => t.id === dragging.id);
@@ -429,7 +526,8 @@ export const useFloorPlanEvents = ({
     if (groupDrag) {
       const dx = w.x - groupDrag.startMouse.x,
         dy = w.y - groupDrag.startMouse.y;
-      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didDrag.current = true;
+      if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)
+        didDrag.current = true;
 
       // IDs di tutti i tavoli del gruppo (da escludere dalla collision)
       const groupIds = Object.keys(groupDrag.startPositions);
@@ -467,13 +565,14 @@ export const useFloorPlanEvents = ({
   };
 
   return {
+    onPointerDownCapture,
     onSVGDown,
     onSVGClick,
     onMove,
     onUp,
-    onWheel,
     onTableDown,
     onTableClick,
+    onWallPointDown,
     onWallClick,
   };
 };

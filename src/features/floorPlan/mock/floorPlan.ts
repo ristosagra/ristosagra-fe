@@ -7,7 +7,7 @@ import type {
   WallData,
 } from "../types/floorPlan";
 import { defaultChairs } from "../helpers/chair";
-import { createMockStore } from "../../../mock/store";
+import { createMockStore, fakeDelay } from "../../../mock/store";
 
 function chair(side: SideConst | "round", offset: number): Chair {
   return { side, offset };
@@ -169,7 +169,25 @@ export function generateFakeFloorPlan(): FloorPlanData {
 }
 
 //Piantina finta salvata nel browser (vedi createMockStore)
-export const floorPlanStore = createMockStore(
+export const floorPlanStore = createMockStore<FloorPlanData | null>(
   "floorPlan",
   generateFakeFloorPlan,
 );
+
+export const fakeFloorPlanApi = {
+  getFloorPlan: async (): Promise<FloorPlanData | null> => {
+    await fakeDelay(600);
+    return floorPlanStore.get();
+  },
+
+  saveFloorPlan: async (plan: FloorPlanData): Promise<FloorPlanData> => {
+    await fakeDelay(800);
+    const saved = {
+      ...plan,
+      id: plan.id ?? "floor-plan-1",
+      updatedAt: new Date().toISOString(),
+    };
+    floorPlanStore.set(saved);
+    return saved;
+  },
+};

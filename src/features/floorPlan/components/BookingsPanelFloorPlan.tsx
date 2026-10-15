@@ -10,7 +10,7 @@ import {
   unitOccupancy,
 } from "../helpers/booking";
 import { tableLabel } from "../helpers/chair";
-import { panToCenter } from "../helpers/view";
+import { isSmallScreen, panToCenter } from "../helpers/view";
 import type { RightPanelConst } from "../constant/floorPlan";
 import { Button } from "../../../components/core/Button";
 import { Input } from "../../../components/core/Input";
@@ -95,10 +95,12 @@ export const BookingsPanelFloorPlan = ({
     .filter((u) => u.bookings.length > 0);
 
   //Seleziona il tavolo e centra la piantina su di esso
+  //(sul cellulare il pannello copre la piantina: si chiude per mostrarla)
   const focusUnit = (unit: TableData[]) => {
     setSelId(unit[0].id);
     const pan = panToCenter(unit, svgRef.current, zoom);
     if (pan) setPan(pan);
+    if (isSmallScreen()) setRightPanel(null);
   };
 
   const removeBooking = (bookingId: string) => {
@@ -116,7 +118,7 @@ export const BookingsPanelFloorPlan = ({
     );
 
   return (
-    <aside className="w-72 bg-neutral-900 border-l border-neutral-700 flex flex-col shrink-0 overflow-hidden">
+    <aside className="absolute inset-0 z-20 sm:static sm:z-auto w-full sm:w-72 bg-neutral-900 sm:border-l border-neutral-700 flex flex-col shrink-0 overflow-hidden">
       {/* Intestazione */}
       <div className="px-3 pt-3 pb-2 border-b border-neutral-700 space-y-2">
         <div className="flex items-center justify-between">
@@ -130,11 +132,12 @@ export const BookingsPanelFloorPlan = ({
             additionalClasses="font-bold"
           />
           <Button
-            iconLeft={<X size={16} />}
+            iconLeft={<X size={18} />}
             onClick={() => setRightPanel(null)}
             dimension={ButtonDimensions.auto}
             variant="icon"
-            className="text-neutral-400 hover:text-white p-1"
+            className="text-neutral-400 hover:text-white w-9 h-9 -mr-1.5"
+            ariaLabel="Chiudi il pannello"
           />
         </div>
         <div className="text-xs text-neutral-400">
@@ -160,7 +163,7 @@ export const BookingsPanelFloorPlan = ({
               variant={filter === key ? "primary" : "secondary"}
               dimension={ButtonDimensions.auto}
               label={<span className="text-xs font-bold">{label}</span>}
-              className="py-1"
+              className="py-2 sm:py-1"
               fullWidth
             />
           ))}
@@ -168,7 +171,7 @@ export const BookingsPanelFloorPlan = ({
       </div>
 
       {/* Elenco per tavolo */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-2">
+      <div className="flex-1 overflow-y-auto overscroll-contain p-2 space-y-2">
         {visible.length === 0 && (
           <Label
             tag={LabelTags.p}
@@ -267,14 +270,15 @@ export const BookingsPanelFloorPlan = ({
                       onClick={() => toggleSeated(b.id, !!b.seatedAt)}
                       dimension={ButtonDimensions.auto}
                       variant={b.seatedAt ? "success" : "secondary"}
-                      className="px-1.5 py-1 hover:brightness-125"
+                      className="px-2 sm:px-1.5 py-2 sm:py-1 hover:brightness-125"
                     />
                     <Button
                       iconLeft={<X size={14} />}
                       onClick={() => removeBooking(b.id)}
                       dimension={ButtonDimensions.auto}
                       variant="secondary"
-                      className="hover:bg-rose-700 p-1"
+                      className="hover:bg-rose-700 w-8 h-8 sm:w-6 sm:h-6"
+                      ariaLabel={`Cancella la prenotazione di ${b.name}`}
                     />
                   </div>
                 </div>

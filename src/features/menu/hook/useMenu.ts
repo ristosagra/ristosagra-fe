@@ -1,13 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { generateFakeDishes } from "../mock/menu";
-import { MenuService } from "../api/menu";
+import { loadMenuApi } from "../api/loadMenuApi";
 
-export const useMenu = () => {
-  const isMocking = import.meta.env.VITE_MOCKING === "true";
-
-  return useQuery({
-    queryKey: ["menu", isMocking],
-    queryFn: isMocking ? () => generateFakeDishes() : MenuService.getMenu,
+export const useMenu = () =>
+  useQuery({
+    queryKey: ["menu"],
+    queryFn: async () => (await loadMenuApi()).getMenu(),
     staleTime: 1000 * 60 * 5,
   });
-};

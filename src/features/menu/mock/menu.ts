@@ -1,5 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { ALLERGENS, DISH_CATEGORIES } from "../constant/menu";
+import { createMockStore, fakeDelay } from "../../../mock/store";
 import type { Dish } from "../../../types/menuOrder";
 
 export const generateFakeDish = (): Dish => ({
@@ -20,8 +21,20 @@ export const generateFakeDishes = (count = 15): Dish[] =>
     allergens: faker.helpers.arrayElements(ALLERGENS, { min: 0, max: 3 }),
   }));
 
-export const fakeCreateMenu = (dishes: Dish[]): Promise<Dish[]> =>
-  Promise.resolve(dishes);
+//Menù finto salvato nel browser: cassa e clienti vedono gli stessi piatti
+const menuStore = createMockStore("menu", () => generateFakeDishes());
 
-export const fakeUpdateMenu = (dishes: Dish[]): Promise<Dish[]> =>
-  Promise.resolve(dishes);
+const saveMenu = async (dishes: Dish[]): Promise<Dish[]> => {
+  await fakeDelay();
+  menuStore.set(dishes);
+  return dishes;
+};
+
+export const fakeMenuApi = {
+  getMenu: async (): Promise<Dish[]> => {
+    await fakeDelay();
+    return menuStore.get();
+  },
+  createMenu: saveMenu,
+  updateMenu: saveMenu,
+};

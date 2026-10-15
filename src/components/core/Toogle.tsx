@@ -1,15 +1,19 @@
 import { ThemeVariants } from "../../constant/colors";
+import { cn } from "../../helpers/cn";
 
 interface ToggleProps {
   value: boolean;
   onChange: () => void;
   variant?: "primary" | "secondary";
+  //cosa attiva/disattiva l'interruttore, per i lettori di schermo
+  ariaLabel?: string;
 }
 
 export const Toggle = ({
   value,
   onChange,
   variant = "primary",
+  ariaLabel,
 }: ToggleProps) => {
   const variantClass = {
     primary: value
@@ -20,15 +24,23 @@ export const Toggle = ({
 
   return (
     <button
+      type="button"
+      role="switch"
+      aria-checked={value}
+      aria-label={ariaLabel}
+      title={ariaLabel}
       onClick={onChange}
-      className={`relative cursor-pointer w-12 h-6 rounded-full transition-colors outline-none focus:outline-none focus-visible:outline-none ${
-        variantClass
-      }`}
+      className={cn(
+        "relative cursor-pointer w-12 h-6 shrink-0 rounded-full transition-colors",
+        variantClass,
+      )}
     >
       <span
-        className={`absolute top-[2.75px] w-4 h-4 ${ThemeVariants.colors.bg.white} rounded-full shadow transition-all ${
-          value ? "left-7" : "left-1"
-        }`}
+        className={cn(
+          "absolute top-[2.75px] w-4 h-4 rounded-full shadow transition-all",
+          ThemeVariants.colors.bg.white,
+          value ? "left-7" : "left-1",
+        )}
       />
     </button>
   );

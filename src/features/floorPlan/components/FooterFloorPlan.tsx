@@ -43,9 +43,9 @@ export const FooterFloorPlan = ({
   };
 
   return (
-    <div className="shrink-0 bg-neutral-900 border-t border-neutral-700 px-5 py-3 flex items-center gap-4 w-full bottom-0 absolute">
-      <div className="min-w-40 shrink-0">
-        <div className="text-white font-bold text-sm flex items-center gap-2">
+    <div className="shrink-0 bg-neutral-900 border-t border-neutral-700 px-3 sm:px-5 py-2.5 sm:py-3 flex flex-wrap items-center gap-x-4 gap-y-2 w-full bottom-0 absolute z-10">
+      <div className="min-w-0 flex-1 sm:flex-none sm:min-w-40">
+        <div className="text-white font-bold text-sm flex flex-wrap items-center gap-x-2 gap-y-1">
           {selGroup.map(tableLabel).join(" + ")}
           {status === TableStatus.Full && (
             <span className="text-xs bg-rose-700 text-rose-200 px-1.5 py-0.5 rounded">
@@ -96,7 +96,7 @@ export const FooterFloorPlan = ({
             dimension={ButtonDimensions.auto}
             variant="success"
             disabled={free === 0}
-            className="px-2 disabled:bg-neutral-700 disabled:text-neutral-500 disabled:cursor-not-allowed disabled:border-neutral-500"
+            className="px-3 h-9 disabled:bg-neutral-700 disabled:text-neutral-500 disabled:cursor-not-allowed disabled:border-neutral-500"
           />
         )}
         <Button
@@ -105,7 +105,8 @@ export const FooterFloorPlan = ({
           dimension={ButtonDimensions.auto}
           variant="active"
           isActive
-          className="px-1 py-1"
+          className="w-9 h-9"
+          ariaLabel="Chiudi"
         />
       </div>
     </div>

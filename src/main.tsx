@@ -1,11 +1,25 @@
 import { createRoot } from "react-dom/client";
+import "@fontsource-variable/dm-sans";
+import "@fontsource/dm-serif-display/400.css";
+import "@fontsource/dm-serif-display/400-italic.css";
 import "./index.css";
 import App from "./App.tsx";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NotificationProvider } from "./provider/Notification.tsx";
 import { applyCachedAppearance } from "./hooks/useTheme.ts";
+import { HttpError } from "./services/client/httpClient.ts";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      //Dati considerati aggiornati per 30 s: cambiando pagina non si rifanno le stesse richieste
+      staleTime: 30_000,
+      //Gli errori 4xx (es. 401, 404) non migliorano riprovando
+      retry: (failureCount, error) =>
+        !(error instanceof HttpError && error.status < 500) && failureCount < 2,
+    },
+  },
+});
 
 //Tema e colore dell'ultima visita, finché non arriva il profilo del ristorante
 applyCachedAppearance();

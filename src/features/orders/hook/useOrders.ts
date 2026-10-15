@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fakeOrdersApi } from "../mock/orders";
 import { OrdersService } from "../api/orders";
+import { IS_MOCKING } from "../../../constant/env";
 import type {
   CartType,
   NewOrder,
@@ -8,13 +8,15 @@ import type {
   TakeawaySettings,
 } from "../types/orders";
 
-const isMocking = () => import.meta.env.VITE_MOCKING === "true";
-const api = () => (isMocking() ? fakeOrdersApi : OrdersService);
+//Servizio reale o finto: il finto (con Faker) si carica solo con VITE_MOCKING
+const loadApi: () => Promise<typeof OrdersService> = IS_MOCKING
+  ? () => import("../mock/orders").then((m) => m.fakeOrdersApi)
+  : () => Promise.resolve(OrdersService);
 
 export const useOrders = () =>
   useQuery({
     queryKey: ["orders"],
-    queryFn: () => api().getOrders(),
+    queryFn: async () => (await loadApi()).getOrders(),
     refetchInterval: 30000,
   });
 
@@ -22,7 +24,7 @@ export const useOrders = () =>
 export const useOrderNumber = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (order: NewOrder) => api().createOrder(order),
+    mutationFn: async (order: NewOrder) => (await loadApi()).createOrder(order),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["orders"] }),
   });
 };
@@ -30,7 +32,8 @@ export const useOrderNumber = () => {
 export const useOrderPayment = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, paid }: Payment) => api().updatePayment(id, paid),
+    mutationFn: async ({ id, paid }: Payment) =>
+      (await loadApi()).updatePayment(id, paid),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["orders"] }),
   });
 };
@@ -39,8 +42,8 @@ export const useOrderPayment = () => {
 export const useUpdateOrderItems = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, items }: { id: number; items: CartType[] }) =>
-      api().updateItems(id, items),
+    mutationFn: async ({ id, items }: { id: number; items: CartType[] }) =>
+      (await loadApi()).updateItems(id, items),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["orders"] }),
   });
 };
@@ -48,14 +51,14 @@ export const useUpdateOrderItems = () => {
 export const useTakeawaySettings = () =>
   useQuery({
     queryKey: ["takeaway-settings"],
-    queryFn: () => api().getTakeawaySettings(),
+    queryFn: async () => (await loadApi()).getTakeawaySettings(),
   });
 
 export const useSaveTakeawaySettings = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (settings: TakeawaySettings) =>
-      api().saveTakeawaySettings(settings),
+    mutationFn: async (settings: TakeawaySettings) =>
+      (await loadApi()).saveTakeawaySettings(settings),
     onSuccess: (saved) =>
       queryClient.setQueryData(["takeaway-settings"], saved),
   });

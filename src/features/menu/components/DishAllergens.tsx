@@ -30,7 +30,8 @@ export const AllergensToggle = ({
     onClick={onToggle}
     dimension={ButtonDimensions.auto}
     variant="icon"
-    className={`p-1 shrink-0 ${ThemeVariants.colors.text.secondary}`}
+    className={`p-2 -m-1 shrink-0 ${ThemeVariants.colors.text.secondary}`}
+    ariaLabel={open ? "Nascondi allergeni" : "Mostra allergeni"}
   />
 );
 

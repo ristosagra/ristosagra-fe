@@ -1,13 +1,24 @@
 import { ThemeVariants } from "../../constant/colors";
+import { cn } from "../../helpers/cn";
 
 interface InputProps {
   type: string;
   placeholder: string;
   value: string;
-  setValue: (value: React.SetStateAction<string>) => void;
+  setValue: (value: string) => void;
   variant?: "primary" | "secondary";
   className?: string;
   autoFocus?: boolean;
+  //lunghezza massima del testo (limite anche per i dati inviati al backend)
+  maxLength?: number;
+  autoComplete?: string;
+  name?: string;
+  required?: boolean;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  min?: number;
+  step?: number | "any";
+  //nome per i lettori di schermo; se manca si usa il placeholder
+  ariaLabel?: string;
 }
 
 export const Input = ({
@@ -18,12 +29,18 @@ export const Input = ({
   variant = "primary",
   className,
   autoFocus,
+  maxLength,
+  autoComplete,
+  name,
+  required,
+  inputMode,
+  min,
+  step,
+  ariaLabel,
 }: InputProps) => {
   const variantClass = {
     primary: `${ThemeVariants.colors.border.all.brand} ${ThemeVariants.colors.bg.overlay}`,
-    secondary: `${ThemeVariants.colors.border.all.default} ${
-      ThemeVariants.colors.bg.surface
-    }`,
+    secondary: `${ThemeVariants.colors.border.all.default} ${ThemeVariants.colors.bg.surface}`,
   }[variant];
 
   return (
@@ -33,7 +50,20 @@ export const Input = ({
       value={value}
       onChange={(e) => setValue(e.target.value)}
       autoFocus={autoFocus}
-      className={`p-2 ${variantClass} ${className} ${ThemeVariants.borderRadius.sm} `}
+      maxLength={maxLength}
+      autoComplete={autoComplete}
+      name={name}
+      required={required}
+      inputMode={inputMode}
+      min={min}
+      step={step}
+      aria-label={ariaLabel ?? placeholder}
+      className={cn(
+        "p-2 min-w-0 transition-colors focus:border-[var(--brand)]",
+        variantClass,
+        className,
+        ThemeVariants.borderRadius.sm,
+      )}
     />
   );
 };

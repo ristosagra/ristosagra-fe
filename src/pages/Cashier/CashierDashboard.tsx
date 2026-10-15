@@ -3,7 +3,7 @@ import { useOrders } from "../../features/orders/hook/useOrders";
 import { useMenu } from "../../features/menu/hook/useMenu";
 import { Label } from "../../components/core/Label";
 import { Container } from "../../components/core/Container";
-import { Loader, ShoppingBag, UtensilsCrossed } from "lucide-react";
+import { LoaderCircle, ShoppingBag, UtensilsCrossed } from "lucide-react";
 import { Input } from "../../components/core/Input";
 import { Button } from "../../components/core/Button";
 import { ButtonDimensions } from "../../constant/button";
@@ -92,7 +92,7 @@ export const CashierDashboard = () => {
 
   return (
     <Container additionalClass="flex flex-col h-full overflow-hidden">
-      <div className="flex flex-row flex-wrap items-center justify-between gap-3 w-full p-5 shrink-0">
+      <div className="flex flex-row flex-wrap items-center justify-between gap-3 w-full p-4 sm:p-5 shrink-0">
         <Label
           label="Ordini"
           tag={LabelTags.h1}
@@ -102,7 +102,7 @@ export const CashierDashboard = () => {
           fontFamily={ThemeVariants.fontFamily.display}
           noMargin
         />
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           <div className="flex gap-1">
             {FILTERS.map(({ key, label }) => (
               <Button
@@ -116,16 +116,23 @@ export const CashierDashboard = () => {
             ))}
           </div>
           <Input
-            type="text"
+            type="search"
             placeholder="Cerca numero o nome..."
             value={search}
             setValue={setSearch}
+            className="w-full sm:w-56"
           />
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto mx-5 mb-5">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-5 pb-5">
         {isLoading ? (
-          <Loader />
+          <div className="flex justify-center py-10">
+            <LoaderCircle
+              size={32}
+              aria-label="Caricamento"
+              className={`animate-spin ${ThemeVariants.colors.text.brand}`}
+            />
+          </div>
         ) : (
           /* Asporto e ordini sul posto in due liste separate */
           <div

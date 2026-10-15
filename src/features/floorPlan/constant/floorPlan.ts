@@ -53,6 +53,10 @@ export const PLAN_OPP: Record<SideConst, SideConst> = {
   [Side.Right]: "left",
 };
 export const PLAN_CHAIR_R = 11;
+
+//Limiti dello zoom della piantina
+export const PLAN_ZOOM_MIN = 0.2;
+export const PLAN_ZOOM_MAX = 5;
 export const PLAN_WALL_HALF = 8;
 
 //Numero minimo di posti per tavolo (non c'è un massimo)

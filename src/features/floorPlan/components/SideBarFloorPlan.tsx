@@ -29,6 +29,9 @@ import { Input } from "../../../components/core/Input";
 import { tableHeads } from "../helpers/dimensions";
 import { useTableEditor } from "../hook/useTableEditor";
 
+//Lunghezza massima del nome di un tavolo (sulla piantina se ne vedono 12 caratteri)
+const TABLE_NAME_MAX = 20;
+
 const HEADS_OPTIONS: { value: HeadsConst; label: string }[] = [
   { value: Heads.Both, label: "Entrambi" },
   { value: Heads.One, label: "Uno solo" },
@@ -63,7 +66,7 @@ const HeadsPicker = ({
         variant={value === opt.value ? "primary" : "secondary"}
         dimension={ButtonDimensions.auto}
         label={<span className="text-xs font-bold px-0.5">{opt.label}</span>}
-        className="py-1.5"
+        className="py-2 sm:py-1.5"
         fullWidth
       />
     ))}
@@ -209,7 +212,7 @@ export const SideBarFloorPlan = ({
             dimension={ButtonDimensions.auto}
             iconLeft={<X size={14} />}
             label="Fine unione"
-            className="py-1"
+            className="py-2 sm:py-1"
             fullWidth
           />
         </div>
@@ -234,7 +237,7 @@ export const SideBarFloorPlan = ({
                   dimension={ButtonDimensions.auto}
                   iconLeft={ic}
                   label={lb}
-                  className="flex flex-col py-1"
+                  className="flex flex-col py-1.5 sm:py-1"
                   fullWidth
                 />
               ))}
@@ -290,12 +293,8 @@ export const SideBarFloorPlan = ({
                 type="text"
                 placeholder="Nome tavolo"
                 value={selTable.name ?? ""}
-                setValue={(v) =>
-                  rename(
-                    selTable,
-                    typeof v === "function" ? v(selTable.name ?? "") : v,
-                  )
-                }
+                setValue={(name) => rename(selTable, name)}
+                maxLength={TABLE_NAME_MAX}
                 variant="secondary"
                 className="w-full text-sm"
               />
@@ -326,7 +325,7 @@ export const SideBarFloorPlan = ({
                     dimension={ButtonDimensions.auto}
                     iconLeft={<RotateCw size={15} />}
                     label="Ruota 90°"
-                    className="py-1.5"
+                    className="py-2 sm:py-1.5"
                     fullWidth
                   />
                 </>
@@ -390,15 +389,15 @@ export const SideBarFloorPlan = ({
               dimension={ButtonDimensions.auto}
               iconLeft={<X size={14} />}
               label="Annulla"
-              className="py-1"
+              className="py-2 sm:py-1"
               fullWidth
             />
           )}
         </div>
       )}
 
-      {/* Legend */}
-      <div className="mt-auto pt-2 border-t border-neutral-700">
+      {/* Legend (sul cellulare non c'è spazio: resta solo sugli schermi grandi) */}
+      <div className="hidden sm:block mt-auto pt-2 border-t border-neutral-700">
         <Label
           tag={LabelTags.p}
           label="Legenda"

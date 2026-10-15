@@ -24,6 +24,7 @@ import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
 import { ThemeVariants } from "../../constant/colors";
 import { useNotification } from "../../hooks/useNotification";
 import { NotificationType } from "../../types/notification";
+import { PERSON_NAME_MAX } from "../../constant/limits";
 
 //Prenotazione di posti dal cliente: nome, persone, orario di arrivo ed eventuali richieste sul posto
 //(la piantina non è visibile).
@@ -77,7 +78,7 @@ export const BookTable = () => {
 
   if (isLoading) return <Loader />;
 
-  const cardClass = `${ThemeVariants.colors.bg.surface} ${ThemeVariants.colors.border.all.brand} ${ThemeVariants.borderRadius.xl} w-full p-6`;
+  const cardClass = `${ThemeVariants.colors.bg.surface} ${ThemeVariants.colors.border.all.brand} ${ThemeVariants.borderRadius.xl} w-full max-w-lg p-5 sm:p-6`;
 
   if (confirmed) {
     const confirmedRequests = [
@@ -86,7 +87,7 @@ export const BookTable = () => {
     ];
     return (
       <Container>
-        <div className="min-h-full flex flex-col justify-center items-center py-10 px-5">
+        <div className="min-h-full flex flex-col justify-center items-center py-8 sm:py-10 px-4 sm:px-5">
           <div
             className={`${cardClass} flex flex-col items-center gap-2 text-center`}
           >
@@ -116,7 +117,7 @@ export const BookTable = () => {
                 size={LabelDimensions.small}
                 color={ThemeVariants.colors.text.secondary}
                 noMargin
-                additionalClasses="break-words"
+                additionalClasses="[overflow-wrap:anywhere]"
               />
             )}
             <Label
@@ -137,7 +138,7 @@ export const BookTable = () => {
               }}
               dimension={ButtonDimensions.auto}
               variant="secondary"
-              className="px-4 py-2 mt-3"
+              className="h-11 px-4 mt-3"
             />
           </div>
         </div>
@@ -148,7 +149,7 @@ export const BookTable = () => {
   return (
     <Container>
       {isPending && <Loader />}
-      <div className="min-h-full flex flex-col justify-center items-center py-10 px-5">
+      <div className="min-h-full flex flex-col justify-center items-center py-8 sm:py-10 px-4 sm:px-5">
         <div className={`${cardClass} space-y-5`}>
           <div>
             <Label
@@ -191,11 +192,15 @@ export const BookTable = () => {
                 />
                 <Input
                   type="text"
+                  name="name"
                   placeholder="Es. Mario Rossi"
                   value={name}
                   setValue={setName}
                   variant="secondary"
                   className="w-full"
+                  autoComplete="name"
+                  maxLength={PERSON_NAME_MAX}
+                  ariaLabel="Nome"
                 />
               </div>
 
@@ -247,6 +252,7 @@ export const BookTable = () => {
                   setValue={setArrivalTime}
                   variant="secondary"
                   className="w-36"
+                  ariaLabel="Orario di arrivo"
                 />
               </div>
 
@@ -274,7 +280,7 @@ export const BookTable = () => {
                         onClick={() => toggleRequest(r)}
                         dimension={ButtonDimensions.auto}
                         variant={requests.includes(r) ? "primary" : "secondary"}
-                        className="px-3 py-1.5"
+                        className="px-3 py-2"
                       />
                     );
                   })}
@@ -283,27 +289,22 @@ export const BookTable = () => {
                   type="text"
                   placeholder="Altre richieste, es. vicino all'uscita"
                   value={notes}
-                  setValue={(v) =>
-                    setNotes((prev) =>
-                      (typeof v === "function" ? v(prev) : v).slice(
-                        0,
-                        NOTES_MAX,
-                      ),
-                    )
-                  }
+                  setValue={setNotes}
+                  maxLength={NOTES_MAX}
                   variant="secondary"
                   className="w-full"
+                  ariaLabel="Altre richieste"
                 />
               </div>
 
               <Button
                 label="Prenota"
                 fullWidth
-                dimension={ButtonDimensions.large}
+                dimension={ButtonDimensions.auto}
                 onClick={submit}
                 variant="primary"
                 disabled={!canSubmit || isPending}
-                className="disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-12 disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </>
           )}

@@ -5,7 +5,6 @@ import { Label } from "../../components/core/Label";
 import { Card } from "../../components/Card";
 import { Button } from "../../components/core/Button";
 import { Input } from "../../components/core/Input";
-import { type Dispatch, type SetStateAction } from "react";
 import { Loader } from "../../components/core/Loader";
 import {
   useOrderNumber,
@@ -26,17 +25,19 @@ import { ThemeVariants } from "../../constant/colors";
 import { useNotification } from "../../hooks/useNotification";
 import { useCurrentTime } from "../../hooks/useCurrentTime";
 import { NotificationType } from "../../types/notification";
+import { PERSON_NAME_MAX } from "../../constant/limits";
 
-//Ordine confermato, con il numero da mostrare alla cassa
-export type ConfirmedOrder = NewOrder & { orderNumber: number };
+//Ordine confermato, con il numero da mostrare alla cassa e l'ora di invio (ISO)
+export type ConfirmedOrder = NewOrder & {
+  orderNumber: number;
+  confirmedAt: string;
+};
 
 interface CartProps {
   cartItems: CartType[];
   setCartItems: React.Dispatch<React.SetStateAction<CartType[]>>;
-  setPage: Dispatch<SetStateAction<PagesCustomerConst>>;
-  setConfirmedOrder: React.Dispatch<
-    React.SetStateAction<ConfirmedOrder | null>
-  >;
+  setPage: (page: PagesCustomerConst) => void;
+  setConfirmedOrder: (order: ConfirmedOrder) => void;
 }
 
 export default function Cart({
@@ -66,18 +67,27 @@ export default function Cart({
 
   if (cartItems.length === 0) {
     return (
-      <div
-        className={`${ThemeVariants.colors.bg.surface} ${ThemeVariants.colors.border.all.brand} ${ThemeVariants.borderRadius.xl} flex justify-center items-center px-2 py-6 mt-20 mx-10`}
-      >
-        <Label
-          label="Il carrello è vuoto"
-          tag={LabelTags.p}
-          size={LabelDimensions.large}
-          weight={LabelWeight.bold}
-          color={ThemeVariants.colors.text.white}
-          noMargin
-        />
-      </div>
+      <Container additionalClass="px-5 py-10">
+        <div
+          className={`${ThemeVariants.colors.bg.surface} ${ThemeVariants.colors.border.all.brand} ${ThemeVariants.borderRadius.xl} max-w-md mx-auto flex flex-col justify-center items-center gap-4 px-4 py-6`}
+        >
+          <Label
+            label="Il carrello è vuoto"
+            tag={LabelTags.p}
+            size={LabelDimensions.large}
+            weight={LabelWeight.bold}
+            color={ThemeVariants.colors.text.white}
+            noMargin
+          />
+          <Button
+            label="Vai al menù"
+            onClick={() => setPage(PagesCustomer.MENU)}
+            dimension={ButtonDimensions.auto}
+            variant="primary"
+            className="h-11 px-5"
+          />
+        </div>
+      </Container>
     );
   }
 
@@ -93,7 +103,11 @@ export default function Cart({
       : { items: cartItems, type };
     confirmOrder(order, {
       onSuccess: ({ orderNumber }) => {
-        setConfirmedOrder({ ...order, orderNumber });
+        setConfirmedOrder({
+          ...order,
+          orderNumber,
+          confirmedAt: new Date().toISOString(),
+        });
         setCartItems([]);
         setPage(PagesCustomer.RESERVATION);
       },
@@ -106,10 +120,10 @@ export default function Cart({
   };
 
   return (
-    <Container additionalClass="px-5 py-7">
+    <Container additionalClass="px-4 sm:px-5 py-6 sm:py-7">
       {isPending && <Loader />}
 
-      <div className="space-y-3">
+      <div className="max-w-2xl mx-auto space-y-3">
         {cartItems.map((item) => (
           <Card
             key={item.dish.id}
@@ -121,7 +135,7 @@ export default function Cart({
         ))}
       </div>
 
-      <div className="space-y-3 mt-3">
+      <div className="max-w-2xl mx-auto space-y-3 mt-3">
         {/* Sul posto o da asporto con ritiro in loco */}
         {canTakeaway && (
           <div
@@ -168,11 +182,15 @@ export default function Cart({
                   />
                   <Input
                     type="text"
+                    name="name"
                     placeholder="Es. Mario Rossi"
                     value={customerName}
                     setValue={setCustomerName}
                     variant="secondary"
                     className="w-full"
+                    autoComplete="name"
+                    maxLength={PERSON_NAME_MAX}
+                    ariaLabel="Nome per il ritiro"
                   />
                 </div>
                 {fixedTime ? (
@@ -201,6 +219,7 @@ export default function Cart({
                       setValue={setCustomTime}
                       variant="secondary"
                       className="w-36"
+                      ariaLabel="Orario di ritiro"
                     />
                   </div>
                 )}
@@ -231,11 +250,11 @@ export default function Cart({
         <Button
           label={isTakeaway ? "Prenota asporto" : "Prenota ordine"}
           fullWidth
-          dimension={ButtonDimensions.large}
+          dimension={ButtonDimensions.auto}
           onClick={handleConfirm}
           variant="primary"
           disabled={!canConfirm || isPending}
-          className="disabled:opacity-50 disabled:cursor-not-allowed"
+          className="h-12 disabled:opacity-50 disabled:cursor-not-allowed"
         />
       </div>
     </Container>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { Container } from "../../components/core/Container";
 import { Label } from "../../components/core/Label";
 import { OrderType } from "../../features/orders/types/orders";
@@ -21,7 +22,7 @@ export const Reservation = ({ order }: ReservationProps) => {
 
   return (
     <Container>
-      <div className="min-h-full flex flex-col justify-center items-center py-10 px-5">
+      <div className="min-h-full max-w-lg mx-auto flex flex-col justify-center items-center py-8 sm:py-10 px-4 sm:px-5">
         {/* Numero ordine */}
         <div
           className={`${ThemeVariants.colors.bg.surface} ${ThemeVariants.colors.border.all.brand} ${ThemeVariants.borderRadius.xl}  flex flex-col items-center justify-center py-10 w-full gap-2`}
@@ -33,6 +34,7 @@ export const Reservation = ({ order }: ReservationProps) => {
             color={ThemeVariants.colors.text.white}
             noMargin
           />
+          {/* Grande e leggibile: il cliente lo mostra alla cassa dallo schermo del telefono */}
           <Label
             label={`${orderNumber}`}
             tag={LabelTags.p}
@@ -49,7 +51,7 @@ export const Reservation = ({ order }: ReservationProps) => {
               weight={LabelWeight.semibold}
               color={ThemeVariants.colors.text.white}
               noMargin
-              additionalClasses="text-center px-4"
+              additionalClasses="text-center justify-center px-4 [overflow-wrap:anywhere]"
             />
           )}
           <Label
@@ -62,6 +64,7 @@ export const Reservation = ({ order }: ReservationProps) => {
             size={LabelDimensions.medium}
             color={ThemeVariants.colors.text.secondary}
             noMargin
+            additionalClasses="text-center justify-center px-4"
           />
         </div>
 
@@ -69,7 +72,11 @@ export const Reservation = ({ order }: ReservationProps) => {
         <div
           className={`${ThemeVariants.colors.bg.surface} ${ThemeVariants.colors.border.all.brand} ${ThemeVariants.borderRadius.xl} overflow-hidden w-full mt-5`}
         >
-          <Accordion onClick={() => setIsOpen(!isOpen)} className="p-4">
+          <Accordion
+            onClick={() => setIsOpen(!isOpen)}
+            expanded={isOpen}
+            className="p-4"
+          >
             <Label
               label="Riepilogo ordine"
               tag={LabelTags.p}
@@ -78,11 +85,11 @@ export const Reservation = ({ order }: ReservationProps) => {
               color={ThemeVariants.colors.text.white}
               noMargin
             />
-            <span
+            <ChevronDown
+              size={20}
+              aria-hidden
               className={`${ThemeVariants.colors.text.white} transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
-            >
-              ▼
-            </span>
+            />
           </Accordion>
 
           {isOpen && (
@@ -90,9 +97,9 @@ export const Reservation = ({ order }: ReservationProps) => {
               {cartItems.map((item) => (
                 <div
                   key={item.dish.id}
-                  className={`${ThemeVariants.colors.border.top.default} flex justify-between items-center pt-3`}
+                  className={`${ThemeVariants.colors.border.top.default} flex justify-between items-center gap-3 pt-3`}
                 >
-                  <div>
+                  <div className="min-w-0">
                     <Label
                       label={item.dish.name}
                       tag={LabelTags.p}

@@ -1,37 +1,55 @@
 @import "tailwindcss";
-@import url("https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap");
 
-html,
-body,
-#root {
-  height: 100%;
-  overflow: hidden;
+/* I font sono inclusi nel bundle (vedi main.tsx): nessuna richiesta a Google Fonts */
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      background 0.3s,
+      color 0.3s;
+  }
+
+  input,
+  select,
+  textarea {
+    font-family: var(--font-body);
+    outline: none;
+  }
+
+  /* Anello di focus solo per chi naviga con la tastiera (il clic del mouse non lo mostra) */
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: none;
+  }
 }
 
-body {
-  font-family: var(--font-body);
-  font-size: 14px;
-  line-height: 1.5;
-  background: var(--bg-base);
-  color: var(--text-primary);
-  -webkit-font-smoothing: antialiased;
-  transition:
-    background 0.3s,
-    color 0.3s;
-}
-
-input,
-select,
-textarea {
-  font-family: var(--font-body);
-  outline: none;
-}
-input:focus {
-  outline: none;
-}
-button:focus,
-button:focus-visible {
-  outline: none;
+/* Sui touch screen i campi sotto i 16px fanno zoomare la pagina (iOS) quando si toccano.
+   Fuori dai layer, vince anche sulle classi text-sm/text-xs dei singoli campi. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 /* ── DARK (default) ── */
@@ -69,7 +87,7 @@ button:focus-visible {
   --info-bg: rgba(91, 143, 217, 0.1);
 
   --font-display: "DM Serif Display", Georgia, serif;
-  --font-body: "DM Sans", system-ui, sans-serif;
+  --font-body: "DM Sans Variable", "DM Sans", system-ui, sans-serif;
 }
 
 /* ── LIGHT ── */
@@ -100,7 +118,4 @@ button:focus-visible {
   --danger-bg: rgba(192, 57, 43, 0.08);
   --info: #2563b0;
   --info-bg: rgba(37, 99, 176, 0.08);
-
-  --font-display: "DM Serif Display", Georgia, serif;
-  --font-body: "DM Sans", system-ui, sans-serif;
 }

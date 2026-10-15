@@ -28,55 +28,49 @@ export const Card = ({
   isCart = false,
 }: CardProps) => {
   const [showAllergens, setShowAllergens] = useState(false);
-  const findItemDish = isCart
-    ? cartItems.find((item) => item.dish.id === dish.id)!
+  const cartItem = isCart
+    ? cartItems.find((item) => item.dish.id === dish.id)
     : undefined;
-  const subtotal = dish.price * (findItemDish?.quantity || 0);
-  const labelPrice = isCart
-    ? `€${subtotal.toFixed(2)}`
-    : `€${dish.price.toFixed(2)}`;
+  const price = cartItem ? dish.price * cartItem.quantity : dish.price;
 
-  const removeItem = (item: CartType) => {
-    setCartItems((prev) => prev.filter((i) => i.dish.id !== item.dish.id));
-  };
+  const removeItem = () =>
+    setCartItems((prev) => prev.filter((i) => i.dish.id !== dish.id));
 
   return (
-    <CardContainer key={dish.id}>
+    <CardContainer>
       <div className="flex justify-between items-start gap-3">
-        <div>
+        <div className="min-w-0">
           <Label
-            label={`${dish.name}`}
-            tag={LabelTags.h2}
+            label={dish.name}
+            tag={LabelTags.h3}
             size={LabelDimensions.xlarge}
             weight={LabelWeight.semibold}
+            additionalClasses="max-sm:text-xl [overflow-wrap:anywhere]"
             noMargin
           />
-          {findItemDish ? (
-            <Label
-              label={`€${dish.price.toFixed(2)} × ${findItemDish.quantity}`}
-              tag={LabelTags.p}
-              size={LabelDimensions.medium}
-              color={ThemeVariants.colors.text.secondary}
-              noMargin
-            />
-          ) : (
-            <Label
-              tag={LabelTags.h3}
-              label={dish.description}
-              size={LabelDimensions.medium}
-              color={ThemeVariants.colors.text.secondary}
-              noMargin
-            />
-          )}
+          <Label
+            tag={LabelTags.p}
+            label={
+              cartItem
+                ? `€${dish.price.toFixed(2)} × ${cartItem.quantity}`
+                : dish.description
+            }
+            size={LabelDimensions.medium}
+            color={ThemeVariants.colors.text.secondary}
+            additionalClasses="max-sm:text-sm"
+            noMargin
+          />
         </div>
-        {findItemDish && (
+        {cartItem && (
           <Button
             iconLeft={
               <Trash2 size={18} color={`${ThemeVariants.raw.danger}`} />
             }
-            onClick={() => removeItem(findItemDish)}
+            onClick={removeItem}
             dimension={ButtonDimensions.small}
             variant="icon"
+            className="shrink-0"
+            ariaLabel={`Togli ${dish.name} dal carrello`}
           />
         )}
         {/* Nel menù la freccia apre il dettaglio del piatto con gli allergeni */}
@@ -88,10 +82,10 @@ export const Card = ({
         )}
       </div>
       {!isCart && showAllergens && <AllergenChips allergens={dish.allergens} />}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <Label
-          label={labelPrice}
-          tag={LabelTags.h3}
+          label={`€${price.toFixed(2)}`}
+          tag={LabelTags.p}
           size={LabelDimensions.large}
           weight={LabelWeight.bold}
           color={ThemeVariants.colors.text.brand}

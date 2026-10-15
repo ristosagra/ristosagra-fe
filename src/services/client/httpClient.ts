@@ -1,53 +1,66 @@
-const BASE_URL = import.meta.env.VITE_API_URL;
-const getToken = () => localStorage.getItem("auth_token");
+import { API_URL } from "../../constant/env";
+import { clearToken, getToken } from "../auth/session";
 
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
-});
+//Oltre questo tempo la richiesta viene interrotta (reti mobili lente o assenti)
+const TIMEOUT_MS = 15000;
 
-const handleResponse = async <T>(res: Response): Promise<T> => {
-  if (res.status === 401) {
-    localStorage.removeItem("auth_token");
-    globalThis.location.href = "/login";
+export class HttpError extends Error {
+  readonly status: number;
+
+  constructor(status: number) {
+    super(`Errore: ${status}`);
+    this.name = "HttpError";
+    this.status = status;
   }
-  if (!res.ok) throw new Error(`Errore: ${res.status}`);
-  return res.json();
+}
+
+interface RequestOptions {
+  body?: unknown;
+  //false per le chiamate che non devono inviare il token (es. login)
+  auth?: boolean;
+}
+
+const request = async <T>(
+  method: string,
+  endpoint: string,
+  { body, auth = true }: RequestOptions = {},
+): Promise<T> => {
+  const token = auth ? getToken() : null;
+  const headers: Record<string, string> = {};
+  // Content-Type solo se c'è un corpo: sulle GET pubbliche evita la richiesta preliminare CORS
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${API_URL}${endpoint}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal:
+      typeof AbortSignal.timeout === "function"
+        ? AbortSignal.timeout(TIMEOUT_MS)
+        : undefined,
+  });
+
+  //Sessione scaduta: si torna al login (ricaricando la pagina si svuota anche la cache dei dati)
+  if (res.status === 401 && token) {
+    clearToken();
+    globalThis.location.replace("/login");
+  }
+  if (!res.ok) throw new HttpError(res.status);
+
+  // le risposte senza corpo (es. 204) diventano undefined
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 };
 
 export const httpClient = {
-  async get<T>(endpoint: string): Promise<T> {
-    const res = await fetch(`${BASE_URL}${endpoint}`, {
-      headers: authHeaders(),
-    });
-    return handleResponse<T>(res);
-  },
+  get: <T>(endpoint: string) => request<T>("GET", endpoint),
 
-  async post<T>(endpoint: string, body: unknown): Promise<T> {
-    const res = await fetch(`${BASE_URL}${endpoint}`, {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify(body),
-    });
-    return handleResponse<T>(res);
-  },
+  post: <T>(endpoint: string, body: unknown, options?: { auth?: boolean }) =>
+    request<T>("POST", endpoint, { body, ...options }),
 
-  async patch<T>(endpoint: string, body: unknown): Promise<T> {
-    const res = await fetch(`${BASE_URL}${endpoint}`, {
-      method: "PATCH",
-      headers: authHeaders(),
-      body: JSON.stringify(body),
-    });
-    return handleResponse<T>(res);
-  },
+  patch: <T>(endpoint: string, body: unknown) =>
+    request<T>("PATCH", endpoint, { body }),
 
-  async delete<T = void>(endpoint: string): Promise<T> {
-    const res = await fetch(`${BASE_URL}${endpoint}`, {
-      method: "DELETE",
-      headers: authHeaders(),
-    });
-    // una DELETE può rispondere senza corpo (204)
-    if (res.ok && res.status === 204) return undefined as T;
-    return handleResponse<T>(res);
-  },
+  delete: <T = void>(endpoint: string) => request<T>("DELETE", endpoint),
 };

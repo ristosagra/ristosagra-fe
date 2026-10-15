@@ -34,6 +34,19 @@ import { LabelTags, LabelDimensions, LabelWeight } from "../../constant/label";
 import { NotificationType } from "../../types/notification";
 import type { Dish } from "../../types/menuOrder";
 
+//Limiti dei campi del piatto (anche per non inviare al backend testi enormi)
+const DISH_NAME_MAX = 80;
+const DISH_DESCRIPTION_MAX = 300;
+const CATEGORY_NAME_MAX = 40;
+const PRICE_MAX = 10000;
+
+//Prezzo valido: numero tra 0 e PRICE_MAX, arrotondato ai centesimi
+const parsePrice = (value: string): number | null => {
+  const price = Number.parseFloat(value.replace(",", "."));
+  if (!Number.isFinite(price) || price < 0 || price > PRICE_MAX) return null;
+  return Math.round(price * 100) / 100;
+};
+
 interface DishFormData {
   name: string;
   description: string;
@@ -61,13 +74,13 @@ const DishRow = ({
 
   return (
     <div
-      className={`px-4 py-3 ${ThemeVariants.colors.bg.surface} ${ThemeVariants.borderRadius.md}`}
+      className={`px-3 sm:px-4 py-3 ${ThemeVariants.colors.bg.surface} ${ThemeVariants.borderRadius.md}`}
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-3 sm:gap-4">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-x-3">
             <span
-              className={`font-semibold ${ThemeVariants.colors.text.white}`}
+              className={`font-semibold min-w-0 [overflow-wrap:anywhere] ${ThemeVariants.colors.text.white}`}
             >
               {dish.name}
             </span>
@@ -93,7 +106,8 @@ const DishRow = ({
               variant="icon"
               onClick={onEdit}
               disabled={disabled}
-              className={`px-2 py-1 ${ThemeVariants.colors.text.secondary}`}
+              className={`w-9 h-9 sm:w-8 sm:h-7 ${ThemeVariants.colors.text.secondary}`}
+              ariaLabel={`Modifica ${dish.name}`}
             />
             <Button
               iconLeft={<Trash2 size={15} />}
@@ -101,7 +115,8 @@ const DishRow = ({
               variant="icon"
               onClick={onDelete}
               disabled={disabled}
-              className={`px-2 py-1 ${ThemeVariants.colors.text.danger}`}
+              className={`w-9 h-9 sm:w-8 sm:h-7 ${ThemeVariants.colors.text.danger}`}
+              ariaLabel={`Elimina ${dish.name}`}
             />
           </div>
         )}
@@ -146,12 +161,11 @@ const DishEditRow = ({
       ALLERGENS.filter((x) => (x === a ? !prev.includes(a) : prev.includes(x))),
     );
 
-  const isValid =
-    name.trim() !== "" && price !== "" && !isNaN(parseFloat(price));
+  const isValid = name.trim() !== "" && parsePrice(price) !== null;
 
   return (
     <div
-      className={`flex flex-col gap-3 px-4 py-3 ${ThemeVariants.colors.bg.overlay} ${ThemeVariants.colors.border.all.brand} ${ThemeVariants.borderRadius.md}`}
+      className={`flex flex-col gap-3 px-3 sm:px-4 py-3 ${ThemeVariants.colors.bg.overlay} ${ThemeVariants.colors.border.all.brand} ${ThemeVariants.borderRadius.md}`}
     >
       <div className="flex gap-3 flex-wrap">
         <Input
@@ -159,21 +173,26 @@ const DishEditRow = ({
           placeholder="Nome piatto"
           value={name}
           setValue={setName}
+          maxLength={DISH_NAME_MAX}
           variant="secondary"
-          className="flex-1 min-w-40 text-sm"
+          className="w-full sm:w-auto sm:flex-1 sm:min-w-40 text-sm"
         />
         <Input
           type="number"
           placeholder="Prezzo (€)"
           value={price}
           setValue={setPrice}
+          inputMode="decimal"
+          min={0}
+          step={0.01}
           variant="secondary"
           className="w-28 text-sm"
         />
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className={`px-2 py-2 text-sm ${ThemeVariants.colors.border.all.default} ${ThemeVariants.colors.bg.surface} ${ThemeVariants.borderRadius.sm} ${ThemeVariants.colors.text.white}`}
+          aria-label="Categoria"
+          className={`flex-1 sm:flex-none min-w-0 px-2 py-2 text-sm ${ThemeVariants.colors.border.all.default} ${ThemeVariants.colors.bg.surface} ${ThemeVariants.borderRadius.sm} ${ThemeVariants.colors.text.white}`}
         >
           {categories.map((cat) => (
             <option key={cat} value={cat}>
@@ -187,6 +206,7 @@ const DishEditRow = ({
         placeholder="Descrizione (opzionale)"
         value={description}
         setValue={setDescription}
+        maxLength={DISH_DESCRIPTION_MAX}
         variant="secondary"
         className="w-full text-sm"
       />
@@ -209,7 +229,7 @@ const DishEditRow = ({
               dimension={ButtonDimensions.auto}
               variant={allergens.includes(a) ? "primary" : "secondary"}
               onClick={() => toggleAllergen(a)}
-              className="px-2.5 py-1 gap-1"
+              className="px-2.5 py-1.5 sm:py-1 gap-1"
             />
           ))}
         </div>
@@ -221,7 +241,7 @@ const DishEditRow = ({
           dimension={ButtonDimensions.auto}
           variant="secondary"
           onClick={onCancel}
-          className="px-3 py-1.5"
+          className="px-3 py-2"
         />
         <Button
           iconLeft={<Check size={15} />}
@@ -233,7 +253,7 @@ const DishEditRow = ({
             onConfirm({ name, description, price, category, allergens })
           }
           disabled={!isValid}
-          className="px-3 py-1.5"
+          className="px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
         />
       </div>
     </div>
@@ -266,7 +286,8 @@ export const MenuEditor = () => {
     draft !== "" && (draft === renamingCat || !categories.includes(draft));
 
   const handleConfirmEdit = (formData: DishFormData) => {
-    const price = parseFloat(formData.price);
+    const price = parsePrice(formData.price);
+    if (price === null) return;
     if (editingId === 0) {
       setLocalDishes([
         ...dishes,
@@ -345,7 +366,7 @@ export const MenuEditor = () => {
       {isSaving && <Loader />}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <UtensilsCrossed
             size={24}
@@ -472,7 +493,7 @@ export const MenuEditor = () => {
         return (
           <div key={cat} className="mb-6">
             <div
-              className={`flex items-center gap-2 mb-3 pb-2 ${ThemeVariants.colors.border.bottom.default}`}
+              className={`flex flex-wrap items-center gap-2 mb-3 pb-2 ${ThemeVariants.colors.border.bottom.default}`}
             >
               {renamingCat === cat ? (
                 /* Rinomina della categoria */
@@ -482,8 +503,9 @@ export const MenuEditor = () => {
                     placeholder="Nome categoria"
                     value={catDraft}
                     setValue={setCatDraft}
+                    maxLength={CATEGORY_NAME_MAX}
                     variant="secondary"
-                    className="text-sm w-56"
+                    className="text-sm flex-1 sm:flex-none sm:w-56"
                     autoFocus
                   />
                   <Button
@@ -492,18 +514,20 @@ export const MenuEditor = () => {
                     variant="primary"
                     onClick={confirmRename}
                     disabled={!isValidCatName}
-                    className="px-2 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-9 h-9 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                    ariaLabel="Conferma il nome della categoria"
                   />
                   <Button
                     iconLeft={<X size={15} />}
                     dimension={ButtonDimensions.auto}
                     variant="secondary"
                     onClick={() => setRenamingCat(null)}
-                    className="px-2 py-1.5"
+                    className="w-9 h-9 shrink-0"
+                    ariaLabel="Annulla"
                   />
                   {draft !== "" && !isValidCatName && (
                     <span
-                      className={`text-xs ${ThemeVariants.colors.text.danger}`}
+                      className={`text-xs basis-full sm:basis-auto ${ThemeVariants.colors.text.danger}`}
                     >
                       Categoria già esistente
                     </span>
@@ -530,7 +554,8 @@ export const MenuEditor = () => {
                       variant="icon"
                       onClick={() => startRename(cat)}
                       disabled={isEditing || renamingCat !== null}
-                      className={`px-1.5 py-1 ${ThemeVariants.colors.text.secondary}`}
+                      className={`w-9 h-9 sm:w-7 sm:h-7 ${ThemeVariants.colors.text.secondary}`}
+                      ariaLabel={`Rinomina la categoria ${cat}`}
                     />
                   )}
                 </>

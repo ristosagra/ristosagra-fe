@@ -6,6 +6,7 @@ import {
   type LabelTagsConst,
   type LabelWeightConst,
 } from "../../constant/label";
+import { cn } from "../../helpers/cn";
 
 export interface LabelProps {
   label: string;
@@ -26,35 +27,36 @@ export const Label = ({
   color,
   colorBorderBottom,
   tag,
-  size,
+  size = LabelDimensions.medium,
   noMargin,
-  weight,
-  additionalClasses = "",
+  weight = LabelWeight.normal,
+  additionalClasses,
   fontFamily,
   variant,
   iconLeft,
 }: LabelProps) => {
   const Tag = tag as React.ElementType;
-  const borderClass = colorBorderBottom ? "border-b" : "";
-  const textSize = size ?? LabelDimensions.medium;
-  const labelWeight = weight ?? LabelWeight.normal;
-  const marginBottom = noMargin
-    ? ""
-    : LabelDimensions.large
-      ? "mb-6"
-      : LabelDimensions.medium
-        ? "mb-4"
-        : "mb-2";
   const variantClass = variant
     ? {
         success: `${ThemeVariants.colors.bg.success} ${ThemeVariants.colors.text.success} ${ThemeVariants.colors.border.all.success} ${ThemeVariants.borderRadius.xl} px-4`,
         danger: `${ThemeVariants.colors.bg.danger} ${ThemeVariants.colors.text.danger} ${ThemeVariants.colors.border.all.danger} ${ThemeVariants.borderRadius.xl} px-4`,
       }[variant]
-    : "";
+    : undefined;
 
   return (
     <Tag
-      className={`${variantClass} ${textSize} ${color} ${marginBottom} ${borderClass} ${colorBorderBottom} ${labelWeight} ${additionalClasses} ${fontFamily} flex flex-row items-center ${iconLeft && "gap-1"}`}
+      className={cn(
+        variantClass,
+        size,
+        color,
+        !noMargin && "mb-6",
+        colorBorderBottom && `border-b ${colorBorderBottom}`,
+        weight,
+        additionalClasses,
+        fontFamily,
+        "flex flex-row items-center",
+        !!iconLeft && "gap-1",
+      )}
     >
       {iconLeft}
       {label}

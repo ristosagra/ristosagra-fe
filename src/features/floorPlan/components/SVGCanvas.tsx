@@ -5,7 +5,6 @@ import type {
   PlanMode,
   TableData,
   WallData,
-  WallDragType,
   WallType,
 } from "../types/floorPlan";
 import {
@@ -39,17 +38,16 @@ interface SVGCanvasProps {
   hoveredTableId: string | null;
   panStart: PanStartType;
   curWall: WallType;
-  didPan: React.RefObject<boolean>;
   cursor: CoordinateType;
   groupMap: Map<string, TableData[]>;
   selTable: TableData | null | undefined;
   mergeAnchor: string | null;
   selId: string | null;
   zoom: number;
-  onSVGDown: (e: React.MouseEvent) => void;
-  onMove: (e: React.MouseEvent) => void;
-  onUp: () => void;
-  onWheel: (e: React.WheelEvent) => void;
+  onPointerDownCapture: (e: React.PointerEvent) => void;
+  onSVGDown: (e: React.PointerEvent) => void;
+  onMove: (e: React.PointerEvent) => void;
+  onUp: (e: React.PointerEvent) => void;
   onSVGClick: (e: React.MouseEvent) => void;
   onWallClick: (
     wallId: string,
@@ -57,9 +55,9 @@ interface SVGCanvasProps {
     isEditing: boolean,
   ) => void;
   pts: (arr: CoordinateType[]) => string;
-  setWallDrag: React.Dispatch<React.SetStateAction<WallDragType>>;
+  onWallPointDown: (e: React.PointerEvent, wallId: string, pi: number) => void;
   getGroup: (gid: string) => TableData[];
-  onTableDown: (e: React.MouseEvent, tid: string) => void;
+  onTableDown: (e: React.PointerEvent, tid: string) => void;
   onTableClick: (e: React.MouseEvent, tid: string) => void;
   setHoveredTableId: React.Dispatch<React.SetStateAction<string | null>>;
   pan: CoordinateType;
@@ -95,21 +93,20 @@ export const SVGCanvas = ({
   hoveredTableId,
   panStart,
   curWall,
-  didPan,
   cursor,
   groupMap,
   selTable,
   mergeAnchor,
   selId,
   zoom,
+  onPointerDownCapture,
   onSVGDown,
   onMove,
   onUp,
-  onWheel,
   onSVGClick,
   onWallClick,
   pts,
-  setWallDrag,
+  onWallPointDown,
   getGroup,
   onTableDown,
   onTableClick,
@@ -124,14 +121,16 @@ export const SVGCanvas = ({
   };
   const ghostCollides =
     isAdding && hasCollision(cursor.x, cursor.y, ghostGeom, tables, []);
+  //punti dei muri trascinabili (in modalità Sposta o Muro)
+  const wallPointsActive = isEditing && (mode === "move" || mode === "wall");
 
   return (
     <>
       {/* ── Canvas ── */}
       <div className="flex-1 relative overflow-hidden flex flex-col">
         {/* Hint */}
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-          <div className="bg-neutral-900/90 text-neutral-300 text-xs px-3 py-1.5 rounded-full border border-neutral-700 backdrop-blur-sm shadow-lg">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none w-max max-w-[calc(100%-1.5rem)]">
+          <div className="bg-neutral-900/90 text-neutral-300 text-xs text-center px-3 py-1.5 rounded-2xl sm:rounded-full border border-neutral-700 backdrop-blur-sm shadow-lg">
             {hints[mode]}
           </div>
         </div>
@@ -157,7 +156,7 @@ export const SVGCanvas = ({
         {/* SVG */}
         <svg
           ref={svgRef}
-          className={`group flex-1 select-none
+          className={`group flex-1 select-none touch-none
               ${
                 hoveredTableId
                   ? "cursor-pointer" // sopra un tavolo
@@ -174,11 +173,12 @@ export const SVGCanvas = ({
             background: `repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,0.04) 39px,rgba(255,255,255,0.04) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,0.04) 39px,rgba(255,255,255,0.04) 40px),#1a1a1a`,
             width: `100%`,
           }}
-          onMouseDown={onSVGDown}
-          onMouseMove={onMove}
-          onMouseUp={onUp}
-          onMouseLeave={onUp}
-          onWheel={onWheel}
+          onPointerDownCapture={onPointerDownCapture}
+          onPointerDown={onSVGDown}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={onUp}
+          onPointerLeave={onUp}
           onClick={onSVGClick}
         >
           <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
@@ -226,39 +226,25 @@ export const SVGCanvas = ({
                   style={{ pointerEvents: "none" }}
                 />
                 {wl.points.map((p, i) => (
-                  <circle
-                    key={p.x + p.y + i}
-                    cx={p.x}
-                    cy={p.y}
-                    r={
-                      isEditing && (mode === "move" || mode === "wall") ? 9 : 5
-                    }
-                    fill={
-                      isEditing && (mode === "move" || mode === "wall")
-                        ? "#f59e0b"
-                        : "#b45309"
-                    }
-                    stroke={
-                      isEditing && (mode === "move" || mode === "wall")
-                        ? "#fff"
-                        : "#f59e0b"
-                    }
-                    strokeWidth="2"
-                    style={{
-                      cursor:
-                        isEditing && (mode === "move" || mode === "wall")
-                          ? "grab"
-                          : "default",
-                      transition: "r 0.15s",
-                    }}
-                    onMouseDown={(e) => {
-                      if (isEditing && (mode === "move" || mode === "wall")) {
-                        e.stopPropagation();
-                        didPan.current = false;
-                        setWallDrag({ wallId: wl.id, pi: i });
-                      }
-                    }}
-                  />
+                  <g
+                    key={i}
+                    onPointerDown={(e) => onWallPointDown(e, wl.id, i)}
+                    style={{ cursor: wallPointsActive ? "grab" : "default" }}
+                  >
+                    {/* Area di presa più grande del punto, comoda da prendere con il dito */}
+                    {wallPointsActive && (
+                      <circle cx={p.x} cy={p.y} r={20} fill="transparent" />
+                    )}
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r={wallPointsActive ? 9 : 5}
+                      fill={wallPointsActive ? "#f59e0b" : "#b45309"}
+                      stroke={wallPointsActive ? "#fff" : "#f59e0b"}
+                      strokeWidth="2"
+                      style={{ transition: "r 0.15s" }}
+                    />
+                  </g>
                 ))}
               </g>
             ))}
@@ -368,7 +354,7 @@ export const SVGCanvas = ({
                 <g
                   key={table.id}
                   transform={`translate(${table.x},${table.y})`}
-                  onMouseDown={(e) => onTableDown(e, table.id)}
+                  onPointerDown={(e) => onTableDown(e, table.id)}
                   onClick={(e) => onTableClick(e, table.id)}
                   onMouseEnter={() => setHoveredTableId(table.id)}
                   onMouseLeave={() => setHoveredTableId(null)}

@@ -3,11 +3,12 @@ import { Label } from "./Label";
 import type { ButtonDimensionsConst } from "../../constant/button";
 import { LabelDimensions, LabelTags } from "../../constant/label";
 import { ThemeVariants } from "../../constant/colors";
+import { cn } from "../../helpers/cn";
 
 interface ButtonProps {
   iconLeft?: React.ReactNode;
   iconRight?: React.ReactNode;
-  onClick: () => void;
+  onClick?: () => void;
   dimension: ButtonDimensionsConst;
   label?: string | React.ReactNode;
   fullWidth?: boolean;
@@ -15,6 +16,10 @@ interface ButtonProps {
   className?: string;
   isActive?: boolean;
   disabled?: boolean;
+  //"submit" solo per il pulsante che invia un form: di default non lo invia
+  type?: "button" | "submit";
+  //nome letto dai lettori di schermo (e mostrato al passaggio del mouse): serve ai pulsanti con sola icona
+  ariaLabel?: string;
 }
 
 export const Button = ({
@@ -25,9 +30,11 @@ export const Button = ({
   label,
   fullWidth = false,
   variant,
-  className = "",
+  className,
   isActive = false,
   disabled = false,
+  type = "button",
+  ariaLabel,
 }: ButtonProps) => {
   const variantClass = {
     primary: `${ThemeVariants.colors.bg.brand} ${ThemeVariants.colors.text.white} rounded-md font-bold`,
@@ -42,16 +49,18 @@ export const Button = ({
 
   return (
     <button
+      type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`
-        ${dimension}
-        flex items-center justify-center
-        outline-none cursor-pointer
-        ${variantClass}
-        ${fullWidth ? "w-full" : ""}
-        ${className}
-      `}
+      aria-label={ariaLabel}
+      title={ariaLabel}
+      className={cn(
+        dimension,
+        "flex items-center justify-center cursor-pointer",
+        variantClass,
+        fullWidth && "w-full",
+        className,
+      )}
     >
       {iconLeft}
       {typeof label === "string" ? (

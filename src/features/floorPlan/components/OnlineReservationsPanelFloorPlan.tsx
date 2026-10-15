@@ -11,7 +11,7 @@ import {
   updateBookingDetails,
 } from "../helpers/booking";
 import { tableLabel } from "../helpers/chair";
-import { panToCenter } from "../helpers/view";
+import { isSmallScreen, panToCenter } from "../helpers/view";
 import {
   useDeleteReservation,
   useReservations,
@@ -28,6 +28,7 @@ import { LabelDimensions, LabelTags } from "../../../constant/label";
 import { ThemeVariants } from "../../../constant/colors";
 import { useNotification } from "../../../hooks/useNotification";
 import { NotificationType } from "../../../types/notification";
+import { PERSON_NAME_MAX } from "../../../constant/limits";
 
 interface OnlineReservationsPanelProps {
   tables: TableData[];
@@ -80,6 +81,14 @@ export const OnlineReservationsPanelFloorPlan = ({
     setSelId(first.id);
     const pan = panToCenter(unit, svgRef.current, zoom);
     if (pan) setPan(pan);
+    if (isSmallScreen()) setRightPanel(null);
+  };
+
+  //Inizia (o annulla) la sistemazione: sul cellulare si chiude il pannello per poter toccare il tavolo
+  const togglePlacing = (id: string) => {
+    const start = placingReservationId !== id;
+    setPlacingReservationId(start ? id : null);
+    if (start && isSmallScreen()) setRightPanel(null);
   };
 
   //Toglie dalla piantina senza eliminare la prenotazione
@@ -142,11 +151,8 @@ export const OnlineReservationsPanelFloorPlan = ({
             type="text"
             placeholder="Nome"
             value={draft.name}
-            setValue={(v) =>
-              setDraft((d) =>
-                d ? { ...d, name: typeof v === "function" ? v(d.name) : v } : d,
-              )
-            }
+            setValue={(name) => setDraft((d) => (d ? { ...d, name } : d))}
+            maxLength={PERSON_NAME_MAX}
             variant="secondary"
             className="w-full text-sm py-1"
           />
@@ -166,17 +172,10 @@ export const OnlineReservationsPanelFloorPlan = ({
               type="time"
               placeholder="20:00"
               value={draft.arrivalTime}
-              setValue={(v) =>
-                setDraft((d) =>
-                  d
-                    ? {
-                        ...d,
-                        arrivalTime:
-                          typeof v === "function" ? v(d.arrivalTime) : v,
-                      }
-                    : d,
-                )
+              setValue={(arrivalTime) =>
+                setDraft((d) => (d ? { ...d, arrivalTime } : d))
               }
+              ariaLabel="Orario di arrivo"
               variant="secondary"
               className="w-24 text-sm py-1 [color-scheme:dark]"
             />
@@ -188,7 +187,7 @@ export const OnlineReservationsPanelFloorPlan = ({
               onClick={() => setDraft(null)}
               dimension={ButtonDimensions.auto}
               variant="secondary"
-              className="px-2 py-1"
+              className="px-2.5 py-2 sm:px-2 sm:py-1"
             />
             <Button
               iconLeft={<Check size={14} />}
@@ -197,7 +196,7 @@ export const OnlineReservationsPanelFloorPlan = ({
               dimension={ButtonDimensions.auto}
               variant="success"
               disabled={!draft.name.trim() || !draft.arrivalTime || isSaving}
-              className="px-2 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-2.5 py-2 sm:px-2 sm:py-1 disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
         </div>
@@ -244,14 +243,14 @@ export const OnlineReservationsPanelFloorPlan = ({
                   onClick={() => remove(r)}
                   dimension={ButtonDimensions.auto}
                   variant="danger"
-                  className="flex-1 py-1"
+                  className="flex-1 py-2 sm:py-1"
                 />
                 <Button
                   label={<span className="text-xs">No</span>}
                   onClick={() => setConfirmDeleteId(null)}
                   dimension={ButtonDimensions.auto}
                   variant="secondary"
-                  className="flex-1 py-1"
+                  className="flex-1 py-2 sm:py-1"
                 />
               </div>
             </>
@@ -265,7 +264,7 @@ export const OnlineReservationsPanelFloorPlan = ({
                   dimension={ButtonDimensions.auto}
                   variant="secondary"
                   fullWidth
-                  className="py-1"
+                  className="py-2 sm:py-1"
                 />
               ) : (
                 <Button
@@ -275,18 +274,17 @@ export const OnlineReservationsPanelFloorPlan = ({
                       {isPlacing ? "Annulla" : "Sistema"}
                     </span>
                   }
-                  onClick={() =>
-                    setPlacingReservationId(isPlacing ? null : r.id)
-                  }
+                  onClick={() => togglePlacing(r.id)}
                   dimension={ButtonDimensions.auto}
                   variant={isPlacing ? "primary" : "secondary"}
                   fullWidth
-                  className="py-1"
+                  className="py-2 sm:py-1"
                 />
               )}
               <div className="flex gap-1">
                 <Button
                   iconLeft={<Pencil size={14} />}
+                  ariaLabel={`Modifica la prenotazione di ${r.name}`}
                   onClick={() =>
                     setDraft({
                       id: r.id,
@@ -297,14 +295,15 @@ export const OnlineReservationsPanelFloorPlan = ({
                   }
                   dimension={ButtonDimensions.auto}
                   variant="secondary"
-                  className="flex-1 py-1"
+                  className="flex-1 py-2 sm:py-1"
                 />
                 <Button
                   iconLeft={<X size={14} />}
+                  ariaLabel={`Elimina la prenotazione di ${r.name}`}
                   onClick={() => setConfirmDeleteId(r.id)}
                   dimension={ButtonDimensions.auto}
                   variant="secondary"
-                  className="flex-1 py-1 hover:bg-rose-700"
+                  className="flex-1 py-2 sm:py-1 hover:bg-rose-700"
                 />
               </div>
             </>
@@ -336,7 +335,7 @@ export const OnlineReservationsPanelFloorPlan = ({
   );
 
   return (
-    <aside className="w-72 bg-neutral-900 border-l border-neutral-700 flex flex-col shrink-0 overflow-hidden">
+    <aside className="absolute inset-0 z-20 sm:static sm:z-auto w-full sm:w-72 bg-neutral-900 sm:border-l border-neutral-700 flex flex-col shrink-0 overflow-hidden">
       <div className="px-3 pt-3 pb-2 border-b border-neutral-700 space-y-1">
         <div className="flex items-center justify-between">
           <Label
@@ -349,18 +348,19 @@ export const OnlineReservationsPanelFloorPlan = ({
             additionalClasses="font-bold"
           />
           <Button
-            iconLeft={<X size={16} />}
+            iconLeft={<X size={18} />}
             onClick={() => setRightPanel(null)}
             dimension={ButtonDimensions.auto}
             variant="icon"
-            className="text-neutral-400 hover:text-white p-1"
+            className="text-neutral-400 hover:text-white w-9 h-9 -mr-1.5"
+            ariaLabel="Chiudi il pannello"
           />
         </div>
         <div className="text-xs text-neutral-400">
-          Premi «Sistema» e poi clicca un tavolo per metterle in piantina
+          Premi «Sistema» e poi tocca un tavolo per metterle in piantina
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-2 space-y-2">
+      <div className="flex-1 overflow-y-auto overscroll-contain p-2 space-y-2">
         {section(
           "Da sistemare",
           waiting,
