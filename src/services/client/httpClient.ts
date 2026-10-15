@@ -40,4 +40,14 @@ export const httpClient = {
     });
     return handleResponse<T>(res);
   },
+
+  async delete<T = void>(endpoint: string): Promise<T> {
+    const res = await fetch(`${BASE_URL}${endpoint}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    // una DELETE può rispondere senza corpo (204)
+    if (res.ok && res.status === 204) return undefined as T;
+    return handleResponse<T>(res);
+  },
 };

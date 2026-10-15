@@ -240,7 +240,8 @@ const DishEditRow = ({
   );
 };
 
-export const Home = () => {
+//Gestione del menù, mostrata nella pagina Profilo del ristorante
+export const MenuEditor = () => {
   const { data, isLoading } = useMenu();
   const { mutate: createMenu, isPending: isCreating } = useCreateMenu();
   const { mutate: updateMenu, isPending: isUpdating } = useUpdateMenu();
@@ -340,7 +341,7 @@ export const Home = () => {
   const grouped = groupDishesByCategory(dishes);
 
   return (
-    <div className="h-full overflow-y-auto p-6">
+    <section>
       {isSaving && <Loader />}
 
       {/* Header */}
@@ -352,7 +353,7 @@ export const Home = () => {
           />
           <Label
             tag={LabelTags.h2}
-            label="Menu del ristorante"
+            label="Menù"
             size={LabelDimensions.xlarge}
             weight={LabelWeight.bold}
             noMargin
@@ -560,6 +561,6 @@ export const Home = () => {
           </div>
         );
       })}
-    </div>
+    </section>
   );
 };

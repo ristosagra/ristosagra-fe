@@ -11,6 +11,9 @@ import { ButtonDimensions } from "../../../constant/button";
 import { Input } from "../../../components/core/Input";
 import { CounterCard } from "../../../components/core/CounterCard";
 import { tableLabel } from "../helpers/chair";
+import { useReservations } from "../../reservations/hook/useReservations";
+import { SeatRequest } from "../../reservations/types/reservations";
+import { SeatRequestTags } from "../../reservations/components/SeatRequestTags";
 import {
   addHeadChair,
   addableHeads,
@@ -96,14 +99,24 @@ export const ModalFloorPlan = ({
   const unit = table ? getUnit(table, tables) : [];
   const { total, booked, free } = unitOccupancy(unit);
   const freeHeads = freeHeadSeats(unit).length;
+  //Prenotazione online da sistemare: nome, persone e orario arrivano da lì
+  const { data: reservations = [] } = useReservations();
+  const reservation = modal.reservationId
+    ? reservations.find((r) => r.id === modal.reservationId)
+    : undefined;
 
   // Se il tavolo è vuoto di default si prenota tutto allo stesso nome
-  const [sameName, setSameName] = useState(booked === 0);
-  const [guest, setGuest] = useState("");
-  const [arrival, setArrival] = useState("");
-  const [people, setPeople] = useState(2);
-  const [addHead, setAddHead] = useState(false);
-  const [wheelchair, setWheelchair] = useState(false);
+  const [sameName, setSameName] = useState(!reservation && booked === 0);
+  const [guest, setGuest] = useState(reservation?.name ?? "");
+  const [arrival, setArrival] = useState(reservation?.arrivalTime ?? "");
+  const [people, setPeople] = useState(reservation?.people ?? 2);
+  //le richieste del cliente (carrozzina, capotavola) preimpostano le opzioni del capotavola
+  const requests = reservation?.seatRequests ?? [];
+  const wantsWheelchair = requests.includes(SeatRequest.Wheelchair);
+  const [addHead, setAddHead] = useState(
+    wantsWheelchair || requests.includes(SeatRequest.Head),
+  );
+  const [wheelchair, setWheelchair] = useState(wantsWheelchair);
   const [wheelchairCount, setWheelchairCount] = useState<1 | 2>(1);
 
   //Prenotazione parziale: i posti si scelgono in fila (vedi selectSeats). Se la fila arriva
@@ -145,7 +158,10 @@ export const ModalFloorPlan = ({
         ? Math.min(wheelchairCount, freeHeads)
         : 1
       : 0;
-  const canConfirm = !!guest.trim() && !!selected && count >= 1;
+  //una prenotazione online va sistemata per intero
+  const missingSeats = reservation ? reservation.people - count : 0;
+  const canConfirm =
+    !!guest.trim() && !!selected && count >= 1 && missingSeats <= 0;
 
   const closeModal = () => setModal({ open: false, tableId: "" });
 
@@ -161,7 +177,7 @@ export const ModalFloorPlan = ({
         useAddedHead ? addHeadChair(p, addable!) : p,
         selected,
         {
-          id: `b-${Date.now()}`,
+          id: reservation?.id ?? `b-${Date.now()}`,
           name: guest.trim(),
           ...(arrival && { arrivalTime: arrival }),
         },
@@ -174,7 +190,7 @@ export const ModalFloorPlan = ({
   return (
     <Modal
       icon={<BookOpenText />}
-      title="Nuova Prenotazione"
+      title={reservation ? "Sistema prenotazione online" : "Nuova Prenotazione"}
       subTitle={
         <Label
           tag={LabelTags.p}
@@ -185,87 +201,107 @@ export const ModalFloorPlan = ({
         />
       }
     >
-      <div className="mb-1">
-        <CheckRow
-          checked={sameName}
-          onChange={setSameName}
-          label="Prenotazione allo stesso nome"
-        />
-      </div>
-      <Label
-        tag={LabelTags.p}
-        label={
-          sameName
-            ? free === 1
-              ? "L'unico posto libero verrà prenotato a questo nome"
-              : `Tutti i ${free} posti liberi verranno prenotati a questo nome`
-            : "I posti verranno assegnati uno dopo l'altro, senza lasciare posti liberi tra un gruppo e l'altro"
-        }
-        color={ThemeVariants.colors.text.secondary}
-        size={LabelDimensions.small}
-        noMargin
-        additionalClasses="mb-5 text-xs"
-      />
-
-      <Label
-        tag={LabelTags.p}
-        label="Nome cliente"
-        additionalClasses="uppercase mb-2"
-        size={LabelDimensions.small}
-        color={ThemeVariants.colors.text.secondary}
-        noMargin
-      />
-      <Input
-        type="text"
-        placeholder="Es. Mario Rossi"
-        value={guest}
-        setValue={setGuest}
-        variant="secondary"
-        className="w-full focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 mb-5"
-        autoFocus
-      />
-
-      <Label
-        tag={LabelTags.p}
-        label="Orario di arrivo (facoltativo)"
-        additionalClasses="uppercase mb-2"
-        size={LabelDimensions.small}
-        color={ThemeVariants.colors.text.secondary}
-        noMargin
-      />
-      <Input
-        type="time"
-        placeholder="20:30"
-        value={arrival}
-        setValue={setArrival}
-        variant="secondary"
-        className="w-32 [color-scheme:dark] focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 mb-5"
-      />
-
-      {!sameName && (
+      {reservation ? (
+        /* Dati della prenotazione online (si modificano dal pannello Online) */
+        <div className="mb-5 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2">
+          <div className="text-white font-bold">{reservation.name}</div>
+          <div className="text-xs text-neutral-400">
+            {reservation.people}{" "}
+            {reservation.people === 1 ? "persona" : "persone"} · arrivo{" "}
+            <span className="text-amber-300">{reservation.arrivalTime}</span>
+          </div>
+          <SeatRequestTags reservation={reservation} />
+          {missingSeats > 0 && (
+            <div className="text-xs text-rose-300 mt-1">
+              Posti liberi insufficienti: ne mancano {missingSeats}
+            </div>
+          )}
+        </div>
+      ) : (
         <>
+          <div className="mb-1">
+            <CheckRow
+              checked={sameName}
+              onChange={setSameName}
+              label="Prenotazione allo stesso nome"
+            />
+          </div>
           <Label
             tag={LabelTags.p}
-            label="Numero di persone"
+            label={
+              sameName
+                ? free === 1
+                  ? "L'unico posto libero verrà prenotato a questo nome"
+                  : `Tutti i ${free} posti liberi verranno prenotati a questo nome`
+                : "I posti verranno assegnati uno dopo l'altro, senza lasciare posti liberi tra un gruppo e l'altro"
+            }
+            color={ThemeVariants.colors.text.secondary}
+            size={LabelDimensions.small}
+            noMargin
+            additionalClasses="mb-5 text-xs"
+          />
+
+          <Label
+            tag={LabelTags.p}
+            label="Nome cliente"
             additionalClasses="uppercase mb-2"
             size={LabelDimensions.small}
             color={ThemeVariants.colors.text.secondary}
             noMargin
           />
-          <div className="flex items-center gap-3 mb-5">
-            <CounterCard
-              quantity={count}
-              decrement={() => setPeople(Math.max(1, count - 1))}
-              increment={() => setPeople(Math.min(maxPeople, count + 1))}
-            />
-            <Label
-              tag={LabelTags.p}
-              label={`min 1 · max ${maxPeople}`}
-              color={ThemeVariants.colors.text.secondary}
-              size={LabelDimensions.small}
-              noMargin
-            />
-          </div>
+          <Input
+            type="text"
+            placeholder="Es. Mario Rossi"
+            value={guest}
+            setValue={setGuest}
+            variant="secondary"
+            className="w-full focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 mb-5"
+            autoFocus
+          />
+
+          <Label
+            tag={LabelTags.p}
+            label="Orario di arrivo (facoltativo)"
+            additionalClasses="uppercase mb-2"
+            size={LabelDimensions.small}
+            color={ThemeVariants.colors.text.secondary}
+            noMargin
+          />
+          <Input
+            type="time"
+            placeholder="20:30"
+            value={arrival}
+            setValue={setArrival}
+            variant="secondary"
+            className="w-32 [color-scheme:dark] focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 mb-5"
+          />
+
+          {!sameName && (
+            <>
+              <Label
+                tag={LabelTags.p}
+                label="Numero di persone"
+                additionalClasses="uppercase mb-2"
+                size={LabelDimensions.small}
+                color={ThemeVariants.colors.text.secondary}
+                noMargin
+              />
+              <div className="flex items-center gap-3 mb-5">
+                <CounterCard
+                  quantity={count}
+                  decrement={() => setPeople(Math.max(1, count - 1))}
+                  increment={() => setPeople(Math.min(maxPeople, count + 1))}
+                />
+                <Label
+                  tag={LabelTags.p}
+                  label={`min 1 · max ${maxPeople}`}
+                  color={ThemeVariants.colors.text.secondary}
+                  size={LabelDimensions.small}
+                  noMargin
+                />
+              </div>
+            </>
+          )}
         </>
       )}
 

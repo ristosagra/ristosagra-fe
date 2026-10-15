@@ -37,19 +37,21 @@ button:focus-visible {
 /* ── DARK (default) ── */
 :root,
 [data-theme="dark"] {
-  --bg-brand: #e8712a;
+  /* Colore scelto dal ristorante (impostato da useTheme), arancione di default */
+  --accent: var(--accent-dark, #e8712a);
+  --bg-brand: var(--accent-dark, #e8712a);
   --bg-base: #0f0e0d;
   --bg-surface: #181614;
   --bg-raised: #221f1c;
   --bg-overlay: #2c2824;
   --bg-hover: #332e29;
 
-  --brand: #e8712a;
-  --brand-dim: #c45a18;
-  --brand-glow: rgba(232, 113, 42, 0.18);
-  --brand-subtle: rgba(232, 113, 42, 0.08);
+  --brand: var(--accent);
+  --brand-dim: color-mix(in srgb, var(--accent) 82%, black);
+  --brand-glow: color-mix(in srgb, var(--accent) 18%, transparent);
+  --brand-subtle: color-mix(in srgb, var(--accent) 8%, transparent);
 
-  --text-colored: #e8712a;
+  --text-colored: var(--accent);
   --text-primary: #f5f0eb;
   --text-secondary: #a89880;
   --text-muted: #6b5e52;
@@ -57,7 +59,7 @@ button:focus-visible {
 
   --border: rgba(255, 255, 255, 0.25);
   --border-medium: rgba(255, 255, 255, 0.12);
-  --border-brand: rgba(232, 113, 42, 0.35);
+  --border-brand: color-mix(in srgb, var(--accent) 35%, transparent);
 
   --success: #3d9e6b;
   --success-bg: rgba(61, 158, 107, 0.1);
@@ -78,10 +80,10 @@ button:focus-visible {
   --bg-overlay: #ede8e0;
   --bg-hover: #e8e0d5;
 
-  --brand: #d4601e;
-  --brand-dim: #b84f14;
-  --brand-glow: rgba(212, 96, 30, 0.15);
-  --brand-subtle: rgba(212, 96, 30, 0.07);
+  /* tonalità più scura del colore scelto, leggibile su sfondo chiaro */
+  --accent: var(--accent-light, #d4601e);
+  --brand-glow: color-mix(in srgb, var(--accent) 15%, transparent);
+  --brand-subtle: color-mix(in srgb, var(--accent) 7%, transparent);
 
   --text-primary: #1a1614;
   --text-secondary: #6b5e52;
@@ -90,7 +92,7 @@ button:focus-visible {
 
   --border: rgba(0, 0, 0, 0.08);
   --border-medium: rgba(0, 0, 0, 0.13);
-  --border-brand: rgba(212, 96, 30, 0.3);
+  --border-brand: color-mix(in srgb, var(--accent) 30%, transparent);
 
   --success: #2d7d52;
   --success-bg: rgba(45, 125, 82, 0.08);

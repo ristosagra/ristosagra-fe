@@ -15,6 +15,8 @@ import {
   type TableShapeConst,
   Heads,
   PLAN_DEFAULT_SEATS,
+  RightPanel,
+  type RightPanelConst,
   TableShape,
 } from "../constant/floorPlan";
 import { rectColumns } from "../helpers/dimensions";
@@ -44,8 +46,14 @@ export const useFloorPlanState = (
   const [modal, setModal] = useState<ModalType>({ open: false, tableId: "" });
   const [hoveredTableId, setHoveredTableId] = useState<string | null>(null);
   const [hoveredBookingId, setHoveredBookingId] = useState<string | null>(null);
-  //pannello laterale con l'elenco di tutte le prenotazioni
-  const [showBookings, setShowBookings] = useState(true);
+  //pannello aperto a destra: prenotazioni ai tavoli o prenotazioni online
+  const [rightPanel, setRightPanel] = useState<RightPanelConst | null>(
+    RightPanel.Bookings,
+  );
+  //prenotazione online in attesa di essere sistemata con un clic su un tavolo
+  const [placingReservationId, setPlacingReservationId] = useState<
+    string | null
+  >(null);
 
   const didPan = useRef(false);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -110,8 +118,10 @@ export const useFloorPlanState = (
     setHoveredTableId,
     hoveredBookingId,
     setHoveredBookingId,
-    showBookings,
-    setShowBookings,
+    rightPanel,
+    setRightPanel,
+    placingReservationId,
+    setPlacingReservationId,
     modal,
     setModal,
     selId,

@@ -1,45 +1,62 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { generateFakeOrderNumber, generateFakeOrders } from "../mock/orders";
+import { fakeOrdersApi } from "../mock/orders";
 import { OrdersService } from "../api/orders";
-import type { CartType, Payment } from "../types/orders";
+import type {
+  CartType,
+  NewOrder,
+  Payment,
+  TakeawaySettings,
+} from "../types/orders";
 
-export const useOrders = () => {
-  const isMocking = import.meta.env.VITE_MOCKING === "true";
+const isMocking = () => import.meta.env.VITE_MOCKING === "true";
+const api = () => (isMocking() ? fakeOrdersApi : OrdersService);
 
-  return useQuery({
+export const useOrders = () =>
+  useQuery({
     queryKey: ["orders"],
-    queryFn: isMocking ? () => generateFakeOrders() : OrdersService.getOrders,
+    queryFn: () => api().getOrders(),
     refetchInterval: 30000,
   });
-};
 
+//Invio di un nuovo ordine (sul posto o da asporto) dal cliente
 export const useOrderNumber = () => {
-  const isMocking = import.meta.env.VITE_MOCKING === "true";
-
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: isMocking
-      ? // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        async (_cart: CartType[]) => {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          return generateFakeOrderNumber();
-        }
-      : OrdersService.postOrderNumber,
+    mutationFn: (order: NewOrder) => api().createOrder(order),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["orders"] }),
   });
 };
 
 export const useOrderPayment = () => {
-  const isMocking = import.meta.env.VITE_MOCKING === "true";
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: isMocking
-      ? // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        async (_params: Payment) => {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-        }
-      : ({ id, paid }: Payment) => OrdersService.updatePayment(id, paid),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-    },
+    mutationFn: ({ id, paid }: Payment) => api().updatePayment(id, paid),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["orders"] }),
+  });
+};
+
+//Modifica dei piatti di un ordine dalla cassa
+export const useUpdateOrderItems = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, items }: { id: number; items: CartType[] }) =>
+      api().updateItems(id, items),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["orders"] }),
+  });
+};
+
+export const useTakeawaySettings = () =>
+  useQuery({
+    queryKey: ["takeaway-settings"],
+    queryFn: () => api().getTakeawaySettings(),
+  });
+
+export const useSaveTakeawaySettings = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (settings: TakeawaySettings) =>
+      api().saveTakeawaySettings(settings),
+    onSuccess: (saved) =>
+      queryClient.setQueryData(["takeaway-settings"], saved),
   });
 };

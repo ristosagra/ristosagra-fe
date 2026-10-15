@@ -1,4 +1,4 @@
-import { House, LandPlot, Wallet } from "lucide-react";
+import { LandPlot, Store, Wallet } from "lucide-react";
 import { NavBar } from "../../components/core/NavBar";
 import { useState } from "react";
 import { CashierDashboard } from "./CashierDashboard";
@@ -7,37 +7,32 @@ import { PagesCashier, type PagesCashierConst } from "../../constant/pages";
 import { ThemeVariants } from "../../constant/colors";
 import { Button } from "../../components/core/Button";
 import { ButtonDimensions } from "../../constant/button";
-import { Toggle } from "../../components/core/Toogle";
-import { Label } from "../../components/core/Label";
-import { LabelTags } from "../../constant/label";
-import { useTheme } from "../../hooks/useTheme";
-import { Home } from "./Home";
+import { useRestaurant } from "../../features/restaurant/hook/useRestaurant";
+import { Profile } from "./Profile";
 
 export const CashierHome = () => {
-  const [page, setPage] = useState<PagesCashierConst>(PagesCashier.HOME);
-  const { isDark, toggleTheme } = useTheme();
+  const [page, setPage] = useState<PagesCashierConst>(PagesCashier.PROFILE);
+  const { data: restaurant } = useRestaurant();
 
   return (
     <div className="min-h-screen min-w-screen h-full overflow-hidden flex flex-col">
       <NavBar>
+        {/* Il nome del locale apre il profilo del ristorante */}
         <Button
-          iconLeft={<House size={24} />}
+          iconLeft={<Store size={24} />}
+          label={
+            <span
+              className={`ml-2 text-lg italic max-w-64 truncate ${ThemeVariants.fontFamily.display}`}
+            >
+              {restaurant?.name ?? "Profilo"}
+            </span>
+          }
           dimension={ButtonDimensions.auto}
-          onClick={() => setPage(PagesCashier.HOME)}
+          onClick={() => setPage(PagesCashier.PROFILE)}
           variant="active"
-          isActive={page === PagesCashier.HOME}
+          isActive={page === PagesCashier.PROFILE}
           className="px-2 py-2 cursor-pointer"
         />
-        <div
-          className={`${ThemeVariants.borderRadius.lg} ${ThemeVariants.colors.border.all.default} flex flex-row gap-3 px-3 py-1`}
-        >
-          <Toggle value={isDark} onChange={toggleTheme} variant="secondary" />
-          <Label
-            tag={LabelTags.p}
-            label={isDark ? "🌙 Dark" : "☀️ Light"}
-            noMargin
-          />
-        </div>
         <div className="flex flex-row items-center gap-8">
           <Button
             iconLeft={<LandPlot size={24} />}
@@ -62,7 +57,7 @@ export const CashierHome = () => {
       <main
         className={`${ThemeVariants.colors.bg.base} flex-1 overflow-hidden pt-16 pb-10`}
       >
-        {page === PagesCashier.HOME && <Home />}
+        {page === PagesCashier.PROFILE && <Profile />}
         {page === PagesCashier.FLORPLAN && <RestaurantFloorPlan />}
         {page === PagesCashier.CASH && <CashierDashboard />}
       </main>

@@ -1,26 +1,25 @@
 import { useState } from "react";
 import { ShoppingCart, House } from "lucide-react";
-import Cart from "./Cart";
+import Cart, { type ConfirmedOrder } from "./Cart";
+import { BookTable } from "./BookTable";
 import { Reservation } from "./Reservation";
 import Menu from "./Menu";
 import { NavBar } from "../../components/core/NavBar";
 import { PagesCustomer, type PagesCustomerConst } from "../../constant/pages";
 import type { CartType } from "../../features/orders/types/orders";
 import { Home } from "./Home";
-import { useTheme } from "../../hooks/useTheme";
 import { ThemeVariants } from "../../constant/colors";
 import { Button } from "../../components/core/Button";
 import { ButtonDimensions } from "../../constant/button";
 import { Label } from "../../components/core/Label";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
-import { Toggle } from "../../components/core/Toogle";
 
 export const CustomerHome = () => {
   const [page, setPage] = useState<PagesCustomerConst>(PagesCustomer.HOME);
   const [cartItems, setCartItems] = useState<CartType[]>([]);
-  const [orderNumber, setOrderNumber] = useState<number | null>(null);
-  const [confirmedCart, setConfirmedCart] = useState<CartType[]>([]);
-  const { isDark, toggleTheme } = useTheme();
+  const [confirmedOrder, setConfirmedOrder] = useState<ConfirmedOrder | null>(
+    null,
+  );
 
   const total = cartItems.reduce(
     (acc, item) => acc + item.dish.price * item.quantity,
@@ -40,18 +39,15 @@ export const CustomerHome = () => {
           className="px-2 py-2"
         />
 
-        <div
-          className={`${ThemeVariants.borderRadius.lg} ${ThemeVariants.colors.border.all.default} flex flex-row gap-3 px-3 py-1`}
-        >
-          <Toggle value={isDark} onChange={toggleTheme} variant="secondary" />
-          <Label
-            tag={LabelTags.p}
-            label={isDark ? "🌙 Dark" : "☀️ Light"}
-            noMargin
-          />
-        </div>
-
         <div className="flex flex-row items-center gap-2">
+          <Button
+            isActive={page === PagesCustomer.BOOK_TABLE}
+            onClick={() => setPage(PagesCustomer.BOOK_TABLE)}
+            label="Prenota un tavolo"
+            dimension={ButtonDimensions.auto}
+            variant="active"
+            className="px-3 py-2"
+          />
           <Button
             isActive={page === PagesCustomer.MENU}
             onClick={() => setPage(PagesCustomer.MENU)}
@@ -111,13 +107,13 @@ export const CustomerHome = () => {
             cartItems={cartItems}
             setCartItems={setCartItems}
             setPage={setPage}
-            setOrderNumber={setOrderNumber}
-            setConfirmedCart={setConfirmedCart}
+            setConfirmedOrder={setConfirmedOrder}
           />
         )}
-        {page === PagesCustomer.RESERVATION && (
-          <Reservation cartItems={confirmedCart} orderNumber={orderNumber!} />
+        {page === PagesCustomer.RESERVATION && confirmedOrder && (
+          <Reservation order={confirmedOrder} />
         )}
+        {page === PagesCustomer.BOOK_TABLE && <BookTable />}
       </main>
     </div>
   );

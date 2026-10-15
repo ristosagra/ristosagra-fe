@@ -10,6 +10,8 @@ import {
   unitOccupancy,
 } from "../helpers/booking";
 import { tableLabel } from "../helpers/chair";
+import { panToCenter } from "../helpers/view";
+import type { RightPanelConst } from "../constant/floorPlan";
 import { Button } from "../../../components/core/Button";
 import { Input } from "../../../components/core/Input";
 import { Label } from "../../../components/core/Label";
@@ -39,7 +41,7 @@ interface BookingsPanelFloorPlanProps {
   setSelId: (x: string | null) => void;
   setTables: React.Dispatch<React.SetStateAction<TableData[]>>;
   setHoveredBookingId: (x: string | null) => void;
-  setShowBookings: (x: boolean) => void;
+  setRightPanel: (x: RightPanelConst | null) => void;
 }
 
 //Pannello laterale con tutte le prenotazioni divise per tavolo:
@@ -53,7 +55,7 @@ export const BookingsPanelFloorPlan = ({
   setSelId,
   setTables,
   setHoveredBookingId,
-  setShowBookings,
+  setRightPanel,
 }: BookingsPanelFloorPlanProps) => {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<BookingFilterConst>(BookingFilter.All);
@@ -95,11 +97,8 @@ export const BookingsPanelFloorPlan = ({
   //Seleziona il tavolo e centra la piantina su di esso
   const focusUnit = (unit: TableData[]) => {
     setSelId(unit[0].id);
-    const r = svgRef.current?.getBoundingClientRect();
-    if (!r) return;
-    const cx = unit.reduce((s, t) => s + t.x, 0) / unit.length;
-    const cy = unit.reduce((s, t) => s + t.y, 0) / unit.length;
-    setPan({ x: r.width / 2 - cx * zoom, y: r.height / 2 - 30 - cy * zoom });
+    const pan = panToCenter(unit, svgRef.current, zoom);
+    if (pan) setPan(pan);
   };
 
   const removeBooking = (bookingId: string) => {
@@ -132,7 +131,7 @@ export const BookingsPanelFloorPlan = ({
           />
           <Button
             iconLeft={<X size={16} />}
-            onClick={() => setShowBookings(false)}
+            onClick={() => setRightPanel(null)}
             dimension={ButtonDimensions.auto}
             variant="icon"
             className="text-neutral-400 hover:text-white p-1"

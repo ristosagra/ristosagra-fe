@@ -1,19 +1,21 @@
 import { useState } from "react";
 import { Container } from "../../components/core/Container";
 import { Label } from "../../components/core/Label";
-import type { CartType } from "../../features/orders/types/orders";
+import { OrderType } from "../../features/orders/types/orders";
+import type { ConfirmedOrder } from "./Cart";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
 import { calcTotal } from "../../helpers/calcTotal";
 import { ThemeVariants } from "../../constant/colors";
 import { Accordion } from "../../components/core/Accordion";
 
 interface ReservationProps {
-  cartItems: CartType[];
-  orderNumber: number;
+  order: ConfirmedOrder;
 }
 
-export const Reservation = ({ cartItems, orderNumber }: ReservationProps) => {
+export const Reservation = ({ order }: ReservationProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { items: cartItems, orderNumber } = order;
+  const isTakeaway = order.type === OrderType.Takeaway;
 
   const total = calcTotal(cartItems);
 
@@ -39,8 +41,23 @@ export const Reservation = ({ cartItems, orderNumber }: ReservationProps) => {
             weight={LabelWeight.bold}
             noMargin
           />
+          {isTakeaway && (
+            <Label
+              label={`Asporto a nome di ${order.customerName} · ritiro alle ${order.pickupTime}`}
+              tag={LabelTags.p}
+              size={LabelDimensions.medium}
+              weight={LabelWeight.semibold}
+              color={ThemeVariants.colors.text.white}
+              noMargin
+              additionalClasses="text-center px-4"
+            />
+          )}
           <Label
-            label="Mostralo alla cassa per ritirare il tuo ordine"
+            label={
+              isTakeaway
+                ? "Mostralo alla cassa quando vieni a ritirarlo"
+                : "Mostralo alla cassa per ritirare il tuo ordine"
+            }
             tag={LabelTags.p}
             size={LabelDimensions.medium}
             color={ThemeVariants.colors.text.secondary}

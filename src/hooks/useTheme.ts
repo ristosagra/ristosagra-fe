@@ -1,26 +1,58 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useRestaurant } from "../features/restaurant/hook/useRestaurant";
+import {
+  BRAND_PALETTE,
+  DEFAULT_APPEARANCE,
+} from "../features/restaurant/constant/brandColors";
+import type {
+  BrandColorConst,
+  RestaurantThemeConst,
+} from "../features/restaurant/types/restaurant";
 
-export const Theme = {
-  Dark: "dark",
-  Light: "light",
-} as const;
+//Ultimo aspetto usato, per applicarlo subito al caricamento senza aspettare il profilo
+const THEME_KEY = "theme";
+const BRAND_KEY = "brandColor";
 
-export type ThemeConst = (typeof Theme)[keyof typeof Theme];
+//Applica tema e colore: data-theme sull'<html> e le due tonalità del colore
+//come variabili CSS, da cui index.css ricava tutte le varianti
+const applyAppearance = (
+  theme: RestaurantThemeConst,
+  brandColor: BrandColorConst,
+) => {
+  const root = document.documentElement;
+  const color =
+    BRAND_PALETTE[brandColor] ?? BRAND_PALETTE[DEFAULT_APPEARANCE.brandColor];
+  root.dataset.theme = theme;
+  root.style.setProperty("--accent-dark", color.dark);
+  root.style.setProperty("--accent-light", color.light);
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+    localStorage.setItem(BRAND_KEY, brandColor);
+  } catch {
+    // localStorage non disponibile: al prossimo caricamento si aspetta il profilo
+  }
+};
 
+export const applyCachedAppearance = () => {
+  try {
+    applyAppearance(
+      (localStorage.getItem(THEME_KEY) as RestaurantThemeConst | null) ??
+        DEFAULT_APPEARANCE.theme,
+      (localStorage.getItem(BRAND_KEY) as BrandColorConst | null) ??
+        DEFAULT_APPEARANCE.brandColor,
+    );
+  } catch {
+    applyAppearance(DEFAULT_APPEARANCE.theme, DEFAULT_APPEARANCE.brandColor);
+  }
+};
+
+//Tema e colore scelti dal ristorante: uguali per cassa e clienti
 export const useTheme = () => {
-  const [theme, setTheme] = useState<ThemeConst>(
-    () => (localStorage.getItem("theme") as ThemeConst) ?? Theme.Dark,
-  );
+  const { data: restaurant } = useRestaurant();
+  const theme = restaurant?.theme;
+  const brandColor = restaurant?.brandColor;
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem("theme", theme);
-  }, [theme]);
-
-  const toggleTheme = () =>
-    setTheme((t) => (t === Theme.Dark ? Theme.Light : Theme.Dark));
-
-  const isDark = theme === Theme.Dark;
-
-  return { theme, isDark, toggleTheme };
+    if (theme && brandColor) applyAppearance(theme, brandColor);
+  }, [theme, brandColor]);
 };

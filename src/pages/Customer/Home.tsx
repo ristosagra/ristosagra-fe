@@ -1,16 +1,19 @@
-import { NotebookPen } from "lucide-react";
+import { CalendarClock, NotebookPen } from "lucide-react";
 import { PagesCustomer, type PagesCustomerConst } from "../../constant/pages";
 import { Button } from "../../components/core/Button";
 import { ButtonDimensions } from "../../constant/button";
 import { ThemeVariants } from "../../constant/colors";
 import { LabelDimensions, LabelTags } from "../../constant/label";
 import { Label } from "../../components/core/Label";
+import { useRestaurant } from "../../features/restaurant/hook/useRestaurant";
 
 export const Home = ({
   setPage,
 }: {
   setPage: React.Dispatch<React.SetStateAction<PagesCustomerConst>>;
 }) => {
+  const { data: restaurant } = useRestaurant();
+
   return (
     <div className="h-full flex flex-col items-center justify-center gap-6 p-6">
       <div
@@ -24,7 +27,8 @@ export const Home = ({
         />{" "}
         <Label
           tag={LabelTags.p}
-          label="Ristosagra"
+          // spazio vuoto finché il nome non è caricato, per non far saltare il testo
+          label={restaurant?.name ?? "\u00a0"}
           size={LabelDimensions.xxxlarge}
           color={ThemeVariants.colors.text.brand}
           additionalClasses="italic"
@@ -54,6 +58,14 @@ export const Home = ({
           label="Vai al menù"
           iconLeft={<NotebookPen size={16} />}
           variant="primary"
+        />
+        <Button
+          dimension={ButtonDimensions.auto}
+          onClick={() => setPage(PagesCustomer.BOOK_TABLE)}
+          label="Prenota un posto"
+          iconLeft={<CalendarClock size={16} />}
+          variant="secondary"
+          className="h-12 px-4"
         />
       </div>
     </div>

@@ -14,7 +14,9 @@ import { useSaveFloorPlan } from "../hook/useSaveFloorPlan";
 import { Button } from "../../../components/core/Button";
 import {
   ClipboardList,
+  Globe,
   Hourglass,
+  LocateFixed,
   Minus,
   Pencil,
   Plus,
@@ -25,7 +27,14 @@ import { ButtonDimensions } from "../../../constant/button";
 import { ThemeVariants } from "../../../constant/colors";
 import { Label } from "../../../components/core/Label";
 import { LabelDimensions, LabelTags } from "../../../constant/label";
-import { allUnits, bookingSummaries, hasBookings } from "../helpers/booking";
+import {
+  allUnits,
+  bookingSummaries,
+  hasBookings,
+  isPlaced,
+} from "../helpers/booking";
+import { RightPanel, type RightPanelConst } from "../constant/floorPlan";
+import { useReservations } from "../../reservations/hook/useReservations";
 
 interface HeaderFloorPlanProps {
   tables: TableData[];
@@ -33,8 +42,8 @@ interface HeaderFloorPlanProps {
   walls: WallData[];
   zoom: number;
   savedPlan: FloorPlanData | null | undefined;
-  showBookings: boolean;
-  setShowBookings: (x: boolean) => void;
+  rightPanel: RightPanelConst | null;
+  setRightPanel: (x: RightPanelConst | null) => void;
   setIsEditing: (x: boolean) => void;
   setMode: (x: PlanMode) => void;
   setWalls: React.Dispatch<React.SetStateAction<WallData[]>>;
@@ -52,8 +61,8 @@ export const HeaderFloorPlan = ({
   walls,
   zoom,
   savedPlan,
-  showBookings,
-  setShowBookings,
+  rightPanel,
+  setRightPanel,
   setIsEditing,
   setMode,
   setWalls,
@@ -77,6 +86,12 @@ export const HeaderFloorPlan = ({
     (s, t) => s + t.chairs.filter((c) => c.booking).length,
     0,
   );
+  //prenotazioni online non ancora sistemate in piantina
+  const { data: reservations = [] } = useReservations();
+  const toPlace = reservations.filter((r) => !isPlaced(tables, r.id)).length;
+  const togglePanel = (panel: RightPanelConst) =>
+    setRightPanel(rightPanel === panel ? null : panel);
+
   const bookingsCount = allUnits(tables).reduce(
     (s, u) => s + bookingSummaries(u).length,
     0,
@@ -118,17 +133,17 @@ export const HeaderFloorPlan = ({
   };
 
   return (
-    <div className="bg-neutral-900 border-b border-neutral-700 px-4 py-2 flex items-center justify-between shrink-0">
+    <div className="bg-neutral-900 border-b border-neutral-700 px-4 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0">
       {/* Zoom */}
-      <div className="flex items-center gap-1.5 bg-neutral-800 rounded-lg px-2 py-1 h-full">
+      <div className="flex items-center gap-1 bg-neutral-800 rounded-lg px-1.5 py-1">
         <Button
           onClick={() => setZoom((z) => Math.max(0.2, z / 1.2))}
           iconLeft={<Minus />}
           variant="icon"
-          dimension={ButtonDimensions.small}
-          className={`cursor-pointer ${ThemeVariants.colors.text.secondary}`}
+          dimension={ButtonDimensions.auto}
+          className={`cursor-pointer w-8 h-7 ${ThemeVariants.colors.text.secondary}`}
         />
-        <span className="w-12 text-center tabular-nums h-full flex items-center justify-center">
+        <span className="w-11 text-center tabular-nums h-full flex items-center justify-center">
           <Label
             tag={LabelTags.p}
             label={`${Math.round(zoom * 100)}%`}
@@ -141,8 +156,8 @@ export const HeaderFloorPlan = ({
           onClick={() => setZoom((z) => Math.min(5, z * 1.2))}
           iconLeft={<Plus />}
           variant="icon"
-          dimension={ButtonDimensions.small}
-          className={`cursor-pointer ${ThemeVariants.colors.text.secondary}`}
+          dimension={ButtonDimensions.auto}
+          className={`cursor-pointer w-8 h-7 ${ThemeVariants.colors.text.secondary}`}
         />
         <div className="w-px bg-neutral-600 mx-1 h-full" />
         <Button
@@ -150,15 +165,15 @@ export const HeaderFloorPlan = ({
             setZoom(1);
             setPan({ x: 0, y: 0 });
           }}
-          label="Reset"
+          iconLeft={<LocateFixed size={18} />}
           variant="icon"
-          dimension={ButtonDimensions.medium}
-          className={`cursor-pointer ${ThemeVariants.colors.text.secondary}`}
+          dimension={ButtonDimensions.auto}
+          className={`cursor-pointer w-8 h-7 ${ThemeVariants.colors.text.secondary}`}
         />
       </div>
 
       {/* Stats + Edit controls */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <div className="flex gap-2">
           {[
             {
@@ -174,9 +189,9 @@ export const HeaderFloorPlan = ({
           ].map(({ label, free, booked }) => (
             <div
               key={label}
-              className="bg-neutral-800 rounded px-3 py-1 text-center border border-neutral-700"
+              className="bg-neutral-800 rounded px-2 py-1 text-center border border-neutral-700"
             >
-              <div className="flex items-baseline justify-center gap-1.5 tabular-nums whitespace-nowrap">
+              <div className="flex items-baseline justify-center gap-1 tabular-nums whitespace-nowrap">
                 <span className="text-base font-bold text-emerald-400">
                   {free}
                 </span>
@@ -207,7 +222,7 @@ export const HeaderFloorPlan = ({
               dimension={ButtonDimensions.auto}
               label="Annulla"
               variant="secondary"
-              className={`px-5 py-3 ${ThemeVariants.colors.border.all.brand}`}
+              className={`px-3 py-2.5 ${ThemeVariants.colors.border.all.brand}`}
             />
             <Button
               iconLeft={isSaving ? <Hourglass size={16} /> : <Save size={16} />}
@@ -215,20 +230,45 @@ export const HeaderFloorPlan = ({
               dimension={ButtonDimensions.auto}
               label={isSaving ? "Salvataggio…" : "Salva"}
               variant="success"
-              className={`px-5 py-3 ${ThemeVariants.colors.border.all.brand}`}
+              className={`px-3 py-2.5 ${ThemeVariants.colors.border.all.brand}`}
             />
           </div>
         ) : (
           <div className="flex gap-2 h-full">
-            {/* Apre/chiude il pannello con l'elenco delle prenotazioni */}
+            {/* Apre/chiude i pannelli a destra: prenotazioni ai tavoli e prenotazioni online */}
             <Button
               iconLeft={<ClipboardList size={16} />}
-              onClick={() => setShowBookings(!showBookings)}
+              onClick={() => togglePanel(RightPanel.Bookings)}
               dimension={ButtonDimensions.auto}
-              label={`Prenotazioni (${bookingsCount})`}
+              label={
+                <span className="ml-1 text-sm whitespace-nowrap flex items-center gap-1.5">
+                  Prenotazioni
+                  <span className="text-xs bg-neutral-600 text-white rounded-full px-1.5 font-bold">
+                    {bookingsCount}
+                  </span>
+                </span>
+              }
               variant="active"
-              isActive={showBookings}
-              className="px-3 py-3"
+              isActive={rightPanel === RightPanel.Bookings}
+              className="px-2 py-2.5"
+            />
+            <Button
+              iconLeft={<Globe size={16} />}
+              onClick={() => togglePanel(RightPanel.Online)}
+              dimension={ButtonDimensions.auto}
+              label={
+                <span className="ml-1 text-sm whitespace-nowrap flex items-center gap-1.5">
+                  Online
+                  {toPlace > 0 && (
+                    <span className="text-xs bg-amber-500 text-neutral-950 rounded-full px-1.5 font-bold">
+                      {toPlace}
+                    </span>
+                  )}
+                </span>
+              }
+              variant="active"
+              isActive={rightPanel === RightPanel.Online}
+              className="px-2 py-2.5"
             />
             <Button
               iconLeft={<Pencil size={16} />}
@@ -236,7 +276,7 @@ export const HeaderFloorPlan = ({
               dimension={ButtonDimensions.auto}
               label="Modifica"
               variant="primary"
-              className={`px-5 py-3 ${ThemeVariants.colors.border.all.brand}`}
+              className={`px-3 py-2.5 ${ThemeVariants.colors.border.all.brand}`}
             />
           </div>
         )}

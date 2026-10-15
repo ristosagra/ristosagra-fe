@@ -319,11 +319,9 @@ export function selectSeats(
  *  - tavolo già prenotato: si continua dalla prenotazione esistente, chiudendo prima
  *    una colonna lasciata a metà, così non restano posti liberi in mezzo. Il capotavola
  *    opposto si occupa solo quando la fila arriva fino a lui. */
-function selectInRows(
-  unit: TableData[],
-  seats: SeatRef[],
-  count: number,
-): SeatRef[] | null {
+/** Posti di un'unità rettangolare in fila da un'estremità all'altra:
+ *  capotavola iniziale, colonne dei lati lunghi una dopo l'altra, capotavola finale. */
+function rowOrder(unit: TableData[], seats: SeatRef[]) {
   const model = seatColumns(unit, seats);
   const { axis, cols } = model;
   const heads = seats.filter((s) => s.head);
@@ -332,6 +330,16 @@ function selectInRows(
     ...cols.flat(),
     ...heads.filter((h) => axis.u(h) >= axis.cu),
   ];
+  return { model, heads, order };
+}
+
+function selectInRows(
+  unit: TableData[],
+  seats: SeatRef[],
+  count: number,
+): SeatRef[] | null {
+  const { model, heads, order } = rowOrder(unit, seats);
+  const { axis, cols } = model;
   const freeIdx = order.flatMap((s, i) => (s.booked ? [] : [i]));
   if (count > freeIdx.length) return null;
 
@@ -503,4 +511,134 @@ export function expectedArrivals(table: TableData) {
     if (c.booking?.arrivalTime && !c.booking.seatedAt)
       times.add(c.booking.arrivalTime);
   return [...times].sort();
+}
+
+/** Vero se la prenotazione è sistemata in piantina (almeno un posto con il suo id). */
+export function isPlaced(tables: TableData[], bookingId: string) {
+  return tables.some((t) => t.chairs.some((c) => c.booking?.id === bookingId));
+}
+
+/** Tavoli su cui è sistemata la prenotazione. */
+export function placedTables(tables: TableData[], bookingId: string) {
+  return tables.filter((t) =>
+    t.chairs.some((c) => c.booking?.id === bookingId),
+  );
+}
+
+/** Aggiorna nome e orario di arrivo sui posti della prenotazione. */
+export function updateBookingDetails(
+  tables: TableData[],
+  bookingId: string,
+  changes: Pick<ChairBooking, "name" | "arrivalTime">,
+): TableData[] {
+  return tables.map((t) =>
+    t.chairs.some((c) => c.booking?.id === bookingId)
+      ? {
+          ...t,
+          chairs: t.chairs.map((c) =>
+            c.booking?.id === bookingId
+              ? { ...c, booking: { ...c.booking, ...changes } }
+              : c,
+          ),
+        }
+      : t,
+  );
+}
+
+/** Ordine dei posti di un'unità: in fila per i rettangolari, attorno al tavolo (circolare) per gli altri. */
+function seatOrder(unit: TableData[], seats: SeatRef[]) {
+  if (isRectUnit(unit))
+    return { order: rowOrder(unit, seats).order, cyclic: false };
+  const cx = seats.reduce((s, p) => s + p.x, 0) / seats.length;
+  const cy = seats.reduce((s, p) => s + p.y, 0) / seats.length;
+  const angle = (p: SeatRef) => Math.atan2(p.y - cy, p.x - cx);
+  return {
+    order: [...seats].sort((a, b) => angle(a) - angle(b)),
+    cyclic: true,
+  };
+}
+
+/** Porta a `people` i posti in piantina di una prenotazione già sistemata.
+ *  Se aumentano si usano i posti liberi consecutivi ai suoi (prima dopo, poi prima);
+ *  se non bastano la prenotazione viene tolta dalla piantina (removed = true) e va sistemata di nuovo.
+ *  Se diminuiscono si liberano gli ultimi posti in fila. */
+export function resizeBookingOnMap(
+  tables: TableData[],
+  bookingId: string,
+  people: number,
+): { tables: TableData[]; removed: boolean } {
+  const first = tables.find((t) =>
+    t.chairs.some((c) => c.booking?.id === bookingId),
+  );
+  if (!first) return { tables, removed: false };
+  const unit = getUnit(first, tables);
+  const chairOf = (s: SeatRef) =>
+    unit.find((t) => t.id === s.tableId)!.chairs[s.index];
+  const { order, cyclic } = seatOrder(unit, unitSeats(unit));
+  const mine = order.flatMap((s, i) =>
+    chairOf(s).booking?.id === bookingId ? [i] : [],
+  );
+  const diff = people - mine.length;
+  if (diff === 0) return { tables, removed: false };
+
+  if (diff < 0) {
+    const release = mine.slice(diff).map((i) => order[i]);
+    return {
+      tables: tables.map((t) =>
+        release.some((s) => s.tableId === t.id)
+          ? {
+              ...t,
+              chairs: t.chairs.map((c, i) =>
+                release.some((s) => s.tableId === t.id && s.index === i)
+                  ? { side: c.side, offset: c.offset }
+                  : c,
+              ),
+            }
+          : t,
+      ),
+      removed: false,
+    };
+  }
+
+  //Posti liberi consecutivi dopo l'ultimo e prima del primo posto della prenotazione
+  const n = order.length;
+  const step = (i: number, d: 1 | -1) => {
+    const j = i + d;
+    if (cyclic) return (j + n) % n;
+    return j >= 0 && j < n ? j : -1;
+  };
+  const extra: number[] = [];
+  for (const [from, d] of [
+    [mine[mine.length - 1], 1],
+    [mine[0], -1],
+  ] as const) {
+    let i = step(from, d);
+    while (
+      i !== -1 &&
+      extra.length < diff &&
+      !order[i].booked &&
+      !extra.includes(i)
+    ) {
+      extra.push(i);
+      i = step(i, d);
+    }
+  }
+  if (extra.length < diff)
+    return { tables: cancelBooking(tables, bookingId), removed: true };
+
+  const base = chairOf(order[mine[0]]).booking!;
+  const booking: ChairBooking = {
+    id: base.id,
+    name: base.name,
+    seatedAt: base.seatedAt,
+    arrivalTime: base.arrivalTime,
+  };
+  return {
+    tables: applyBooking(
+      tables,
+      extra.map((i) => order[i]),
+      booking,
+    ),
+    removed: false,
+  };
 }

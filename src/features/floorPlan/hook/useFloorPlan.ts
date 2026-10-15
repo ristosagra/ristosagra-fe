@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { generateFakeFloorPlan } from "../mock/floorPlan";
+import { floorPlanStore } from "../mock/floorPlan";
 import type { FloorPlanData } from "../types/floorPlan";
 import { FloorPlanService } from "../api/floorPlan";
 
@@ -12,7 +12,7 @@ export const useFloorPlan = () => {
       ? async () => {
           // Simulate network latency
           await new Promise((r) => setTimeout(r, 600));
-          return generateFakeFloorPlan();
+          return floorPlanStore.get();
         }
       : FloorPlanService.getFloorPlan,
     staleTime: 1000 * 60 * 5, // 5 minutes

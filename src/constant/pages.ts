@@ -3,13 +3,14 @@ export const PagesCustomer = {
   MENU: "menu",
   CART: "cart",
   RESERVATION: "reservation",
+  BOOK_TABLE: "book-table",
 } as const;
 
 export type PagesCustomerConst =
   (typeof PagesCustomer)[keyof typeof PagesCustomer];
 
 export const PagesCashier = {
-  HOME: "home",
+  PROFILE: "profile",
   FLORPLAN: "florplan",
   CASH: "cash",
 } as const;

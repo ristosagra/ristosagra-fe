@@ -26,6 +26,13 @@ export type HeadsConst = (typeof Heads)[keyof typeof Heads];
 //Rotazione del tavolo, a scatti di 90° in senso orario
 export type RotationConst = 0 | 90 | 180 | 270;
 
+//Pannello aperto a destra della piantina (uno alla volta)
+export const RightPanel = {
+  Bookings: "bookings",
+  Online: "online",
+} as const;
+export type RightPanelConst = (typeof RightPanel)[keyof typeof RightPanel];
+
 export const TableStatus = {
   Free: "free",
   Partial: "partial",

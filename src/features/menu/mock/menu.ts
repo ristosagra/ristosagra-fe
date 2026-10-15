@@ -3,7 +3,7 @@ import { ALLERGENS, DISH_CATEGORIES } from "../constant/menu";
 import type { Dish } from "../../../types/menuOrder";
 
 export const generateFakeDish = (): Dish => ({
-  id: 1,
+  id: faker.number.int({ min: 1000, max: 99999 }),
   name: faker.food.dish(),
   description: faker.food.description(),
   price: Number.parseFloat(faker.commerce.price({ min: 4, max: 20 })),

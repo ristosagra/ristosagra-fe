@@ -20,7 +20,8 @@ import { NotificationType } from "../../../types/notification";
 import { defaultChairs, nextTableName } from "../helpers/chair";
 import { snapIncoming } from "../helpers/snap";
 import { useNotification } from "../../../hooks/useNotification";
-import { getUnit, hasBookings } from "../helpers/booking";
+import { getUnit, hasBookings, unitOccupancy } from "../helpers/booking";
+import type { ModalType } from "../../../types/general";
 
 interface UseFloorPlanEventsProps {
   mode: PlanMode;
@@ -49,6 +50,11 @@ interface UseFloorPlanEventsProps {
   setSelId: React.Dispatch<React.SetStateAction<string | null>>;
   setCurWall: React.Dispatch<React.SetStateAction<WallType>>;
   setMergeAnchor: React.Dispatch<React.SetStateAction<string | null>>;
+  placingReservationId: string | null;
+  setPlacingReservationId: (x: string | null) => void;
+  setModal: (x: ModalType) => void;
+  //persone della prenotazione da sistemare, per controllare che il tavolo abbia posti a sufficienza
+  placingPeople?: number;
 }
 
 export const useFloorPlanEvents = ({
@@ -77,6 +83,10 @@ export const useFloorPlanEvents = ({
   setCurWall,
   setMergeAnchor,
   getGroup,
+  placingReservationId,
+  setPlacingReservationId,
+  setModal,
+  placingPeople,
 }: UseFloorPlanEventsProps) => {
   const showNotification = useNotification();
 
@@ -335,6 +345,26 @@ export const useFloorPlanEvents = ({
     if (didDrag.current || didPan.current) return;
     const t = tables.find((t) => t.id === tid);
     if (!t) return;
+
+    //Prenotazione online da sistemare: il clic sul tavolo apre la prenotazione già compilata
+    if (!isEditing && placingReservationId) {
+      const { free } = unitOccupancy(getUnit(t, tables));
+      if (placingPeople && free < placingPeople) {
+        showNotification(
+          `❌ Il tavolo ha solo ${free} posti liberi, ne servono ${placingPeople}`,
+          NotificationType.Err,
+        );
+        return;
+      }
+      setSelId(tid);
+      setModal({
+        open: true,
+        tableId: tid,
+        reservationId: placingReservationId,
+      });
+      setPlacingReservationId(null);
+      return;
+    }
 
     if (mode === "view" || (isEditing && (mode === "add" || mode === "move"))) {
       setSelId(tid);
