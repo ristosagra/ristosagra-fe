@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { DISH_CATEGORIES } from "../constant/menu";
+import { ALLERGENS, DISH_CATEGORIES } from "../constant/menu";
 import type { Dish } from "../../../types/menuOrder";
 
 export const generateFakeDish = (): Dish => ({
@@ -17,6 +17,7 @@ export const generateFakeDishes = (count = 15): Dish[] =>
     description: faker.food.description(),
     price: Number.parseFloat(faker.commerce.price({ min: 4, max: 20 })),
     category: DISH_CATEGORIES[i % DISH_CATEGORIES.length],
+    allergens: faker.helpers.arrayElements(ALLERGENS, { min: 0, max: 3 }),
   }));
 
 export const fakeCreateMenu = (dishes: Dish[]): Promise<Dish[]> =>

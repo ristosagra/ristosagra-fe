@@ -1,9 +1,11 @@
-import { PLAN_RECT_H, PLAN_RECT_W, Side } from "../constant/floorPlan";
+import { Side } from "../constant/floorPlan";
 import type { TableData } from "../types/floorPlan";
 import { redistributeOnBlock } from "./chair";
+import { bodyHalfExtents, toLocalSide } from "./dimensions";
 
 /** Aggancia (snap) un tavolo in ingresso al lato più vicino di un tavolo nel gruppo.
- *  Aggiorna i blockedSides e redistribuisce le sedie su entrambi i tavoli coinvolti.
+ *  Aggiorna i blockedSides (salvati come lati del tavolo non ruotato) e redistribuisce
+ *  le sedie su entrambi i tavoli coinvolti.
  *  Funziona solo con tavoli rettangolari. Ritorna null se non è possibile fare snap. */
 export function snapIncoming(
   incoming: TableData,
@@ -14,11 +16,9 @@ export function snapIncoming(
   let bestResult: ReturnType<typeof snapIncoming> = null;
 
   for (const target of group) {
-    if (target.shape !== "rect") continue;
-    const hw1 = PLAN_RECT_W[target.size] / 2,
-      hh1 = PLAN_RECT_H[target.size] / 2;
-    const hw2 = PLAN_RECT_W[incoming.size] / 2,
-      hh2 = PLAN_RECT_H[incoming.size] / 2;
+    if (target.shape !== "rect" || target.id === incoming.id) continue;
+    const { hw: hw1, hh: hh1 } = bodyHalfExtents(target);
+    const { hw: hw2, hh: hh2 } = bodyHalfExtents(incoming);
 
     const candidates = [
       {
@@ -47,7 +47,10 @@ export function snapIncoming(
       },
     ];
 
-    for (const { s1, s2, nx, ny } of candidates) {
+    for (const c of candidates) {
+      const { nx, ny } = c;
+      const s1 = toLocalSide(c.s1, target.rotation);
+      const s2 = toLocalSide(c.s2, incoming.rotation);
       if (target.blockedSides.includes(s1)) continue;
       const dist = Math.hypot(incoming.x - nx, incoming.y - ny);
       if (dist < bestDist) {
@@ -60,14 +63,14 @@ export function snapIncoming(
             x: nx,
             y: ny,
             blockedSides: b2,
-            chairs: redistributeOnBlock(incoming.chairs, s2, b2, incoming.size),
+            chairs: redistributeOnBlock(incoming.chairs, s2, b2, incoming),
           },
           updatedGroup: group.map((t) =>
             t.id === target.id
               ? {
                   ...t,
                   blockedSides: b1,
-                  chairs: redistributeOnBlock(t.chairs, s1, b1, t.size),
+                  chairs: redistributeOnBlock(t.chairs, s1, b1, t),
                 }
               : t,
           ),
@@ -82,10 +85,8 @@ export function snapIncoming(
  *  Usato per disegnare la linea viola di connessione tra tavoli uniti. Ritorna null se non si toccano. */
 export function sharedEdge(t1: TableData, t2: TableData) {
   if (t1.shape !== "rect" || t2.shape !== "rect") return null;
-  const hw1 = PLAN_RECT_W[t1.size] / 2,
-    hh1 = PLAN_RECT_H[t1.size] / 2;
-  const hw2 = PLAN_RECT_W[t2.size] / 2,
-    hh2 = PLAN_RECT_H[t2.size] / 2;
+  const { hw: hw1, hh: hh1 } = bodyHalfExtents(t1);
+  const { hw: hw2, hh: hh2 } = bodyHalfExtents(t2);
   const T = 4;
   const chkV = (
     ax: number,

@@ -2,14 +2,19 @@ import {
   PLAN_ALL_SIDES,
   PLAN_OPP,
   Side,
-  PLAN_CHAIR_DIST,
-  PLAN_RECT_W,
-  PLAN_RECT_H,
+  TableShape,
   type SideConst,
-  type TableSizeConst,
-  type TableShapeConst,
 } from "../constant/floorPlan";
-import type { TableData, CoordinateType } from "../types/floorPlan";
+import type { TableData, CoordinateType, TableGeom } from "../types/floorPlan";
+import {
+  chairDist,
+  rectColumns,
+  rectHeight,
+  rectSlotX,
+  rectWidth,
+  rotatePoint,
+  tableHeads,
+} from "./dimensions";
 
 /** Trova il lato con più capacità libera su cui aggiungere una sedia.
  *  Ignora i lati bloccati dall'unione con altri tavoli. */
@@ -18,8 +23,7 @@ function findBestSideForChair(t: TableData): SideConst | null {
   let bestSide: SideConst | null = null;
   let bestCap = 0;
   for (const s of free) {
-    const cap =
-      maxPerSide(s, t.size) - t.chairs.filter((c) => c.side === s).length;
+    const cap = maxPerSide(s, t) - t.chairs.filter((c) => c.side === s).length;
     if (cap > bestCap) {
       bestCap = cap;
       bestSide = s;
@@ -52,10 +56,9 @@ function addRoundChair(t: TableData): TableData {
 }
 
 /** Restituisce il numero massimo di sedie posizionabili su un lato del tavolo.
- *  I tavoli da 4 accettano 1 sedia per lato, quelli da 8 ne accettano 3 su top/bottom e 1 su left/right. */
-export function maxPerSide(side: SideConst, size: TableSizeConst) {
-  if (size === 4) return 1;
-  return side === "top" || side === "bottom" ? 3 : 1;
+ *  Le testate (left/right) accettano 1 sedia, i lati lunghi tante quante le colonne del tavolo. */
+export function maxPerSide(side: SideConst, t: TableGeom) {
+  return side === Side.Top || side === Side.Bottom ? rectColumns(t) : 1;
 }
 
 /** Calcola le posizioni (offset) lungo un lato per distribuire n sedie in modo uniforme e simmetrico. */
@@ -67,15 +70,30 @@ export function offsetsForCount(n: number): number[] {
   return Array.from({ length: n }, (_, i) => -0.6 + (1.2 * i) / (n - 1));
 }
 
+/** Calcola gli offset di n sedie su un lato. Sui lati lunghi le sedie occupano le colonne
+ *  del tavolo (centrate), così quelle sopra e sotto restano una di fronte all'altra. */
+function sideOffsets(side: SideConst, count: number, t: TableGeom): number[] {
+  if (count <= 0) return [];
+  if (side === Side.Left || side === Side.Right) return offsetsForCount(count);
+  const k = rectColumns(t);
+  const start = Math.floor((k - count) / 2);
+  const usable = (rectWidth(t) / 2) * 0.85;
+  return Array.from(
+    { length: count },
+    (_, i) => rectSlotX(start + i, k) / usable,
+  );
+}
+
 /** Sostituisce tutte le sedie di un lato specifico con un nuovo set di n sedie distribuite uniformemente. */
 export function setSideChairs(
   chairs: TableData["chairs"],
   side: SideConst,
   count: number,
+  t: TableGeom,
 ): TableData["chairs"] {
   return [
     ...chairs.filter((c) => c.side !== side),
-    ...offsetsForCount(count).map((o) => ({ side, offset: o })),
+    ...sideOffsets(side, count, t).map((o) => ({ side, offset: o })),
   ];
 }
 
@@ -85,7 +103,7 @@ export function redistributeOnBlock(
   chairs: TableData["chairs"],
   blocked: SideConst,
   allBlocked: SideConst[],
-  size: TableSizeConst,
+  t: TableGeom,
 ): TableData["chairs"] {
   const count = chairs.filter((c) => c.side === blocked).length;
   let result = chairs.filter((c) => c.side !== blocked);
@@ -97,52 +115,58 @@ export function redistributeOnBlock(
   for (const s of order) {
     if (toAdd <= 0) break;
     const cur = result.filter((c) => c.side === s).length;
-    const add = Math.min(maxPerSide(s, size) - cur, toAdd);
+    const add = Math.min(maxPerSide(s, t) - cur, toAdd);
     if (add > 0) {
-      result = setSideChairs(result, s, cur + add);
+      result = setSideChairs(result, s, cur + add, t);
       toAdd -= add;
     }
   }
   return result;
 }
 
-/** Genera la configurazione iniziale di sedie per un tavolo appena creato.
- *  I tavoli rotondi distribuiscono le sedie in cerchio, quelli rettangolari sui 4 lati. */
-export function defaultChairs(
-  size: TableSizeConst,
-  shape: TableShapeConst,
-): TableData["chairs"] {
-  if (shape === "round")
-    return Array.from({ length: size }, (_, i) => ({
+/** Genera la configurazione iniziale di sedie per un tavolo.
+ *  I tavoli rotondi distribuiscono le sedie in cerchio; quelli rettangolari mettono i capotavola
+ *  scelti sulle testate (sinistra, poi destra) e dividono gli altri posti tra lato superiore e inferiore. */
+export function defaultChairs(t: TableGeom): TableData["chairs"] {
+  if (t.shape === TableShape.Round)
+    return Array.from({ length: t.size }, (_, i) => ({
       side: "round" as const,
-      offset: (360 / size) * i,
+      offset: (360 / t.size) * i,
     }));
-  if (size === 4) return PLAN_ALL_SIDES.map((side) => ({ side, offset: 0 }));
+  const heads = tableHeads(t);
+  const rest = t.size - heads;
+  const top = Math.ceil(rest / 2),
+    bottom = Math.floor(rest / 2);
   return [
-    ...[-0.55, 0, 0.55].map((o) => ({ side: Side.Top, offset: o })),
-    ...[-0.55, 0, 0.55].map((o) => ({ side: Side.Bottom, offset: o })),
-    { side: Side.Left, offset: 0 },
-    { side: Side.Right, offset: 0 },
+    ...sideOffsets(Side.Top, top, t).map((o) => ({
+      side: Side.Top,
+      offset: o,
+    })),
+    ...sideOffsets(Side.Bottom, bottom, t).map((o) => ({
+      side: Side.Bottom,
+      offset: o,
+    })),
+    ...(heads >= 1 ? [{ side: Side.Left, offset: 0 }] : []),
+    ...(heads === 2 ? [{ side: Side.Right, offset: 0 }] : []),
   ];
 }
 
-/** Calcola la posizione x,y di una sedia rispetto al centro del tavolo.
+/** Calcola la posizione x,y di una sedia rispetto al centro del tavolo non ruotato.
  *  Per i tavoli rotondi usa la trigonometria, per i rettangolari usa offset rispetto ai bordi. */
 export function chairPos(
   c: TableData["chairs"][0],
-  shape: TableShapeConst,
-  size: TableSizeConst,
+  t: TableGeom,
 ): CoordinateType {
   const g = 16;
-  if (shape === "round" || c.side === "round") {
+  if (t.shape === TableShape.Round || c.side === "round") {
     const r = (c.offset * Math.PI) / 180;
     return {
-      x: Math.cos(r) * PLAN_CHAIR_DIST[size],
-      y: Math.sin(r) * PLAN_CHAIR_DIST[size],
+      x: Math.cos(r) * chairDist(t),
+      y: Math.sin(r) * chairDist(t),
     };
   }
-  const hw = PLAN_RECT_W[size] / 2,
-    hh = PLAN_RECT_H[size] / 2;
+  const hw = rectWidth(t) / 2,
+    hh = rectHeight(t) / 2;
   switch (c.side) {
     case "top":
       return { x: c.offset * (hw * 0.85), y: -(hh + g) };
@@ -155,6 +179,14 @@ export function chairPos(
   }
 }
 
+/** Posizione di una sedia rispetto al centro del tavolo, tenendo conto della rotazione. */
+export function worldChairPos(
+  c: TableData["chairs"][0],
+  t: TableGeom,
+): CoordinateType {
+  return rotatePoint(chairPos(c, t), t.rotation);
+}
+
 /** Aggiunge una sedia al tavolo: delega ad addRoundChair se rotondo,
  *  altrimenti trova il lato con più spazio disponibile e aggiunge lì. */
 export function addChair(t: TableData): TableData {
@@ -165,7 +197,7 @@ export function addChair(t: TableData): TableData {
   const bestSide = findBestSideForChair(t);
   if (!bestSide) return t;
   const cur = t.chairs.filter((c) => c.side === bestSide).length;
-  return { ...t, chairs: setSideChairs(t.chairs, bestSide, cur + 1) };
+  return { ...t, chairs: setSideChairs(t.chairs, bestSide, cur + 1, t) };
 }
 
 /** Rimuove una sedia dal tavolo: per i rotondi toglie l'ultima,
@@ -184,5 +216,33 @@ export function removeChair(t: TableData): TableData {
     }
   }
   if (!maxSide || maxN === 0) return { ...t, chairs: t.chairs.slice(0, -1) };
-  return { ...t, chairs: setSideChairs(t.chairs, maxSide, maxN - 1) };
+  return { ...t, chairs: setSideChairs(t.chairs, maxSide, maxN - 1, t) };
+}
+
+/** Ridimensiona un tavolo al nuovo numero di posti, rigenerando le sedie:
+ *  la grandezza del tavolo cresce o diminuisce di conseguenza. */
+export function resizeTable(t: TableData, size: number): TableData {
+  return { ...t, size, chairs: defaultChairs({ ...t, size }) };
+}
+
+/** Ruota il tavolo di 90° in senso orario. Le sedie (e le loro prenotazioni) restano le stesse. */
+export function rotateTable(t: TableData): TableData {
+  return {
+    ...t,
+    rotation: (((t.rotation ?? 0) + 90) % 360) as TableData["rotation"],
+  };
+}
+
+/** Nome proposto per un nuovo tavolo: "T-" seguito dal primo numero libero. */
+export function nextTableName(tables: TableData[]) {
+  const nums = tables
+    .map((t) => /^T-(\d+)$/.exec(t.name ?? "")?.[1])
+    .filter((n): n is string => !!n)
+    .map(Number);
+  return `T-${(nums.length ? Math.max(...nums) : 0) + 1}`;
+}
+
+/** Etichetta del tavolo: il nome se presente, altrimenti i posti. */
+export function tableLabel(t: TableData) {
+  return t.name?.trim() || `T·${t.chairs.length}`;
 }

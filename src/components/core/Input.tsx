@@ -32,7 +32,8 @@ export const Input = ({
       placeholder={placeholder}
       value={value}
       onChange={(e) => setValue(e.target.value)}
-      className={`p-2 ${variantClass} ${className} ${autoFocus} ${ThemeVariants.borderRadius.sm} `}
+      autoFocus={autoFocus}
+      className={`p-2 ${variantClass} ${className} ${ThemeVariants.borderRadius.sm} `}
     />
   );
 };

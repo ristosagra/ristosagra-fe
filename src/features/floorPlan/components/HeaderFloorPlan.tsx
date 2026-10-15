@@ -12,11 +12,20 @@ import type {
 import { NotificationType } from "../../../types/notification";
 import { useSaveFloorPlan } from "../hook/useSaveFloorPlan";
 import { Button } from "../../../components/core/Button";
-import { Hourglass, Minus, Pencil, Plus, Save, X } from "lucide-react";
+import {
+  ClipboardList,
+  Hourglass,
+  Minus,
+  Pencil,
+  Plus,
+  Save,
+  X,
+} from "lucide-react";
 import { ButtonDimensions } from "../../../constant/button";
 import { ThemeVariants } from "../../../constant/colors";
 import { Label } from "../../../components/core/Label";
 import { LabelDimensions, LabelTags } from "../../../constant/label";
+import { allUnits, bookingSummaries, hasBookings } from "../helpers/booking";
 
 interface HeaderFloorPlanProps {
   tables: TableData[];
@@ -24,7 +33,8 @@ interface HeaderFloorPlanProps {
   walls: WallData[];
   zoom: number;
   savedPlan: FloorPlanData | null | undefined;
-  groupMap: Map<string, TableData[]>;
+  showBookings: boolean;
+  setShowBookings: (x: boolean) => void;
   setIsEditing: (x: boolean) => void;
   setMode: (x: PlanMode) => void;
   setWalls: React.Dispatch<React.SetStateAction<WallData[]>>;
@@ -42,7 +52,8 @@ export const HeaderFloorPlan = ({
   walls,
   zoom,
   savedPlan,
-  groupMap,
+  showBookings,
+  setShowBookings,
   setIsEditing,
   setMode,
   setWalls,
@@ -58,7 +69,18 @@ export const HeaderFloorPlan = ({
 
   const [snapshot, setSnapshot] = useState<SnapshotType>(null);
 
-  const reserved = tables.filter((t) => t.reserved).length;
+  //tavoli con almeno un posto prenotato
+  const reserved = tables.filter((t) => hasBookings([t])).length;
+  //posti prenotati e liberi su tutta la piantina
+  const totalSeats = tables.reduce((s, t) => s + t.chairs.length, 0);
+  const bookedSeats = tables.reduce(
+    (s, t) => s + t.chairs.filter((c) => c.booking).length,
+    0,
+  );
+  const bookingsCount = allUnits(tables).reduce(
+    (s, u) => s + bookingSummaries(u).length,
+    0,
+  );
 
   const startEditing = () => {
     setSnapshot({
@@ -140,28 +162,34 @@ export const HeaderFloorPlan = ({
         <div className="flex gap-2">
           {[
             {
-              label: "TOTALI",
-              val: tables.length,
-              cls: "text-neutral-200",
+              label: "TAVOLI",
+              free: tables.length - reserved,
+              booked: reserved,
             },
             {
-              label: "LIBERI",
-              val: tables.length - reserved,
-              cls: "text-emerald-400",
+              label: "POSTI",
+              free: totalSeats - bookedSeats,
+              booked: bookedSeats,
             },
-            { label: "PRENOTATI", val: reserved, cls: "text-rose-400" },
-            {
-              label: "GRUPPI",
-              val: groupMap.size,
-              cls: "text-purple-400",
-            },
-          ].map(({ label, val, cls }) => (
+          ].map(({ label, free, booked }) => (
             <div
               key={label}
               className="bg-neutral-800 rounded px-3 py-1 text-center border border-neutral-700"
             >
-              <div className={`text-base font-bold tabular-nums ${cls}`}>
-                {val}
+              <div className="flex items-baseline justify-center gap-1.5 tabular-nums whitespace-nowrap">
+                <span className="text-base font-bold text-emerald-400">
+                  {free}
+                </span>
+                <span className="text-xs text-neutral-400">
+                  {free === 1 ? "libero" : "liberi"}
+                </span>
+                <span className="text-neutral-600">·</span>
+                <span className="text-base font-bold text-rose-400">
+                  {booked}
+                </span>
+                <span className="text-xs text-neutral-400">
+                  {booked === 1 ? "prenotato" : "prenotati"}
+                </span>
               </div>
               <div className="text-neutral-500 text-xs tracking-widest">
                 {label}
@@ -191,14 +219,26 @@ export const HeaderFloorPlan = ({
             />
           </div>
         ) : (
-          <Button
-            iconLeft={<Pencil size={16} />}
-            onClick={startEditing}
-            dimension={ButtonDimensions.auto}
-            label="Modifica"
-            variant="primary"
-            className={`px-5 py-3 ${ThemeVariants.colors.border.all.brand}`}
-          />
+          <div className="flex gap-2 h-full">
+            {/* Apre/chiude il pannello con l'elenco delle prenotazioni */}
+            <Button
+              iconLeft={<ClipboardList size={16} />}
+              onClick={() => setShowBookings(!showBookings)}
+              dimension={ButtonDimensions.auto}
+              label={`Prenotazioni (${bookingsCount})`}
+              variant="active"
+              isActive={showBookings}
+              className="px-3 py-3"
+            />
+            <Button
+              iconLeft={<Pencil size={16} />}
+              onClick={startEditing}
+              dimension={ButtonDimensions.auto}
+              label="Modifica"
+              variant="primary"
+              className={`px-5 py-3 ${ThemeVariants.colors.border.all.brand}`}
+            />
+          </div>
         )}
       </div>
     </div>

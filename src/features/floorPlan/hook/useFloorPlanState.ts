@@ -10,7 +10,14 @@ import type {
   WallType,
 } from "../types/floorPlan";
 import type { ModalType } from "../../../types/general";
-import { type TableShapeConst, TableShape } from "../constant/floorPlan";
+import {
+  type HeadsConst,
+  type TableShapeConst,
+  Heads,
+  PLAN_DEFAULT_SEATS,
+  TableShape,
+} from "../constant/floorPlan";
+import { rectColumns } from "../helpers/dimensions";
 
 export const useFloorPlanState = (
   savedPlan: FloorPlanData | null | undefined,
@@ -23,6 +30,10 @@ export const useFloorPlanState = (
   const [curWall, setCurWall] = useState<WallType>(null);
   const [mode, setMode] = useState<PlanMode>("view");
   const [shape, setShape] = useState<TableShapeConst>(TableShape.Round);
+  //posti del prossimo tavolo da aggiungere (la grandezza del tavolo dipende da questo valore)
+  const [newSeats, setNewSeats] = useState<number>(PLAN_DEFAULT_SEATS);
+  //capotavola compresi nei posti del prossimo tavolo rettangolare
+  const [newHeads, setNewHeads] = useState<HeadsConst>(Heads.Both);
   const [zoom, setZoom] = useState<number>(1);
   const [pan, setPan] = useState<CoordinateType>({ x: 0, y: 0 });
   const [panStart, setPanStart] = useState<PanStartType>(null);
@@ -31,8 +42,10 @@ export const useFloorPlanState = (
   const [mergeAnchor, setMergeAnchor] = useState<string | null>(null);
   const [selId, setSelId] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalType>({ open: false, tableId: "" });
-  const [guest, setGuest] = useState("");
   const [hoveredTableId, setHoveredTableId] = useState<string | null>(null);
+  const [hoveredBookingId, setHoveredBookingId] = useState<string | null>(null);
+  //pannello laterale con l'elenco di tutte le prenotazioni
+  const [showBookings, setShowBookings] = useState(true);
 
   const didPan = useRef(false);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -55,16 +68,22 @@ export const useFloorPlanState = (
       groupMap.get(t.groupId)!.push(t);
     }
 
+  const addHint = `Aggiungi tavolo da ${newSeats} posti · ${
+    shape === TableShape.Round
+      ? "Rotondo"
+      : rectColumns({ size: newSeats, shape, heads: newHeads }) <= 1
+        ? "Quadrato"
+        : "Rettangolare"
+  } · clicca un tavolo per selezionarlo`;
   const hints: Record<PlanMode, string> = {
     view: isEditing
       ? "Clicca un tavolo per gestirlo"
       : "Clicca un tavolo per vedere dettagli e prenotare",
-    add4: `Aggiungi tavolo da 4 · ${shape === TableShape.Round ? "Rotondo" : "Quadrato"}`,
-    add8: `Aggiungi tavolo da 8 · ${shape === TableShape.Round ? "Rotondo" : "Rettangolare"}`,
+    add: addHint,
     merge: mergeAnchor
       ? "Ancora impostata — clicca altri tavoli per unirli, poi Fine unione"
       : "Clicca un tavolo come ancora del gruppo",
-    move: "Trascina tavoli (i gruppi si muovono insieme) · 🟡 per muri",
+    move: "Trascina tavoli (i gruppi si muovono insieme) · 🟡 per muri · clic = seleziona",
     delete:
       "Clic tavolo = elimina · Clic gruppo = separa · Clic muro = elimina",
     pan: "Trascina per navigare · Rotellina per zoom",
@@ -89,8 +108,10 @@ export const useFloorPlanState = (
     setPan,
     hoveredTableId,
     setHoveredTableId,
-    guest,
-    setGuest,
+    hoveredBookingId,
+    setHoveredBookingId,
+    showBookings,
+    setShowBookings,
     modal,
     setModal,
     selId,
@@ -103,6 +124,10 @@ export const useFloorPlanState = (
     setPanStart,
     shape,
     setShape,
+    newSeats,
+    setNewSeats,
+    newHeads,
+    setNewHeads,
     curWall,
     setCurWall,
     // derivati

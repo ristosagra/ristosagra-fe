@@ -9,15 +9,18 @@ import type {
   WallType,
 } from "../types/floorPlan";
 import {
-  PLAN_CHAIR_R,
-  PLAN_RECT_H,
-  PLAN_RECT_W,
-  PLAN_TABLE_R,
   TableShape,
+  type HeadsConst,
+  type TableShapeConst,
 } from "../constant/floorPlan";
-import { chairPos } from "../helpers/chair";
+import { defaultChairs, nextTableName, tableLabel } from "../helpers/chair";
 import { getTableStyle } from "../helpers/tableStyle";
 import { sharedEdge } from "../helpers/snap";
+import { groupOutlinePath } from "../helpers/outline";
+import { tableRadius } from "../helpers/dimensions";
+import { expectedArrivals } from "../helpers/booking";
+import { hasCollision } from "../helpers/collision";
+import { TableShapeSVG } from "./TableShapeSVG";
 import { Label } from "../../../components/core/Label";
 import { LabelDimensions, LabelTags } from "../../../constant/label";
 import { ThemeVariants } from "../../../constant/colors";
@@ -26,6 +29,10 @@ interface SVGCanvasProps {
   isEditing: boolean;
   hints: Record<PlanMode, string>;
   mode: PlanMode;
+  shape: TableShapeConst;
+  newSeats: number;
+  newHeads: HeadsConst;
+  hoveredBookingId: string | null;
   tables: TableData[];
   walls: WallData[];
   svgRef: React.RefObject<SVGSVGElement | null>;
@@ -58,10 +65,30 @@ interface SVGCanvasProps {
   pan: CoordinateType;
 }
 
+const PURPLE_DASH = {
+  fill: "none",
+  stroke: "#a855f7",
+  strokeWidth: 2.5,
+  strokeDasharray: "5,3",
+  opacity: 0.7,
+  style: { pointerEvents: "none" as const },
+};
+
+//Prossimo arrivo previsto sul tavolo (es. "20:30", o "20:30 +1" se ce ne sono altri)
+const arrivalLabel = (table: TableData) => {
+  const times = expectedArrivals(table);
+  if (times.length === 0) return undefined;
+  return times.length > 1 ? `${times[0]} +${times.length - 1}` : times[0];
+};
+
 export const SVGCanvas = ({
   isEditing,
   hints,
   mode,
+  shape,
+  newSeats,
+  newHeads,
+  hoveredBookingId,
   tables,
   walls,
   svgRef,
@@ -89,6 +116,15 @@ export const SVGCanvas = ({
   setHoveredTableId,
   pan,
 }: SVGCanvasProps) => {
+  const isAdding = isEditing && mode === "add";
+  const ghostGeom = {
+    size: newSeats,
+    shape,
+    ...(shape === TableShape.Rect && { heads: newHeads }),
+  };
+  const ghostCollides =
+    isAdding && hasCollision(cursor.x, cursor.y, ghostGeom, tables, []);
+
   return (
     <>
       {/* ── Canvas ── */}
@@ -121,11 +157,11 @@ export const SVGCanvas = ({
         {/* SVG */}
         <svg
           ref={svgRef}
-          className={`flex-1 select-none
+          className={`group flex-1 select-none
               ${
                 hoveredTableId
                   ? "cursor-pointer" // sopra un tavolo
-                  : mode === "add4" || mode === "add8" || mode === "wall"
+                  : mode === "add" || mode === "wall"
                     ? "cursor-crosshair" // aggiunta elementi
                     : mode === "delete"
                       ? "cursor-not-allowed" // elimina
@@ -301,7 +337,13 @@ export const SVGCanvas = ({
                       />,
                     );
                 }
-              return <g key={gid}>{lines}</g>;
+              return (
+                <g key={gid}>
+                  {lines}
+                  {/* Contorno unico del gruppo: non passa sopra ai tavoli uniti */}
+                  <path d={groupOutlinePath(gtables)} {...PURPLE_DASH} />
+                </g>
+              );
             })}
 
             {/* Tables */}
@@ -312,8 +354,7 @@ export const SVGCanvas = ({
                 glow,
                 isSel,
                 isMergeAnc,
-                reservedBy,
-                isReserved,
+                bookingColors,
               } = getTableStyle(
                 table,
                 selTable,
@@ -340,133 +381,45 @@ export const SVGCanvas = ({
                         : `drop-shadow(0 0 8px ${glow}) drop-shadow(0 3px 6px rgba(0,0,0,0.4))`,
                   }}
                 >
-                  {/* Group ring */}
-                  {table.groupId &&
-                    (table.shape === TableShape.Round ? (
-                      <circle
-                        r={PLAN_TABLE_R[table.size] + 8}
-                        fill="none"
-                        stroke="#a855f7"
-                        strokeWidth="2.5"
-                        strokeDasharray="5,3"
-                        opacity="0.7"
-                        style={{ pointerEvents: "none" }}
-                      />
-                    ) : (
-                      <rect
-                        x={-PLAN_RECT_W[table.size] / 2 - 8}
-                        y={-PLAN_RECT_H[table.size] / 2 - 8}
-                        width={PLAN_RECT_W[table.size] + 16}
-                        height={PLAN_RECT_H[table.size] + 16}
-                        rx="14"
-                        fill="none"
-                        stroke="#a855f7"
-                        strokeWidth="2.5"
-                        strokeDasharray="5,3"
-                        opacity="0.7"
-                        style={{ pointerEvents: "none" }}
-                      />
-                    ))}
-
-                  {/* Chairs */}
-                  {table.chairs.map((c, i) => {
-                    const { x, y } = chairPos(c, table.shape, table.size);
-                    return (
-                      <circle
-                        key={x + y + i}
-                        cx={x}
-                        cy={y}
-                        r={PLAN_CHAIR_R}
-                        fill="#d97706"
-                        stroke="#92400e"
-                        strokeWidth="2"
-                        opacity="0.9"
-                      />
-                    );
-                  })}
-
-                  {/* Body */}
-                  {table.shape === TableShape.Round ? (
-                    <>
-                      <circle
-                        r={PLAN_TABLE_R[table.size] + 2}
-                        fill={strokeClr}
-                      />
-                      <circle
-                        r={PLAN_TABLE_R[table.size]}
-                        fill={fill}
-                        style={{ transition: "fill 0.4s" }}
-                      />
-                      <circle
-                        r={PLAN_TABLE_R[table.size] - 6}
-                        fill="none"
-                        stroke="rgba(255,255,255,0.15)"
-                        strokeWidth="1.5"
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <rect
-                        x={-PLAN_RECT_W[table.size] / 2 - 2}
-                        y={-PLAN_RECT_H[table.size] / 2 - 2}
-                        width={PLAN_RECT_W[table.size] + 4}
-                        height={PLAN_RECT_H[table.size] + 4}
-                        rx="10"
-                        fill={strokeClr}
-                      />
-                      <rect
-                        x={-PLAN_RECT_W[table.size] / 2}
-                        y={-PLAN_RECT_H[table.size] / 2}
-                        width={PLAN_RECT_W[table.size]}
-                        height={PLAN_RECT_H[table.size]}
-                        rx="8"
-                        fill={fill}
-                        style={{ transition: "fill 0.4s" }}
-                      />
-                      <rect
-                        x={-PLAN_RECT_W[table.size] / 2 + 6}
-                        y={-PLAN_RECT_H[table.size] / 2 + 6}
-                        width={PLAN_RECT_W[table.size] - 12}
-                        height={PLAN_RECT_H[table.size] - 12}
-                        rx="4"
-                        fill="none"
-                        stroke="rgba(255,255,255,0.12)"
-                        strokeWidth="1.5"
-                      />
-                    </>
+                  {/* Group ring (i rettangolari usano il contorno unico del gruppo) */}
+                  {table.groupId && table.shape === TableShape.Round && (
+                    <circle r={tableRadius(table) + 8} {...PURPLE_DASH} />
                   )}
-                  <text
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fill="rgba(255,255,255,0.95)"
-                    fontSize="11"
-                    fontWeight="bold"
-                    dy="-7"
-                    style={{
-                      pointerEvents: "none",
-                      fontFamily: "monospace",
-                      letterSpacing: "0.05em",
-                    }}
-                  >
-                    {table.groupId ? "🔗" : ""}
-                    {`T·${table.chairs.length}`}
-                  </text>
-                  <text
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fill="rgba(255,255,255,0.75)"
-                    fontSize="9"
-                    dy="8"
-                    style={{
-                      pointerEvents: "none",
-                      fontFamily: "monospace",
-                    }}
-                  >
-                    {isReserved ? (reservedBy?.slice(0, 11) ?? "") : "Libero"}
-                  </text>
+
+                  <TableShapeSVG
+                    geom={table}
+                    chairs={table.chairs}
+                    fill={fill}
+                    strokeClr={strokeClr}
+                    label={tableLabel(table)}
+                    subLabel={`${table.groupId ? "🔗 " : ""}${table.chairs.length} posti`}
+                    arrival={arrivalLabel(table)}
+                    bookingColors={bookingColors}
+                    highlightBookingId={hoveredBookingId}
+                  />
                 </g>
               );
             })}
+
+            {/* Anteprima del tavolo da aggiungere: segue il cursore e mostra la grandezza in base ai posti */}
+            {isAdding && !hoveredTableId && (
+              <g className="opacity-0 group-hover:opacity-100">
+                <g
+                  transform={`translate(${cursor.x},${cursor.y})`}
+                  opacity={0.5}
+                  style={{ pointerEvents: "none" }}
+                >
+                  <TableShapeSVG
+                    geom={ghostGeom}
+                    chairs={defaultChairs(ghostGeom)}
+                    fill={ghostCollides ? "#dc2626" : "#16a34a"}
+                    strokeClr={ghostCollides ? "#991b1b" : "#166534"}
+                    label={nextTableName(tables)}
+                    subLabel={`${newSeats} posti`}
+                  />
+                </g>
+              </g>
+            )}
           </g>
         </svg>
       </div>

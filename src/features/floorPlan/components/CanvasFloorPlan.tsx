@@ -1,6 +1,7 @@
 import type { FloorPlanData } from "../types/floorPlan";
 import { useFloorPlanEvents } from "../hook/useFloorPlanEvents";
 import { useFloorPlanState } from "../hook/useFloorPlanState";
+import { BookingsPanelFloorPlan } from "./BookingsPanelFloorPlan";
 import { FooterFloorPlan } from "./FooterFloorPlan";
 import { HeaderFloorPlan } from "./HeaderFloorPlan";
 import { ModalFloorPlan } from "./ModalFloorPlan";
@@ -20,9 +21,15 @@ export const CanvasFloorPlan = ({
       <HeaderFloorPlan savedPlan={savedPlan} {...state} />
       <div className="flex flex-1 overflow-hidden">
         {state.isEditing && <SideBarFloorPlan {...state} />}
-        <SVGCanvas {...state} {...events} />
-        {state.selTable && (
-          <FooterFloorPlan {...state} selTable={state.selTable} />
+        {/* Il footer è posizionato rispetto alla sola colonna della piantina */}
+        <div className="relative flex flex-1 overflow-hidden">
+          <SVGCanvas {...state} {...events} />
+          {state.selTable && (
+            <FooterFloorPlan {...state} selTable={state.selTable} />
+          )}
+        </div>
+        {!state.isEditing && state.showBookings && (
+          <BookingsPanelFloorPlan {...state} />
         )}
       </div>
       {state.modal.open && <ModalFloorPlan {...state} />}

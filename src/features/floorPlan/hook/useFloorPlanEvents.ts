@@ -10,12 +10,17 @@ import type {
   WallDragType,
   WallType,
 } from "../types/floorPlan";
-import type { TableShapeConst, TableSizeConst } from "../constant/floorPlan";
+import {
+  TableShape,
+  type HeadsConst,
+  type TableShapeConst,
+} from "../constant/floorPlan";
 import { hasCollision } from "../helpers/collision";
 import { NotificationType } from "../../../types/notification";
-import { defaultChairs } from "../helpers/chair";
+import { defaultChairs, nextTableName } from "../helpers/chair";
 import { snapIncoming } from "../helpers/snap";
 import { useNotification } from "../../../hooks/useNotification";
+import { getUnit, hasBookings } from "../helpers/booking";
 
 interface UseFloorPlanEventsProps {
   mode: PlanMode;
@@ -25,6 +30,8 @@ interface UseFloorPlanEventsProps {
   wallDrag: WallDragType;
   isEditing: boolean;
   shape: TableShapeConst;
+  newSeats: number;
+  newHeads: HeadsConst;
   walls: WallData[];
   panStart: PanStartType;
   mergeAnchor: string | null;
@@ -50,6 +57,8 @@ export const useFloorPlanEvents = ({
   zoom,
   isEditing,
   shape,
+  newSeats,
+  newHeads,
   tables,
   walls,
   panStart,
@@ -148,7 +157,7 @@ export const useFloorPlanEvents = ({
   };
 
   //gestisce il click sullo sfondo SVG. In base alla modalità:
-  //add4/add8 — aggiunge un tavolo da 4 o 8 posti dove si clicca (se non ci sono collisioni)
+  //add — aggiunge un tavolo con posti, forma e capotavola scelti dove si clicca (se non ci sono collisioni)
   //wall — aggiunge un punto al muro in costruzione
   //view — deseleziona il tavolo selezionato
   const onSVGClick = (e: React.MouseEvent) => {
@@ -158,9 +167,14 @@ export const useFloorPlanEvents = ({
       setSelId(null);
       return;
     }
-    if (mode === "add4" || mode === "add8") {
-      const sz: TableSizeConst = mode === "add4" ? 4 : 8;
-      if (hasCollision(x, y, sz, shape, tables, [])) {
+    if (mode === "add") {
+      // i capotavola hanno senso solo per i tavoli rettangolari
+      const geom = {
+        size: newSeats,
+        shape,
+        ...(shape === TableShape.Rect && { heads: newHeads }),
+      };
+      if (hasCollision(x, y, geom, tables, [])) {
         showNotification("❌ Sovrapposizione!", NotificationType.Err);
         return;
       }
@@ -168,13 +182,12 @@ export const useFloorPlanEvents = ({
         ...p,
         {
           id: `t-${Date.now()}`,
+          name: nextTableName(p),
           x,
           y,
-          size: sz,
-          shape,
-          reserved: false,
+          ...geom,
           blockedSides: [],
-          chairs: defaultChairs(sz, shape),
+          chairs: defaultChairs(geom),
         },
       ]);
       showNotification("✓ Tavolo aggiunto!", NotificationType.Ok);
@@ -211,6 +224,13 @@ export const useFloorPlanEvents = ({
   //separa tutti i tavoli del gruppo ripristinando le sedie di default. Se è singolo, lo elimina direttamente.
   const handleDeleteMode = (t: TableData, tid: string) => {
     if (t.groupId) {
+      if (hasBookings(getGroup(t.groupId))) {
+        showNotification(
+          "🔒 Libera i posti prenotati prima di separare il gruppo",
+          NotificationType.Err,
+        );
+        return;
+      }
       setTables((p) =>
         p.map((tt) =>
           tt.groupId === t.groupId
@@ -218,7 +238,7 @@ export const useFloorPlanEvents = ({
                 ...tt,
                 groupId: undefined,
                 blockedSides: [],
-                chairs: defaultChairs(tt.size, tt.shape),
+                chairs: defaultChairs(tt),
               }
             : tt,
         ),
@@ -233,6 +253,13 @@ export const useFloorPlanEvents = ({
   //gestisce l'unione di tavoli in modalità merge. Al primo click imposta l'ancora,
   //ai click successivi unisce i tavoli cliccati al gruppo dell'ancora, usando snapIncoming per agganciare fisicamente i tavoli uno accanto all'altro.
   const handleMergeMode = (t: TableData, tid: string) => {
+    if (hasBookings(getUnit(t, tables))) {
+      showNotification(
+        "🔒 Libera i posti prenotati prima di unire i tavoli",
+        NotificationType.Err,
+      );
+      return;
+    }
     if (!mergeAnchor) {
       setMergeAnchor(tid);
       showNotification(
@@ -253,7 +280,7 @@ export const useFloorPlanEvents = ({
 
     const anchorGid = anchorTable?.groupId;
     const incomingGid = t.groupId;
-    const newGid = anchorGid ?? incomingGid ?? `g-${Date.now()}`;
+    const newGid = anchorGid ?? `g-${Date.now()}`;
     const incomingTables = incomingGid
       ? tables.filter((tt) => tt.groupId === incomingGid)
       : [t];
@@ -261,11 +288,10 @@ export const useFloorPlanEvents = ({
     let updatedAll = [...tables];
 
     for (const incoming of incomingTables) {
+      // Solo i tavoli già nel gruppo dell'ancora possono fare da aggancio
+      // (mai il tavolo in arrivo o gli altri tavoli del suo vecchio gruppo)
       const liveGroup = updatedAll.filter(
-        (tt) =>
-          tt.groupId === newGid ||
-          tt.id === mergeAnchor ||
-          (anchorGid && tt.groupId === anchorGid),
+        (tt) => tt.groupId === newGid || tt.id === mergeAnchor,
       );
       const liveIncoming = updatedAll.find((tt) => tt.id === incoming.id)!;
       const snap = snapIncoming(liveIncoming, liveGroup);
@@ -300,7 +326,7 @@ export const useFloorPlanEvents = ({
   };
 
   //gestisce il click su un tavolo. In base alla modalità:
-  //view — seleziona il tavolo
+  //view — seleziona il tavolo (in modifica anche in add/move, così si può rinominare o ruotare)
   //delete — chiama handleDeleteMode
   //merge — chiama handleMergeMode
   //Ignora il click se c'è stato un drag.
@@ -310,7 +336,7 @@ export const useFloorPlanEvents = ({
     const t = tables.find((t) => t.id === tid);
     if (!t) return;
 
-    if (mode === "view") {
+    if (mode === "view" || (isEditing && (mode === "add" || mode === "move"))) {
       setSelId(tid);
       return;
     }
@@ -363,10 +389,7 @@ export const useFloorPlanEvents = ({
       )
         didDrag.current = true;
       const t = tables.find((t) => t.id === dragging.id);
-      if (
-        t &&
-        !hasCollision(nx, ny, t.size, t.shape, tables, walls, [dragging.id])
-      )
+      if (t && !hasCollision(nx, ny, t, tables, walls, [dragging.id]))
         setTables((p) =>
           p.map((tbl) =>
             tbl.id === dragging.id ? { ...tbl, x: nx, y: ny } : tbl,
@@ -389,8 +412,7 @@ export const useFloorPlanEvents = ({
         return hasCollision(
           start.x + dx,
           start.y + dy,
-          t.size,
-          t.shape,
+          t,
           tables,
           walls,
           groupIds, // escludi tutti i tavoli del gruppo

@@ -1,45 +1,87 @@
-import { Side, TableShape, type SideConst } from "../constant/floorPlan";
+import { TableShape, type SideConst } from "../constant/floorPlan";
 import type {
   Chair,
+  ChairBooking,
   FloorPlanData,
   TableData,
   WallData,
 } from "../types/floorPlan";
+import { defaultChairs } from "../helpers/chair";
 
 function chair(side: SideConst | "round", offset: number): Chair {
   return { side, offset };
 }
 
+//Assegna una prenotazione alle sedie con gli indici indicati (quelle in wheelchairIndexes sono per una carrozzina)
+function book(
+  chairs: Chair[],
+  indexes: number[],
+  booking: ChairBooking,
+  wheelchairIndexes: number[] = [],
+) {
+  return chairs.map((c, i) =>
+    indexes.includes(i)
+      ? {
+          ...c,
+          booking: wheelchairIndexes.includes(i)
+            ? { ...booking, wheelchair: true }
+            : booking,
+        }
+      : c,
+  );
+}
+
 export function generateFakeFloorPlan(): FloorPlanData {
+  const rossi = {
+    id: "b-1700000000001",
+    name: "Rossi",
+    arrivalTime: "20:30",
+  };
+  const ferrari = {
+    id: "b-1700000000002",
+    name: "Ferrari",
+    seatedAt: new Date().toISOString(),
+  };
+  const bianchi = { id: "b-1700000000003", name: "Bianchi" };
+  const verdi = {
+    id: "b-1700000000004",
+    name: "Verdi",
+    arrivalTime: "21:00",
+  };
+
   const tables: TableData[] = [
     {
       id: "t-1",
+      name: "T-1",
       x: 180,
       y: 160,
       size: 4,
       shape: TableShape.Round,
-      reserved: true,
-      reservedBy: "Rossi",
       blockedSides: [],
-      chairs: [0, 90, 180, 270].map((o) => chair(TableShape.Round, o)),
+      // 2 persone, una di fronte all'altra
+      chairs: book(
+        [0, 90, 180, 270].map((o) => chair(TableShape.Round, o)),
+        [0, 2],
+        rossi,
+      ),
     },
     {
       id: "t-2",
+      name: "T-2",
       x: 340,
       y: 160,
       size: 4,
       shape: TableShape.Round,
-      reserved: false,
       blockedSides: [],
       chairs: [0, 90, 180, 270].map((o) => chair(TableShape.Round, o)),
     },
     {
       id: "t-3",
+      name: "T-3",
       x: 500,
       y: 160,
       size: 8,
       shape: TableShape.Round,
-      reserved: false,
       blockedSides: [],
       chairs: [0, 45, 90, 135, 180, 225, 270, 315].map((o) =>
         chair(TableShape.Round, o),
@@ -47,41 +89,53 @@ export function generateFakeFloorPlan(): FloorPlanData {
     },
     {
       id: "t-4",
+      name: "T-4",
       x: 200,
       y: 360,
       size: 4,
       shape: "rect",
-      reserved: false,
       groupId: "g-mock-1",
       blockedSides: ["right"],
-      chairs: [chair("top", 0), chair("bottom", 0), chair("left", 0)],
+      chairs: book(
+        [chair("top", 0), chair("bottom", 0), chair("left", 0)],
+        [0, 1, 2],
+        ferrari,
+      ),
     },
     {
       id: "t-5",
-      x: 344,
+      name: "T-5",
+      x: 272,
       y: 360,
       size: 4,
       shape: "rect",
-      reserved: true,
-      reservedBy: "Ferrari",
       groupId: "g-mock-1",
       blockedSides: ["left"],
-      chairs: [chair("top", 0), chair("bottom", 0), chair("right", 0)],
+      chairs: book(
+        [chair("top", 0), chair("bottom", 0), chair("right", 0)],
+        [0, 1, 2],
+        ferrari,
+      ),
     },
     {
       id: "t-6",
+      name: "T-6",
       x: 580,
       y: 360,
       size: 8,
       shape: "rect",
-      reserved: false,
       blockedSides: [],
-      chairs: [
-        ...[-0.55, 0, 0.55].map((o) => chair(Side.Top, o)),
-        ...[-0.55, 0, 0.55].map((o) => chair(Side.Bottom, o)),
-        chair("left", 0),
-        chair("right", 0),
-      ],
+      // ordine sedie: 3 sopra, 3 sotto, testata sinistra, testata destra
+      chairs: book(
+        book(
+          defaultChairs({ size: 8, shape: TableShape.Rect }),
+          [6, 0, 3],
+          bianchi,
+          [6],
+        ),
+        [1, 4],
+        verdi,
+      ),
     },
   ];
 

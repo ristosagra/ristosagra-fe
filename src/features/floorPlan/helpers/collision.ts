@@ -1,14 +1,15 @@
 import {
   TableShape,
   PLAN_WALL_HALF,
-  PLAN_CHAIR_DIST,
   PLAN_CHAIR_R,
-  PLAN_RECT_W,
-  PLAN_RECT_H,
-  type TableSizeConst,
-  type TableShapeConst,
 } from "../constant/floorPlan";
-import type { CoordinateType, TableData, WallData } from "../types/floorPlan";
+import type {
+  CoordinateType,
+  TableData,
+  TableGeom,
+  WallData,
+} from "../types/floorPlan";
+import { bodyHalfExtents, chairDist } from "./dimensions";
 import { closestPointOnSeg, segsIntersect } from "./geometry";
 
 /** Verifica se un singolo segmento di muro (AB) collide con un tavolo nella posizione data.
@@ -19,24 +20,23 @@ function checkSegmentCollision(
   pos: CoordinateType,
   segA: CoordinateType,
   segB: CoordinateType,
-  sh: TableShapeConst,
-  sz: TableSizeConst,
+  geom: TableGeom,
   helpers: {
-    circR: (size: TableSizeConst) => number;
-    rectHW: (size: TableSizeConst) => number;
-    rectHH: (size: TableSizeConst) => number;
+    circR: (g: TableGeom) => number;
+    rectHW: (g: TableGeom) => number;
+    rectHH: (g: TableGeom) => number;
   },
 ) {
-  if (sh === TableShape.Round) {
+  if (geom.shape === TableShape.Round) {
     const cp = closestPointOnSeg(pos.x, pos.y, segA.x, segA.y, segB.x, segB.y);
     return (
       Math.hypot(pos.x - cp.x, pos.y - cp.y) <
-      helpers.circR(sz) + PLAN_WALL_HALF
+      helpers.circR(geom) + PLAN_WALL_HALF
     );
   }
 
-  const hw = helpers.rectHW(sz),
-    hh = helpers.rectHH(sz);
+  const hw = helpers.rectHW(geom),
+    hh = helpers.rectHH(geom);
   const left = pos.x - hw - PLAN_WALL_HALF,
     right = pos.x + hw + PLAN_WALL_HALF;
   const top = pos.y - hh - PLAN_WALL_HALF,
@@ -81,13 +81,12 @@ function checkSegmentCollision(
 function checkWallCollision(
   x: number,
   y: number,
-  sz: TableSizeConst,
-  sh: TableShapeConst,
+  geom: TableGeom,
   walls: WallData[],
   helpers: {
-    circR: (size: TableSizeConst) => number;
-    rectHW: (size: TableSizeConst) => number;
-    rectHH: (size: TableSizeConst) => number;
+    circR: (g: TableGeom) => number;
+    rectHW: (g: TableGeom) => number;
+    rectHH: (g: TableGeom) => number;
   },
 ) {
   return walls.some((wl) => {
@@ -99,8 +98,7 @@ function checkWallCollision(
           { x, y },
           { x: ax, y: ay },
           { x: bx, y: by },
-          sh,
-          sz,
+          geom,
           helpers,
         )
       )
@@ -118,31 +116,28 @@ function checkWallCollision(
 export function hasCollision(
   x: number,
   y: number,
-  sz: TableSizeConst,
-  sh: TableShapeConst,
+  geom: TableGeom,
   tables: TableData[],
   walls: WallData[],
   excludeIds: string[] = [],
 ) {
   const g = 16;
-  const circR = (size: TableSizeConst) => PLAN_CHAIR_DIST[size] + PLAN_CHAIR_R;
-  const rectHW = (size: TableSizeConst) =>
-    PLAN_RECT_W[size] / 2 + g + PLAN_CHAIR_R;
-  const rectHH = (size: TableSizeConst) =>
-    PLAN_RECT_H[size] / 2 + g + PLAN_CHAIR_R;
+  const circR = (tg: TableGeom) => chairDist(tg) + PLAN_CHAIR_R;
+  const rectHW = (tg: TableGeom) => bodyHalfExtents(tg).hw + g + PLAN_CHAIR_R;
+  const rectHH = (tg: TableGeom) => bodyHalfExtents(tg).hh + g + PLAN_CHAIR_R;
 
   // ── Tavolo vs Tavolo ──────────────────────────────────────────────────
   const tableHit = tables.some((t) => {
     if (excludeIds.includes(t.id)) return false;
 
-    if (sh === TableShape.Round && t.shape === TableShape.Round)
-      return Math.hypot(x - t.x, y - t.y) < circR(sz) + circR(t.size);
+    if (geom.shape === TableShape.Round && t.shape === TableShape.Round)
+      return Math.hypot(x - t.x, y - t.y) < circR(geom) + circR(t);
 
-    if (sh === "rect" && t.shape === "rect") {
-      const hw1 = rectHW(sz),
-        hh1 = rectHH(sz);
-      const hw2 = rectHW(t.size),
-        hh2 = rectHH(t.size);
+    if (geom.shape === "rect" && t.shape === "rect") {
+      const hw1 = rectHW(geom),
+        hh1 = rectHH(geom);
+      const hw2 = rectHW(t),
+        hh2 = rectHH(t);
       return !(
         x + hw1 <= t.x - hw2 ||
         x - hw1 >= t.x + hw2 ||
@@ -152,14 +147,14 @@ export function hasCollision(
     }
 
     const [circ, rect] =
-      sh === TableShape.Round
+      geom.shape === TableShape.Round
         ? [
-            { cx: x, cy: y, r: circR(sz) },
-            { rx: t.x, ry: t.y, hw: rectHW(t.size), hh: rectHH(t.size) },
+            { cx: x, cy: y, r: circR(geom) },
+            { rx: t.x, ry: t.y, hw: rectHW(t), hh: rectHH(t) },
           ]
         : [
-            { cx: t.x, cy: t.y, r: circR(t.size) },
-            { rx: x, ry: y, hw: rectHW(sz), hh: rectHH(sz) },
+            { cx: t.x, cy: t.y, r: circR(t) },
+            { rx: x, ry: y, hw: rectHW(geom), hh: rectHH(geom) },
           ];
     const nx = Math.max(
       rect.rx - rect.hw,
@@ -175,5 +170,5 @@ export function hasCollision(
   if (tableHit) return true;
 
   // ── Tavolo vs Muri ────────────────────────────────────────────────────
-  return checkWallCollision(x, y, sz, sh, walls, { circR, rectHW, rectHH });
+  return checkWallCollision(x, y, geom, walls, { circR, rectHW, rectHH });
 }

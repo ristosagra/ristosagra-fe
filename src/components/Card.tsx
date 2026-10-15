@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { ThemeVariants } from "../constant/colors";
 import { Button } from "./core/Button";
@@ -8,6 +9,10 @@ import type { CartType } from "../features/orders/types/orders";
 import { LabelDimensions, LabelTags, LabelWeight } from "../constant/label";
 import { ButtonDimensions } from "../constant/button";
 import type { Dish } from "../types/menuOrder";
+import {
+  AllergenChips,
+  AllergensToggle,
+} from "../features/menu/components/DishAllergens";
 
 interface CardProps {
   dish: Dish;
@@ -22,6 +27,7 @@ export const Card = ({
   setCartItems,
   isCart = false,
 }: CardProps) => {
+  const [showAllergens, setShowAllergens] = useState(false);
   const findItemDish = isCart
     ? cartItems.find((item) => item.dish.id === dish.id)!
     : undefined;
@@ -73,7 +79,15 @@ export const Card = ({
             variant="icon"
           />
         )}
+        {/* Nel menù la freccia apre il dettaglio del piatto con gli allergeni */}
+        {!isCart && (
+          <AllergensToggle
+            open={showAllergens}
+            onToggle={() => setShowAllergens((o) => !o)}
+          />
+        )}
       </div>
+      {!isCart && showAllergens && <AllergenChips allergens={dish.allergens} />}
       <div className="flex items-center justify-between">
         <Label
           label={labelPrice}

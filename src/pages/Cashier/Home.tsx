@@ -13,8 +13,16 @@ import {
   useCreateMenu,
   useUpdateMenu,
 } from "../../features/menu/hook/useSaveMenu";
-import { groupDishesByCategory } from "../../features/menu/utils/menuUtils";
-import { DISH_CATEGORIES } from "../../features/menu/constant/menu";
+import {
+  getCategories,
+  getCategoryOptions,
+  groupDishesByCategory,
+} from "../../features/menu/utils/menuUtils";
+import { ALLERGENS } from "../../features/menu/constant/menu";
+import {
+  AllergenChips,
+  AllergensToggle,
+} from "../../features/menu/components/DishAllergens";
 import { Button } from "../../components/core/Button";
 import { Input } from "../../components/core/Input";
 import { Label } from "../../components/core/Label";
@@ -31,6 +39,7 @@ interface DishFormData {
   description: string;
   price: string;
   category: string;
+  allergens: string[];
 }
 
 interface DishRowProps {
@@ -47,65 +56,95 @@ const DishRow = ({
   onDelete,
   isEditMode,
   disabled,
-}: DishRowProps) => (
-  <div
-    className={`flex items-start justify-between gap-4 px-4 py-3 ${ThemeVariants.colors.bg.surface} ${ThemeVariants.borderRadius.md}`}
-  >
-    <div className="flex-1 min-w-0">
-      <div className="flex items-center gap-3">
-        <span className={`font-semibold ${ThemeVariants.colors.text.white}`}>
-          {dish.name}
-        </span>
-        <span
-          className={`text-sm font-bold ${ThemeVariants.colors.text.brand}`}
-        >
-          €{dish.price.toFixed(2)}
-        </span>
+}: DishRowProps) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div
+      className={`px-4 py-3 ${ThemeVariants.colors.bg.surface} ${ThemeVariants.borderRadius.md}`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3">
+            <span
+              className={`font-semibold ${ThemeVariants.colors.text.white}`}
+            >
+              {dish.name}
+            </span>
+            <span
+              className={`text-sm font-bold ${ThemeVariants.colors.text.brand}`}
+            >
+              €{dish.price.toFixed(2)}
+            </span>
+          </div>
+          {dish.description && (
+            <p
+              className={`text-sm mt-0.5 truncate ${ThemeVariants.colors.text.secondary}`}
+            >
+              {dish.description}
+            </p>
+          )}
+        </div>
+        {isEditMode && (
+          <div className="flex items-center gap-1 shrink-0">
+            <Button
+              iconLeft={<Pencil size={15} />}
+              dimension={ButtonDimensions.auto}
+              variant="icon"
+              onClick={onEdit}
+              disabled={disabled}
+              className={`px-2 py-1 ${ThemeVariants.colors.text.secondary}`}
+            />
+            <Button
+              iconLeft={<Trash2 size={15} />}
+              dimension={ButtonDimensions.auto}
+              variant="icon"
+              onClick={onDelete}
+              disabled={disabled}
+              className={`px-2 py-1 ${ThemeVariants.colors.text.danger}`}
+            />
+          </div>
+        )}
+        {/* Fuori dalla modifica la freccia apre il dettaglio con gli allergeni */}
+        {!isEditMode && (
+          <AllergensToggle open={open} onToggle={() => setOpen((o) => !o)} />
+        )}
       </div>
-      {dish.description && (
-        <p
-          className={`text-sm mt-0.5 truncate ${ThemeVariants.colors.text.secondary}`}
-        >
-          {dish.description}
-        </p>
+      {!isEditMode && open && (
+        <div className={`mt-3 pt-3 ${ThemeVariants.colors.border.top.default}`}>
+          <AllergenChips allergens={dish.allergens} />
+        </div>
       )}
     </div>
-    {isEditMode && (
-      <div className="flex items-center gap-1 shrink-0">
-        <Button
-          iconLeft={<Pencil size={15} />}
-          dimension={ButtonDimensions.auto}
-          variant="icon"
-          onClick={onEdit}
-          disabled={disabled}
-          className={`px-2 py-1 ${ThemeVariants.colors.text.secondary}`}
-        />
-        <Button
-          iconLeft={<Trash2 size={15} />}
-          dimension={ButtonDimensions.auto}
-          variant="icon"
-          onClick={onDelete}
-          disabled={disabled}
-          className={`px-2 py-1 ${ThemeVariants.colors.text.danger}`}
-        />
-      </div>
-    )}
-  </div>
-);
+  );
+};
 
 interface DishEditRowProps {
   initial?: Dish;
+  categories: string[];
   onConfirm: (data: DishFormData) => void;
   onCancel: () => void;
 }
 
-const DishEditRow = ({ initial, onConfirm, onCancel }: DishEditRowProps) => {
+const DishEditRow = ({
+  initial,
+  categories,
+  onConfirm,
+  onCancel,
+}: DishEditRowProps) => {
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [price, setPrice] = useState(initial ? String(initial.price) : "");
-  const [category, setCategory] = useState(
-    initial?.category ?? DISH_CATEGORIES[0],
+  const [category, setCategory] = useState(initial?.category ?? categories[0]);
+  const [allergens, setAllergens] = useState<string[]>(
+    initial?.allergens ?? [],
   );
+
+  // mantiene gli allergeni nell'ordine dell'elenco ufficiale
+  const toggleAllergen = (a: string) =>
+    setAllergens((prev) =>
+      ALLERGENS.filter((x) => (x === a ? !prev.includes(a) : prev.includes(x))),
+    );
 
   const isValid =
     name.trim() !== "" && price !== "" && !isNaN(parseFloat(price));
@@ -136,7 +175,7 @@ const DishEditRow = ({ initial, onConfirm, onCancel }: DishEditRowProps) => {
           onChange={(e) => setCategory(e.target.value)}
           className={`px-2 py-2 text-sm ${ThemeVariants.colors.border.all.default} ${ThemeVariants.colors.bg.surface} ${ThemeVariants.borderRadius.sm} ${ThemeVariants.colors.text.white}`}
         >
-          {DISH_CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <option key={cat} value={cat}>
               {cat}
             </option>
@@ -151,6 +190,30 @@ const DishEditRow = ({ initial, onConfirm, onCancel }: DishEditRowProps) => {
         variant="secondary"
         className="w-full text-sm"
       />
+      {/* Allergeni del piatto */}
+      <div>
+        <Label
+          tag={LabelTags.p}
+          label="Allergeni"
+          size={LabelDimensions.small}
+          color={ThemeVariants.colors.text.secondary}
+          noMargin
+          additionalClasses="uppercase mb-1.5"
+        />
+        <div className="flex flex-wrap gap-1.5">
+          {ALLERGENS.map((a) => (
+            <Button
+              key={a}
+              label={<span className="text-xs">{a}</span>}
+              iconLeft={allergens.includes(a) ? <Check size={13} /> : undefined}
+              dimension={ButtonDimensions.auto}
+              variant={allergens.includes(a) ? "primary" : "secondary"}
+              onClick={() => toggleAllergen(a)}
+              className="px-2.5 py-1 gap-1"
+            />
+          ))}
+        </div>
+      </div>
       <div className="flex gap-2 justify-end">
         <Button
           iconLeft={<X size={15} />}
@@ -166,7 +229,8 @@ const DishEditRow = ({ initial, onConfirm, onCancel }: DishEditRowProps) => {
           dimension={ButtonDimensions.auto}
           variant="primary"
           onClick={() =>
-            isValid && onConfirm({ name, description, price, category })
+            isValid &&
+            onConfirm({ name, description, price, category, allergens })
           }
           disabled={!isValid}
           className="px-3 py-1.5"
@@ -185,12 +249,20 @@ export const Home = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [localDishes, setLocalDishes] = useState<Dish[] | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null); // dish id, or 0 for new
+  // categoria in rinomina e nuovo nome in bozza
+  const [renamingCat, setRenamingCat] = useState<string | null>(null);
+  const [catDraft, setCatDraft] = useState("");
   const idCounter = useRef(-1);
 
   const dishes = localDishes ?? data ?? [];
   const hasExistingMenu = (data?.length ?? 0) > 0;
   const isSaving = isCreating || isUpdating;
   const isEditing = editingId !== null;
+  const categories = getCategories(dishes);
+  const categoryOptions = getCategoryOptions(dishes);
+  const draft = catDraft.trim();
+  const isValidCatName =
+    draft !== "" && (draft === renamingCat || !categories.includes(draft));
 
   const handleConfirmEdit = (formData: DishFormData) => {
     const price = parseFloat(formData.price);
@@ -203,6 +275,7 @@ export const Home = () => {
           description: formData.description.trim(),
           price,
           category: formData.category,
+          allergens: formData.allergens,
         },
       ]);
     } else {
@@ -215,12 +288,29 @@ export const Home = () => {
                 description: formData.description.trim(),
                 price,
                 category: formData.category,
+                allergens: formData.allergens,
               }
             : d,
         ),
       );
     }
     setEditingId(null);
+  };
+
+  //Rinomina una categoria: tutti i suoi piatti passano al nuovo nome
+  const startRename = (cat: string) => {
+    setRenamingCat(cat);
+    setCatDraft(cat);
+  };
+
+  const confirmRename = () => {
+    if (!renamingCat || !isValidCatName) return;
+    setLocalDishes(
+      dishes.map((d) =>
+        d.category === renamingCat ? { ...d, category: draft } : d,
+      ),
+    );
+    setRenamingCat(null);
   };
 
   const handleDelete = (id: number) => {
@@ -232,6 +322,7 @@ export const Home = () => {
       setLocalDishes(null);
       setIsEditMode(false);
       setEditingId(null);
+      setRenamingCat(null);
       showNotification("Menu salvato con successo", NotificationType.Ok);
     };
     const onError = () =>
@@ -294,7 +385,9 @@ export const Home = () => {
                 dimension={ButtonDimensions.auto}
                 variant="primary"
                 onClick={handleSave}
-                disabled={dishes.length === 0 || isEditing}
+                disabled={
+                  dishes.length === 0 || isEditing || renamingCat !== null
+                }
                 className="px-3 py-2"
               />
             </>
@@ -365,6 +458,7 @@ export const Home = () => {
             />
           </div>
           <DishEditRow
+            categories={categoryOptions}
             onConfirm={handleConfirmEdit}
             onCancel={() => setEditingId(null)}
           />
@@ -372,25 +466,74 @@ export const Home = () => {
       )}
 
       {/* Dishes grouped by category */}
-      {DISH_CATEGORIES.map((cat) => {
+      {categories.map((cat) => {
         const catDishes = grouped[cat] ?? [];
         return (
           <div key={cat} className="mb-6">
             <div
               className={`flex items-center gap-2 mb-3 pb-2 ${ThemeVariants.colors.border.bottom.default}`}
             >
-              <Label
-                tag={LabelTags.h3}
-                label={cat}
-                size={LabelDimensions.large}
-                weight={LabelWeight.semibold}
-                noMargin
-              />
-              <span
-                className={`text-sm ${ThemeVariants.colors.text.secondary}`}
-              >
-                ({catDishes.length})
-              </span>
+              {renamingCat === cat ? (
+                /* Rinomina della categoria */
+                <>
+                  <Input
+                    type="text"
+                    placeholder="Nome categoria"
+                    value={catDraft}
+                    setValue={setCatDraft}
+                    variant="secondary"
+                    className="text-sm w-56"
+                    autoFocus
+                  />
+                  <Button
+                    iconLeft={<Check size={15} />}
+                    dimension={ButtonDimensions.auto}
+                    variant="primary"
+                    onClick={confirmRename}
+                    disabled={!isValidCatName}
+                    className="px-2 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                  />
+                  <Button
+                    iconLeft={<X size={15} />}
+                    dimension={ButtonDimensions.auto}
+                    variant="secondary"
+                    onClick={() => setRenamingCat(null)}
+                    className="px-2 py-1.5"
+                  />
+                  {draft !== "" && !isValidCatName && (
+                    <span
+                      className={`text-xs ${ThemeVariants.colors.text.danger}`}
+                    >
+                      Categoria già esistente
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Label
+                    tag={LabelTags.h3}
+                    label={cat}
+                    size={LabelDimensions.large}
+                    weight={LabelWeight.semibold}
+                    noMargin
+                  />
+                  <span
+                    className={`text-sm ${ThemeVariants.colors.text.secondary}`}
+                  >
+                    ({catDishes.length})
+                  </span>
+                  {isEditMode && (
+                    <Button
+                      iconLeft={<Pencil size={14} />}
+                      dimension={ButtonDimensions.auto}
+                      variant="icon"
+                      onClick={() => startRename(cat)}
+                      disabled={isEditing || renamingCat !== null}
+                      className={`px-1.5 py-1 ${ThemeVariants.colors.text.secondary}`}
+                    />
+                  )}
+                </>
+              )}
             </div>
             <div className="flex flex-col gap-2">
               {catDishes.map((dish) =>
@@ -398,6 +541,7 @@ export const Home = () => {
                   <DishEditRow
                     key={dish.id}
                     initial={dish}
+                    categories={categoryOptions}
                     onConfirm={handleConfirmEdit}
                     onCancel={() => setEditingId(null)}
                   />
