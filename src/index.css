@@ -88,10 +88,16 @@
 
   --font-display: "DM Serif Display", Georgia, serif;
   --font-body: "DM Sans Variable", "DM Sans", system-ui, sans-serif;
+
+  /* Controlli nativi (icona dell'orologio/calendario, scrollbar, select) del colore del tema,
+     non di quello del sistema operativo */
+  color-scheme: dark;
 }
 
 /* ── LIGHT ── */
 [data-theme="light"] {
+  color-scheme: light;
+
   --bg-base: #faf8f5;
   --bg-surface: #ffffff;
   --bg-raised: #f4f0eb;

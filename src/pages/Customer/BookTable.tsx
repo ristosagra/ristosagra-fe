@@ -19,6 +19,15 @@ import {
   type SeatRequestConst,
 } from "../../features/reservations/types/reservations";
 import { SEAT_REQUEST_ICONS } from "../../features/reservations/constant/seatRequests";
+import { useRestaurant } from "../../features/restaurant/hook/useRestaurant";
+import { useCurrentTime } from "../../hooks/useCurrentTime";
+import {
+  formatRanges,
+  isWithinRanges,
+  openRanges,
+  openServices,
+  todayWeekday,
+} from "../../helpers/openingHours";
 import { ButtonDimensions } from "../../constant/button";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
 import { ThemeVariants } from "../../constant/colors";
@@ -32,7 +41,9 @@ import { PERSON_NAME_MAX } from "../../constant/limits";
 export const BookTable = () => {
   const { data: availability, isLoading } = useAvailability();
   const { mutate: createReservation, isPending } = useCreateReservation();
+  const { data: restaurant } = useRestaurant();
   const showNotification = useNotification();
+  const now = useCurrentTime();
 
   const [name, setName] = useState("");
   const [people, setPeople] = useState(2);
@@ -44,8 +55,20 @@ export const BookTable = () => {
   const remaining = availability?.remainingSeats ?? 0;
   const soldOut = remaining === 0;
   const count = Math.min(Math.max(people, 1), Math.max(remaining, 1));
+  //Si prenota solo per oggi, negli orari di apertura e per un orario non ancora passato
+  const today = restaurant?.openingHours[todayWeekday()];
+  const services = today ? openServices(today) : [];
+  const closedNow = !!today && !services.some((s) => now <= today[s].to);
+  const arrivalValid =
+    !today ||
+    (isWithinRanges(openRanges(today), arrivalTime) && arrivalTime >= now);
   const canSubmit =
-    !!name.trim() && !!arrivalTime && !soldOut && count <= remaining;
+    !!name.trim() &&
+    !!arrivalTime &&
+    arrivalValid &&
+    !soldOut &&
+    !closedNow &&
+    count <= remaining;
 
   //mantiene le richieste nell'ordine dell'elenco
   const toggleRequest = (r: SeatRequestConst) =>
@@ -169,9 +192,15 @@ export const BookTable = () => {
             />
           </div>
 
-          {soldOut ? (
+          {closedNow || soldOut ? (
             <Label
-              label="Siamo al completo: al momento non ci sono posti disponibili."
+              label={
+                closedNow
+                  ? services.length === 0
+                    ? "Oggi il locale è chiuso: non si può prenotare."
+                    : "Per oggi il locale ha chiuso: non si può più prenotare."
+                  : "Siamo al completo: al momento non ci sono posti disponibili."
+              }
               tag={LabelTags.p}
               size={LabelDimensions.medium}
               weight={LabelWeight.semibold}
@@ -254,6 +283,13 @@ export const BookTable = () => {
                   className="w-36"
                   ariaLabel="Orario di arrivo"
                 />
+                {today && (
+                  <p
+                    className={`text-sm mt-1.5 ${arrivalTime && !arrivalValid ? ThemeVariants.colors.text.danger : ThemeVariants.colors.text.secondary}`}
+                  >
+                    Orari di oggi: {formatRanges(openRanges(today))}
+                  </p>
+                )}
               </div>
 
               <div>

@@ -24,6 +24,13 @@ import { calcTotal } from "../../helpers/calcTotal";
 import { ThemeVariants } from "../../constant/colors";
 import { useNotification } from "../../hooks/useNotification";
 import { useCurrentTime } from "../../hooks/useCurrentTime";
+import {
+  formatRanges,
+  isWithinRanges,
+  openServices,
+  todayWeekday,
+} from "../../helpers/openingHours";
+import { useRestaurant } from "../../features/restaurant/hook/useRestaurant";
 import { NotificationType } from "../../types/notification";
 import { PERSON_NAME_MAX } from "../../constant/limits";
 
@@ -48,6 +55,7 @@ export default function Cart({
 }: CartProps) {
   const { mutate: confirmOrder, isPending } = useOrderNumber();
   const { data: takeaway } = useTakeawaySettings();
+  const { data: restaurant } = useRestaurant();
   const showNotification = useNotification();
   const now = useCurrentTime();
 
@@ -56,14 +64,31 @@ export default function Cart({
   const [customTime, setCustomTime] = useState("");
 
   const total = calcTotal(cartItems);
-  const fixedTime =
-    takeaway?.mode === PickupMode.Fixed ? takeaway.fixedTime : null;
-  //Superato l'orario unico di ritiro l'asporto non si può più scegliere
-  const canTakeaway = !!takeaway && !(fixedTime && now > fixedTime);
+  //L'asporto segue i giorni e i servizi in cui il locale è aperto oggi
+  const today = restaurant?.openingHours[todayWeekday()];
+  const services = today ? openServices(today) : [];
+  const isFixed = takeaway?.mode === PickupMode.Fixed;
+  //Servizio di oggi in cui si può ancora ritirare: con l'orario unico finché non è passato,
+  //altrimenti fino alla fine della sua fascia. Se non c'è, l'asporto non si può scegliere
+  const service = takeaway
+    ? services.find(
+        (s) =>
+          now <= (isFixed ? takeaway.fixedTimes[s] : takeaway.ranges[s].to),
+      )
+    : undefined;
+  const canTakeaway = !!service;
   const isTakeaway = canTakeaway && type === OrderType.Takeaway;
+  const fixedTime =
+    takeaway?.mode === PickupMode.Fixed && service
+      ? takeaway.fixedTimes[service]
+      : null;
+  //l'orario scelto dal cliente deve stare nelle fasce dei servizi di oggi e non essere già passato
+  const todayRanges = takeaway ? services.map((s) => takeaway.ranges[s]) : [];
+  const customTimeValid =
+    isWithinRanges(todayRanges, customTime) && customTime >= now;
   const pickupTime = fixedTime ?? customTime;
   const canConfirm =
-    !isTakeaway || (!!customerName.trim() && !!pickupTime && !!takeaway);
+    !isTakeaway || (!!customerName.trim() && (!!fixedTime || customTimeValid));
 
   if (cartItems.length === 0) {
     return (
@@ -221,6 +246,11 @@ export default function Cart({
                       className="w-36"
                       ariaLabel="Orario di ritiro"
                     />
+                    <p
+                      className={`text-sm mt-1.5 ${customTime && !customTimeValid ? ThemeVariants.colors.text.danger : ThemeVariants.colors.text.secondary}`}
+                    >
+                      Ritiro possibile oggi: {formatRanges(todayRanges)}
+                    </p>
                   </div>
                 )}
               </div>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   Check,
+  Clock,
   Moon,
   Palette,
   Pencil,
@@ -27,11 +28,15 @@ import {
 import { Button } from "../../components/core/Button";
 import { Input } from "../../components/core/Input";
 import { Label } from "../../components/core/Label";
+import { SaveChanges } from "../../components/SaveChanges";
+import { WeeklyHoursEditor } from "../../components/WeeklyHoursEditor";
 import { useNotification } from "../../hooks/useNotification";
 import { ThemeVariants } from "../../constant/colors";
 import { ButtonDimensions } from "../../constant/button";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
+import { weeklyHoursValid } from "../../helpers/openingHours";
 import { NotificationType } from "../../types/notification";
+import type { WeeklyHours } from "../../types/openingHours";
 
 interface SettingsCardProps {
   icon: React.ReactNode;
@@ -210,7 +215,51 @@ const AppearanceSetting = () => {
   );
 };
 
-//Profilo del ristorante: nome del locale, tema e colore, orario di ritiro dell'asporto e menù
+//Giorni e orari di apertura del locale: le prenotazioni dei clienti devono starci dentro
+const OpeningHoursSetting = () => {
+  const { data: restaurant } = useRestaurant();
+  const { mutate: updateRestaurant, isPending } = useUpdateRestaurant();
+  const showNotification = useNotification();
+  const [draft, setDraft] = useState<WeeklyHours | null>(null);
+
+  if (!restaurant) return null;
+
+  const save = () => {
+    if (!draft) return;
+    updateRestaurant(
+      { openingHours: draft },
+      {
+        onSuccess: () => {
+          setDraft(null);
+          showNotification("Orari di apertura salvati", NotificationType.Ok);
+        },
+        onError: () =>
+          showNotification(
+            "Errore nel salvataggio degli orari",
+            NotificationType.Err,
+          ),
+      },
+    );
+  };
+
+  return (
+    <>
+      <WeeklyHoursEditor
+        hours={draft ?? restaurant.openingHours}
+        onChange={setDraft}
+      />
+      {draft && (
+        <SaveChanges
+          onSave={save}
+          onCancel={() => setDraft(null)}
+          disabled={isPending || !weeklyHoursValid(draft)}
+        />
+      )}
+    </>
+  );
+};
+
+//Profilo del ristorante: nome del locale, tema e colore, orari di apertura, asporto e menù
 export const Profile = () => (
   <div className="h-full overflow-y-auto p-4 sm:p-6">
     <div className="flex items-center gap-3 mb-5 sm:mb-6">
@@ -224,7 +273,7 @@ export const Profile = () => (
       />
     </div>
 
-    <div className="grid gap-4 md:grid-cols-3 mb-8 sm:mb-10">
+    <div className="grid gap-4 md:grid-cols-2 mb-4">
       <SettingsCard icon={<Store size={15} />} title="Nome del locale">
         <RestaurantNameSetting />
       </SettingsCard>
@@ -232,11 +281,17 @@ export const Profile = () => (
       <SettingsCard icon={<Palette size={15} />} title="Tema e colore">
         <AppearanceSetting />
       </SettingsCard>
+    </div>
 
+    <div className="grid gap-4 xl:grid-cols-2 xl:items-start mb-8 sm:mb-10">
       <SettingsCard
-        icon={<ShoppingBag size={15} />}
-        title="Orario di ritiro asporto"
+        icon={<Clock size={15} />}
+        title="Giorni e orari di apertura"
       >
+        <OpeningHoursSetting />
+      </SettingsCard>
+
+      <SettingsCard icon={<ShoppingBag size={15} />} title="Asporto">
         <TakeawaySettingsBox />
       </SettingsCard>
     </div>

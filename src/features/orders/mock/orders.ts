@@ -39,12 +39,30 @@ export const generateFakeOrders = (count = 20): Order[] =>
     };
   });
 
+const DEFAULT_TAKEAWAY: TakeawaySettings = {
+  mode: PickupMode.Custom,
+  fixedTimes: { lunch: "12:30", dinner: "19:30" },
+  ranges: {
+    lunch: { from: "12:00", to: "14:30" },
+    dinner: { from: "19:00", to: "22:30" },
+  },
+};
+
 //Ordini e impostazioni dell'asporto finti, salvati nel browser
 const ordersStore = createMockStore("orders", () => generateFakeOrders(12));
-const takeawayStore = createMockStore<TakeawaySettings>("takeaway", () => ({
-  mode: PickupMode.Custom,
-  fixedTime: "19:30",
-}));
+const takeawayStore = createMockStore<TakeawaySettings>(
+  "takeaway",
+  () => DEFAULT_TAKEAWAY,
+);
+
+//le impostazioni salvate prima di pranzo e cena (con un solo fixedTime) non li hanno: si usano quelli predefiniti
+const readTakeaway = (): TakeawaySettings => {
+  const { mode, fixedTimes, ranges } = {
+    ...DEFAULT_TAKEAWAY,
+    ...takeawayStore.get(),
+  };
+  return { mode, fixedTimes, ranges };
+};
 
 export const fakeOrdersApi = {
   getOrders: async (): Promise<Order[]> => {
@@ -90,7 +108,7 @@ export const fakeOrdersApi = {
 
   getTakeawaySettings: async (): Promise<TakeawaySettings> => {
     await fakeDelay(200);
-    return takeawayStore.get();
+    return readTakeaway();
   },
 
   saveTakeawaySettings: async (

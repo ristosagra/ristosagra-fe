@@ -1,18 +1,32 @@
 import { createMockStore, fakeDelay } from "../../../mock/store";
 import { DEFAULT_APPEARANCE } from "../constant/brandColors";
+import { sameEveryDay } from "../../../helpers/openingHours";
 import type {
   RestaurantProfile,
   RestaurantProfileUpdate,
 } from "../types/restaurant";
 
+//Aperto tutti i giorni a pranzo e a cena
+const DEFAULT_OPENING_HOURS = sameEveryDay({
+  open: true,
+  lunch: { open: true, from: "12:00", to: "15:00" },
+  dinner: { open: true, from: "19:00", to: "23:00" },
+});
+
+const DEFAULT_PROFILE: RestaurantProfile = {
+  name: "Ristosagra",
+  ...DEFAULT_APPEARANCE,
+  openingHours: DEFAULT_OPENING_HOURS,
+};
+
 const restaurantStore = createMockStore<RestaurantProfile>(
   "restaurant",
-  () => ({ name: "Ristosagra", ...DEFAULT_APPEARANCE }),
+  () => DEFAULT_PROFILE,
 );
 
-//i profili salvati prima di tema e colore non li hanno: si usano quelli predefiniti
+//i profili salvati prima di tema, colore e orari non li hanno: si usano quelli predefiniti
 const readProfile = (): RestaurantProfile => ({
-  ...DEFAULT_APPEARANCE,
+  ...DEFAULT_PROFILE,
   ...restaurantStore.get(),
 });
 

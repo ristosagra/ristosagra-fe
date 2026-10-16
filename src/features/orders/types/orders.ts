@@ -1,4 +1,5 @@
 import type { Dish } from "../../../types/menuOrder";
+import type { ServiceConst, TimeRange } from "../../../types/openingHours";
 
 export type CartType = { dish: Dish; quantity: number };
 
@@ -45,8 +46,11 @@ export const PickupMode = {
 } as const;
 export type PickupModeConst = (typeof PickupMode)[keyof typeof PickupMode];
 
+//L'asporto si ritira nei giorni e nei servizi (pranzo/cena) in cui il locale è aperto
 export interface TakeawaySettings {
   mode: PickupModeConst;
-  //orario unico di ritiro (HH:MM), usato con mode "fixed"
-  fixedTime: string;
+  //orario unico di ritiro (HH:MM) del pranzo e della cena, usato con mode "fixed"
+  fixedTimes: Record<ServiceConst, string>;
+  //fasce in cui il cliente sceglie l'orario di ritiro, usate con mode "custom"
+  ranges: Record<ServiceConst, TimeRange>;
 }

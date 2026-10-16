@@ -1,3 +1,5 @@
+import type { WeeklyHours } from "../../../types/openingHours";
+
 //Tema del sito, scelto dal ristorante e usato anche dai clienti
 export const RestaurantTheme = {
   Dark: "dark",
@@ -26,6 +28,8 @@ export interface RestaurantProfile {
   name: string;
   theme: RestaurantThemeConst;
   brandColor: BrandColorConst;
+  //giorni e orari di apertura: le prenotazioni dei clienti devono starci dentro
+  openingHours: WeeklyHours;
 }
 
 export type RestaurantProfileUpdate = Partial<RestaurantProfile>;

@@ -96,17 +96,32 @@ Risposta `200`:
 
 ### `GET /api/restaurant` — pubblica
 
-Profilo mostrato a cassa e clienti (nome nella home, tema e colore di tutto il sito).
+Profilo mostrato a cassa e clienti (nome nella home, tema e colore di tutto il sito, giorni e orari di apertura).
 
 Risposta `200`: [`RestaurantProfile`](#restaurantprofile)
 
 ```json
-{ "name": "Sagra del Borgo", "theme": "dark", "brandColor": "orange" }
+{
+  "name": "Sagra del Borgo",
+  "theme": "dark",
+  "brandColor": "orange",
+  "openingHours": {
+    "mon": {
+      "open": true,
+      "lunch": { "open": false, "from": "12:00", "to": "15:00" },
+      "dinner": { "open": true, "from": "19:00", "to": "23:00" }
+    },
+    "tue": { "open": false, "lunch": { … }, "dinner": { … } },
+    …
+  }
+}
 ```
+
+- `openingHours` (vedi [`WeeklyHours`](#weeklyhours)): il frontend accetta prenotazioni solo per oggi, negli orari di apertura di oggi e per un orario non ancora passato. Gli stessi giorni e servizi valgono per l'[asporto](#impostazioni-asporto).
 
 ### `PATCH /api/restaurant` — cassa
 
-Richiesta: solo i campi modificati (uno o più di `name`, `theme`, `brandColor`).
+Richiesta: solo i campi modificati (uno o più di `name`, `theme`, `brandColor`, `openingHours`). `openingHours` si invia sempre completo (tutti e 7 i giorni).
 
 ```json
 { "theme": "light" }
@@ -168,6 +183,7 @@ Ordine inviato dal cliente. Richiesta: [`NewOrder`](#neworder)
 ```
 
 - `type: "dinein"` (sul posto) non ha `customerName` né `pickupTime`.
+- Asporto: `pickupTime` non deve essere già passato e deve riguardare un servizio (pranzo o cena) in cui il locale è aperto oggi. Con `mode: "fixed"` deve essere l'orario unico di quel servizio, con `mode: "custom"` deve stare nella sua fascia ([`TakeawaySettings`](#impostazioni-asporto)). Il frontend lo controlla, il backend deve rifiutare gli altri (es. `400`).
 - Risposta `200`: `{ "orderNumber": 112 }` — numero da mostrare alla cassa.
 - **Il backend non deve fidarsi dei prezzi inviati**: totale e prezzi vanno ricalcolati dal menù salvato usando `dish.id` e `quantity`. Verificare anche che i piatti esistano e che `quantity` sia un intero > 0.
 - Il numero d'ordine è assegnato dal backend (i dati finti partono da 100 e incrementano).
@@ -195,11 +211,19 @@ Modifica i piatti di un ordine da asporto. Richiesta: `{ "items": CartType[] }` 
 Risposta `200`: [`TakeawaySettings`](#takeawaysettings)
 
 ```json
-{ "mode": "fixed", "fixedTime": "19:30" }
+{
+  "mode": "fixed",
+  "fixedTimes": { "lunch": "12:30", "dinner": "19:30" },
+  "ranges": {
+    "lunch": { "from": "12:00", "to": "14:30" },
+    "dinner": { "from": "19:00", "to": "22:30" }
+  }
+}
 ```
 
-- `mode: "fixed"`: tutti ritirano a `fixedTime`; passato quell'orario il frontend non propone più l'asporto.
-- `mode: "custom"`: il cliente sceglie l'orario (`pickupTime` dell'ordine).
+- **Giorni e servizi**: l'asporto non ha una settimana sua, segue quella del locale ([`RestaurantProfile.openingHours`](#weeklyhours)). Si ritira a pranzo solo nei giorni in cui il locale è aperto a pranzo, a cena solo in quelli aperti a cena. Se oggi non resta un servizio ancora prenotabile il frontend non propone l'asporto.
+- `mode: "fixed"`: chi ordina ritira all'orario unico del servizio, `fixedTimes.lunch` o `fixedTimes.dinner` (`ranges` viene ignorato). Il frontend usa il primo servizio aperto di oggi il cui orario unico non è ancora passato.
+- `mode: "custom"`: il cliente sceglie l'orario (`pickupTime` dell'ordine) dentro `ranges.lunch` o `ranges.dinner`, solo per i servizi aperti oggi (`fixedTimes` viene ignorato).
 
 ### `PATCH /api/takeaway/settings` — cassa
 
@@ -241,7 +265,7 @@ Richiesta: [`NewReservation`](#newreservation)
 - `seatRequests` e `notes` sono facoltativi (assenti se vuoti).
 - Risposta `200`: la [`Reservation`](#reservation) creata, con `id` (stringa) e `createdAt`; il frontend la usa per la conferma al cliente.
 - **Se i posti non bastano** (`people > remainingSeats`) rispondere con un errore (es. `409`): il cliente vede "Non ci sono più abbastanza posti liberi".
-- Validare: `name` 1–60 caratteri, `people` intero ≥ 1, `arrivalTime` `HH:MM`, `notes` max 200, `seatRequests` solo [valori ammessi](#seatrequest).
+- Validare: `name` 1–60 caratteri, `people` intero ≥ 1, `arrivalTime` `HH:MM` dentro gli orari di apertura di oggi ([`openingHours`](#weeklyhours)) e non già passato, `notes` max 200, `seatRequests` solo [valori ammessi](#seatrequest).
 
 ### `GET /api/reservations` — cassa
 
@@ -354,9 +378,42 @@ interface Order {
 ```ts
 interface TakeawaySettings {
   mode: "fixed" | "custom";
-  fixedTime: string; // "HH:MM", usato con mode "fixed"
+  fixedTimes: { lunch: string; dinner: string };      // "HH:MM", usati con mode "fixed"
+  ranges: { lunch: TimeRange; dinner: TimeRange };   // fasce di ritiro, usate con mode "custom"
+}
+
+interface TimeRange {
+  from: string; // "HH:MM"
+  to: string;   // "HH:MM", dopo from
 }
 ```
+
+- Validare `ranges`: `from < to` e `lunch.to ≤ dinner.from`.
+- Giorni e servizi dell'asporto sono quelli di apertura del locale (vedi [Impostazioni asporto](#impostazioni-asporto)).
+
+### WeeklyHours
+
+Giorni e orari di apertura del locale (`RestaurantProfile.openingHours`), che valgono anche per i giorni e i servizi dell'asporto.
+
+```ts
+type WeeklyHours = Record<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun", DayHours>;
+
+interface DayHours {
+  open: boolean;        // false = chiuso tutto il giorno
+  lunch: ServiceHours;
+  dinner: ServiceHours;
+}
+
+interface ServiceHours {
+  open: boolean; // false = quel giorno il servizio non c'è
+  from: string;  // "HH:MM"
+  to: string;    // "HH:MM", dopo from (non oltre la mezzanotte)
+}
+```
+
+- Un servizio è aperto solo se lo sono **sia** il giorno **sia** il servizio. Gli orari restano salvati anche da chiuso, così la cassa li ritrova quando riapre.
+- Validare: tutti e 7 i giorni presenti, `from < to`, e se pranzo e cena sono entrambi aperti `lunch.to ≤ dinner.from`.
+- Il giorno di "oggi" è quello dell'ora locale del ristorante (il frontend usa l'ora del dispositivo).
 
 ### SeatRequest
 
@@ -390,6 +447,7 @@ interface RestaurantProfile {
   name: string; // max 40
   theme: "dark" | "light";
   brandColor: "orange" | "red" | "pink" | "violet" | "blue" | "teal" | "green" | "brown";
+  openingHours: WeeklyHours; // giorni e orari di apertura
 }
 ```
 
