@@ -1,18 +1,17 @@
-import { useState, useRef } from "react";
+import { useId, useState } from "react";
 import {
   Plus,
   Pencil,
   Trash2,
-  Save,
   UtensilsCrossed,
   Check,
   X,
+  ChevronDown,
 } from "lucide-react";
-import { useMenu } from "../../features/menu/hook/useMenu";
-import {
-  useCreateMenu,
-  useUpdateMenu,
-} from "../../features/menu/hook/useSaveMenu";
+import type {
+  DishData,
+  MenuDraft,
+} from "../../features/menu/hook/useMenuDraft";
 import {
   getCategories,
   getCategoryOptions,
@@ -23,15 +22,14 @@ import {
   AllergenChips,
   AllergensToggle,
 } from "../../features/menu/components/DishAllergens";
+import { Accordion } from "../../components/core/Accordion";
 import { Button } from "../../components/core/Button";
 import { Input } from "../../components/core/Input";
 import { Label } from "../../components/core/Label";
 import { Loader } from "../../components/core/Loader";
-import { useNotification } from "../../hooks/useNotification";
 import { ThemeVariants } from "../../constant/colors";
 import { ButtonDimensions } from "../../constant/button";
 import { LabelTags, LabelDimensions, LabelWeight } from "../../constant/label";
-import { NotificationType } from "../../types/notification";
 import type { Dish } from "../../types/menuOrder";
 
 //Limiti dei campi del piatto (anche per non inviare al backend testi enormi)
@@ -46,14 +44,6 @@ const parsePrice = (value: string): number | null => {
   if (!Number.isFinite(price) || price < 0 || price > PRICE_MAX) return null;
   return Math.round(price * 100) / 100;
 };
-
-interface DishFormData {
-  name: string;
-  description: string;
-  price: string;
-  category: string;
-  allergens: string[];
-}
 
 interface DishRowProps {
   dish: Dish;
@@ -74,7 +64,7 @@ const DishRow = ({
 
   return (
     <div
-      className={`px-3 sm:px-4 py-3 ${ThemeVariants.colors.bg.surface} ${ThemeVariants.borderRadius.md}`}
+      className={`px-3 sm:px-4 py-3 ${ThemeVariants.colors.bg.base} ${ThemeVariants.colors.border.all.default} ${ThemeVariants.borderRadius.md}`}
     >
       <div className="flex items-start justify-between gap-3 sm:gap-4">
         <div className="flex-1 min-w-0">
@@ -137,7 +127,7 @@ const DishRow = ({
 interface DishEditRowProps {
   initial?: Dish;
   categories: string[];
-  onConfirm: (data: DishFormData) => void;
+  onConfirm: (dish: DishData) => void;
   onCancel: () => void;
 }
 
@@ -161,7 +151,8 @@ const DishEditRow = ({
       ALLERGENS.filter((x) => (x === a ? !prev.includes(a) : prev.includes(x))),
     );
 
-  const isValid = name.trim() !== "" && parsePrice(price) !== null;
+  const parsedPrice = parsePrice(price);
+  const isValid = name.trim() !== "" && parsedPrice !== null;
 
   return (
     <div
@@ -250,7 +241,13 @@ const DishEditRow = ({
           variant="primary"
           onClick={() =>
             isValid &&
-            onConfirm({ name, description, price, category, allergens })
+            onConfirm({
+              name: name.trim(),
+              description: description.trim(),
+              price: parsedPrice,
+              category,
+              allergens,
+            })
           }
           disabled={!isValid}
           className="px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -260,177 +257,187 @@ const DishEditRow = ({
   );
 };
 
-//Gestione del menù, mostrata nella pagina Profilo del ristorante
-export const MenuEditor = () => {
-  const { data, isLoading } = useMenu();
-  const { mutate: createMenu, isPending: isCreating } = useCreateMenu();
-  const { mutate: updateMenu, isPending: isUpdating } = useUpdateMenu();
-  const showNotification = useNotification();
+interface CategoryRenameRowProps {
+  category: string;
+  categories: string[];
+  onConfirm: (name: string) => void;
+  onCancel: () => void;
+}
 
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [localDishes, setLocalDishes] = useState<Dish[] | null>(null);
-  const [editingId, setEditingId] = useState<number | null>(null); // dish id, or 0 for new
-  // categoria in rinomina e nuovo nome in bozza
-  const [renamingCat, setRenamingCat] = useState<string | null>(null);
-  const [catDraft, setCatDraft] = useState("");
-  const idCounter = useRef(-1);
+//Rinomina di una categoria: il nuovo nome non può essere quello di un'altra
+const CategoryRenameRow = ({
+  category,
+  categories,
+  onConfirm,
+  onCancel,
+}: CategoryRenameRowProps) => {
+  const [value, setValue] = useState(category);
+  const draft = value.trim();
+  const isValid =
+    draft !== "" && (draft === category || !categories.includes(draft));
 
-  const dishes = localDishes ?? data ?? [];
-  const hasExistingMenu = (data?.length ?? 0) > 0;
-  const isSaving = isCreating || isUpdating;
+  return (
+    <>
+      <Input
+        type="text"
+        placeholder="Nome categoria"
+        value={value}
+        setValue={setValue}
+        maxLength={CATEGORY_NAME_MAX}
+        variant="secondary"
+        className="text-sm flex-1 sm:flex-none sm:w-56"
+        autoFocus
+      />
+      <Button
+        iconLeft={<Check size={15} />}
+        dimension={ButtonDimensions.auto}
+        variant="primary"
+        onClick={() => isValid && onConfirm(draft)}
+        disabled={!isValid}
+        className="w-9 h-9 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+        ariaLabel="Conferma il nome della categoria"
+      />
+      <Button
+        iconLeft={<X size={15} />}
+        dimension={ButtonDimensions.auto}
+        variant="secondary"
+        onClick={onCancel}
+        className="w-9 h-9 shrink-0"
+        ariaLabel="Annulla"
+      />
+      {draft !== "" && !isValid && (
+        <span
+          className={`text-xs basis-full sm:basis-auto ${ThemeVariants.colors.text.danger}`}
+        >
+          Categoria già esistente
+        </span>
+      )}
+    </>
+  );
+};
+
+interface MenuCategoryProps {
+  name: string;
+  count: number;
+  open: boolean;
+  onToggle: () => void;
+  //pulsanti accanto al titolo (rinomina)
+  actions?: React.ReactNode;
+  //se c'è, prende il posto del titolo (form di rinomina)
+  renameRow?: React.ReactNode;
+  children: React.ReactNode;
+}
+
+//Categoria del menù (Antipasti, Primi...) che si apre e chiude dal titolo. Da chiusa
+//i piatti restano montati (solo nascosti), così non si perde un piatto in modifica
+const MenuCategory = ({
+  name,
+  count,
+  open,
+  onToggle,
+  actions,
+  renameRow,
+  children,
+}: MenuCategoryProps) => {
+  const bodyId = useId();
+
+  return (
+    <div>
+      <div
+        className={`flex flex-wrap items-center gap-2 pb-2 ${ThemeVariants.colors.border.bottom.default}`}
+      >
+        {renameRow ?? (
+          <>
+            <h4 className="flex-1 min-w-0">
+              <Accordion
+                onClick={onToggle}
+                expanded={open}
+                controls={bodyId}
+                className="gap-2 min-h-9"
+              >
+                <span className="flex flex-wrap items-baseline gap-x-2 min-w-0">
+                  <span className="text-lg font-semibold [overflow-wrap:anywhere]">
+                    {name}
+                  </span>
+                  <span
+                    className={`text-sm ${ThemeVariants.colors.text.secondary}`}
+                  >
+                    ({count})
+                  </span>
+                </span>
+                <ChevronDown
+                  size={20}
+                  aria-hidden
+                  className={`shrink-0 transition-transform duration-300 ${ThemeVariants.colors.text.secondary} ${open ? "rotate-180" : ""}`}
+                />
+              </Accordion>
+            </h4>
+            {actions}
+          </>
+        )}
+      </div>
+      <div id={bodyId} hidden={!open} className="flex flex-col gap-2 mt-3">
+        {children}
+      </div>
+    </div>
+  );
+};
+
+interface MenuEditorProps {
+  menu: MenuDraft;
+  isEditMode: boolean;
+}
+
+//Menù del ristorante, nella sua box del Profilo: in lettura mostra piatti e allergeni,
+//in modifica si aggiungono, cambiano ed eliminano piatti e si rinominano le categorie
+export const MenuEditor = ({ menu, isEditMode }: MenuEditorProps) => {
+  const { dishes, editingId, renamingCat } = menu;
+  //categorie aperte: partono tutte chiuse
+  const [openCats, setOpenCats] = useState<string[]>([]);
+
+  if (menu.isLoading) return <Loader />;
+
+  const toggleCat = (cat: string) =>
+    setOpenCats((open) =>
+      open.includes(cat) ? open.filter((c) => c !== cat) : [...open, cat],
+    );
+
+  //Un piatto confermato si vede subito: si apre la sua categoria
+  const saveDish = (dish: DishData) => {
+    menu.saveDish(dish);
+    setOpenCats((open) =>
+      open.includes(dish.category) ? open : [...open, dish.category],
+    );
+  };
+
+  //Una categoria rinominata resta aperta (o chiusa) com'era
+  const renameCategory = (name: string) => {
+    setOpenCats((open) => open.map((c) => (c === renamingCat ? name : c)));
+    menu.renameCategory(name);
+  };
+
   const isEditing = editingId !== null;
   const categories = getCategories(dishes);
   const categoryOptions = getCategoryOptions(dishes);
-  const draft = catDraft.trim();
-  const isValidCatName =
-    draft !== "" && (draft === renamingCat || !categories.includes(draft));
-
-  const handleConfirmEdit = (formData: DishFormData) => {
-    const price = parsePrice(formData.price);
-    if (price === null) return;
-    if (editingId === 0) {
-      setLocalDishes([
-        ...dishes,
-        {
-          id: idCounter.current--,
-          name: formData.name.trim(),
-          description: formData.description.trim(),
-          price,
-          category: formData.category,
-          allergens: formData.allergens,
-        },
-      ]);
-    } else {
-      setLocalDishes(
-        dishes.map((d) =>
-          d.id === editingId
-            ? {
-                ...d,
-                name: formData.name.trim(),
-                description: formData.description.trim(),
-                price,
-                category: formData.category,
-                allergens: formData.allergens,
-              }
-            : d,
-        ),
-      );
-    }
-    setEditingId(null);
-  };
-
-  //Rinomina una categoria: tutti i suoi piatti passano al nuovo nome
-  const startRename = (cat: string) => {
-    setRenamingCat(cat);
-    setCatDraft(cat);
-  };
-
-  const confirmRename = () => {
-    if (!renamingCat || !isValidCatName) return;
-    setLocalDishes(
-      dishes.map((d) =>
-        d.category === renamingCat ? { ...d, category: draft } : d,
-      ),
-    );
-    setRenamingCat(null);
-  };
-
-  const handleDelete = (id: number) => {
-    setLocalDishes(dishes.filter((d) => d.id !== id));
-  };
-
-  const handleSave = () => {
-    const onSuccess = () => {
-      setLocalDishes(null);
-      setIsEditMode(false);
-      setEditingId(null);
-      setRenamingCat(null);
-      showNotification("Menu salvato con successo", NotificationType.Ok);
-    };
-    const onError = () =>
-      showNotification("Errore nel salvataggio del menu", NotificationType.Err);
-
-    if (hasExistingMenu) {
-      updateMenu(dishes, { onSuccess, onError });
-    } else {
-      createMenu(dishes, { onSuccess, onError });
-    }
-  };
-
-  if (isLoading) return <Loader />;
-
   const grouped = groupDishesByCategory(dishes);
 
   return (
-    <section>
-      {isSaving && <Loader />}
-
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div className="flex items-center gap-3">
-          <UtensilsCrossed
-            size={24}
-            className={ThemeVariants.colors.text.brand}
-          />
-          <Label
-            tag={LabelTags.h2}
-            label="Menù"
-            size={LabelDimensions.xlarge}
-            weight={LabelWeight.bold}
-            noMargin
-          />
-          <span
-            className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-              hasExistingMenu
-                ? `${ThemeVariants.colors.bg.success} ${ThemeVariants.colors.text.white} ${ThemeVariants.colors.border.all.success}`
-                : `${ThemeVariants.colors.bg.danger} ${ThemeVariants.colors.text.white} ${ThemeVariants.colors.border.all.danger}`
-            }`}
-          >
-            {hasExistingMenu ? "Attivo" : "Non configurato"}
-          </span>
-        </div>
-        <div className="flex gap-2">
-          {isEditMode ? (
-            <>
-              <Button
-                iconLeft={<Plus size={18} />}
-                label="Aggiungi piatto"
-                dimension={ButtonDimensions.auto}
-                variant="secondary"
-                onClick={() => setEditingId(0)}
-                disabled={isEditing}
-                className="px-3 py-2"
-              />
-              <Button
-                iconLeft={<Save size={18} />}
-                label="Salva"
-                dimension={ButtonDimensions.auto}
-                variant="primary"
-                onClick={handleSave}
-                disabled={
-                  dishes.length === 0 || isEditing || renamingCat !== null
-                }
-                className="px-3 py-2"
-              />
-            </>
-          ) : (
-            <Button
-              iconLeft={<Pencil size={18} />}
-              label="Modifica"
-              dimension={ButtonDimensions.auto}
-              variant="primary"
-              onClick={() => setIsEditMode(true)}
-              className="px-3 py-2"
-            />
-          )}
-        </div>
-      </div>
+    <div className="flex flex-col gap-6">
+      {isEditMode && dishes.length > 0 && (
+        <Button
+          iconLeft={<Plus size={18} />}
+          label="Aggiungi piatto"
+          dimension={ButtonDimensions.auto}
+          variant="secondary"
+          onClick={() => menu.setEditingId(0)}
+          disabled={isEditing}
+          className="self-start px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        />
+      )}
 
       {/* Empty state */}
       {dishes.length === 0 && !isEditing && (
-        <div
-          className={`flex flex-col items-center justify-center py-20 gap-4 ${ThemeVariants.colors.bg.surface} ${ThemeVariants.borderRadius.lg}`}
-        >
+        <div className="flex flex-col items-center justify-center py-10 gap-4 text-center">
           <UtensilsCrossed
             size={48}
             className={ThemeVariants.colors.text.secondary}
@@ -458,7 +465,7 @@ export const MenuEditor = () => {
               label="Aggiungi piatto"
               dimension={ButtonDimensions.auto}
               variant="primary"
-              onClick={() => setEditingId(0)}
+              onClick={() => menu.setEditingId(0)}
               className="px-4 py-2 mt-2"
             />
           )}
@@ -466,13 +473,13 @@ export const MenuEditor = () => {
       )}
 
       {/* New dish form */}
-      {editingId === 0 && (
-        <div className="mb-6">
+      {isEditMode && editingId === 0 && (
+        <div>
           <div
             className={`flex items-center gap-2 mb-3 pb-2 ${ThemeVariants.colors.border.bottom.default}`}
           >
             <Label
-              tag={LabelTags.h3}
+              tag={LabelTags.h4}
               label="Nuovo piatto"
               size={LabelDimensions.large}
               weight={LabelWeight.semibold}
@@ -481,111 +488,73 @@ export const MenuEditor = () => {
           </div>
           <DishEditRow
             categories={categoryOptions}
-            onConfirm={handleConfirmEdit}
-            onCancel={() => setEditingId(null)}
+            onConfirm={saveDish}
+            onCancel={() => menu.setEditingId(null)}
           />
         </div>
       )}
 
       {/* Dishes grouped by category */}
-      {categories.map((cat) => {
-        const catDishes = grouped[cat] ?? [];
-        return (
-          <div key={cat} className="mb-6">
-            <div
-              className={`flex flex-wrap items-center gap-2 mb-3 pb-2 ${ThemeVariants.colors.border.bottom.default}`}
-            >
-              {renamingCat === cat ? (
-                /* Rinomina della categoria */
-                <>
-                  <Input
-                    type="text"
-                    placeholder="Nome categoria"
-                    value={catDraft}
-                    setValue={setCatDraft}
-                    maxLength={CATEGORY_NAME_MAX}
-                    variant="secondary"
-                    className="text-sm flex-1 sm:flex-none sm:w-56"
-                    autoFocus
-                  />
-                  <Button
-                    iconLeft={<Check size={15} />}
-                    dimension={ButtonDimensions.auto}
-                    variant="primary"
-                    onClick={confirmRename}
-                    disabled={!isValidCatName}
-                    className="w-9 h-9 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
-                    ariaLabel="Conferma il nome della categoria"
-                  />
-                  <Button
-                    iconLeft={<X size={15} />}
-                    dimension={ButtonDimensions.auto}
-                    variant="secondary"
-                    onClick={() => setRenamingCat(null)}
-                    className="w-9 h-9 shrink-0"
-                    ariaLabel="Annulla"
-                  />
-                  {draft !== "" && !isValidCatName && (
-                    <span
-                      className={`text-xs basis-full sm:basis-auto ${ThemeVariants.colors.text.danger}`}
-                    >
-                      Categoria già esistente
-                    </span>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Label
-                    tag={LabelTags.h3}
-                    label={cat}
-                    size={LabelDimensions.large}
-                    weight={LabelWeight.semibold}
-                    noMargin
-                  />
-                  <span
-                    className={`text-sm ${ThemeVariants.colors.text.secondary}`}
-                  >
-                    ({catDishes.length})
-                  </span>
-                  {isEditMode && (
+      {categories.length > 0 && (
+        <div className="flex flex-col gap-4">
+          {categories.map((cat) => {
+            const catDishes = grouped[cat] ?? [];
+            return (
+              <MenuCategory
+                key={cat}
+                name={cat}
+                count={catDishes.length}
+                open={openCats.includes(cat)}
+                onToggle={() => toggleCat(cat)}
+                renameRow={
+                  isEditMode && renamingCat === cat ? (
+                    <CategoryRenameRow
+                      category={cat}
+                      categories={categories}
+                      onConfirm={renameCategory}
+                      onCancel={() => menu.setRenamingCat(null)}
+                    />
+                  ) : undefined
+                }
+                actions={
+                  isEditMode && (
                     <Button
                       iconLeft={<Pencil size={14} />}
                       dimension={ButtonDimensions.auto}
                       variant="icon"
-                      onClick={() => startRename(cat)}
+                      onClick={() => menu.setRenamingCat(cat)}
                       disabled={isEditing || renamingCat !== null}
                       className={`w-9 h-9 sm:w-7 sm:h-7 ${ThemeVariants.colors.text.secondary}`}
                       ariaLabel={`Rinomina la categoria ${cat}`}
                     />
-                  )}
-                </>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              {catDishes.map((dish) =>
-                editingId === dish.id ? (
-                  <DishEditRow
-                    key={dish.id}
-                    initial={dish}
-                    categories={categoryOptions}
-                    onConfirm={handleConfirmEdit}
-                    onCancel={() => setEditingId(null)}
-                  />
-                ) : (
-                  <DishRow
-                    key={dish.id}
-                    dish={dish}
-                    onEdit={() => setEditingId(dish.id)}
-                    onDelete={() => handleDelete(dish.id)}
-                    isEditMode={isEditMode}
-                    disabled={isEditing}
-                  />
-                ),
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </section>
+                  )
+                }
+              >
+                {catDishes.map((dish) =>
+                  isEditMode && editingId === dish.id ? (
+                    <DishEditRow
+                      key={dish.id}
+                      initial={dish}
+                      categories={categoryOptions}
+                      onConfirm={saveDish}
+                      onCancel={() => menu.setEditingId(null)}
+                    />
+                  ) : (
+                    <DishRow
+                      key={dish.id}
+                      dish={dish}
+                      onEdit={() => menu.setEditingId(dish.id)}
+                      onDelete={() => menu.deleteDish(dish.id)}
+                      isEditMode={isEditMode}
+                      disabled={isEditing}
+                    />
+                  ),
+                )}
+              </MenuCategory>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 };

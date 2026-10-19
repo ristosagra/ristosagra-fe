@@ -14,7 +14,7 @@ export const SaveChanges = ({
   onCancel,
   disabled,
 }: SaveChangesProps) => (
-  <div className="flex justify-end gap-2 pt-1">
+  <div className="flex justify-end gap-2">
     <Button
       iconLeft={<X size={16} />}
       label={<span className="text-sm ml-1">Annulla</span>}

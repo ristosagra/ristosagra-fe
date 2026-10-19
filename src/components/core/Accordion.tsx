@@ -5,6 +5,8 @@ interface AccordionProps {
   onClick: () => void;
   expanded: boolean;
   className?: string;
+  //id del contenuto che apre/chiude, per i lettori di schermo
+  controls?: string;
 }
 
 export const Accordion = ({
@@ -12,12 +14,14 @@ export const Accordion = ({
   onClick,
   expanded,
   className,
+  controls,
 }: AccordionProps) => {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-expanded={expanded}
+      aria-controls={controls}
       className={cn(
         "w-full flex justify-between items-center cursor-pointer text-left",
         className,

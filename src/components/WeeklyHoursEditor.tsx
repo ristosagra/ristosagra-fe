@@ -96,7 +96,8 @@ export const WeeklyHoursEditor = ({
             </div>
 
             {day.open && (
-              <div className="grid gap-1.5 @md:pl-15 @2xl:grid-cols-2 @2xl:gap-6">
+              /* pranzo sopra e cena sotto, anche sugli schermi larghi */
+              <div className="flex flex-col gap-1.5 @md:pl-15">
                 {SERVICES.map((s) => (
                   <div key={s} className="flex items-center gap-2">
                     <label className="flex items-center gap-2 w-20 shrink-0 min-h-9 text-sm cursor-pointer">
