@@ -13,6 +13,9 @@ export const PagesCashier = {
   PROFILE: "profile",
   FLORPLAN: "florplan",
   CASH: "cash",
+  NEW_ORDER: "new-order",
+  KITCHEN: "kitchen",
+  PICKUP: "pickup",
 } as const;
 
 export type PagesCashierConst =

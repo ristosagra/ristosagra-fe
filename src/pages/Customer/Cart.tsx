@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ShoppingBag, UtensilsCrossed } from "lucide-react";
+import { CreditCard, MapPin, ShoppingBag, UtensilsCrossed } from "lucide-react";
 import { Container } from "../../components/core/Container";
 import { Label } from "../../components/core/Label";
 import { Card } from "../../components/Card";
@@ -14,9 +14,23 @@ import {
   OrderType,
   PickupMode,
   type CartType,
+  type ConfirmedOrder,
   type NewOrder,
   type OrderTypeConst,
 } from "../../features/orders/types/orders";
+import {
+  goToCheckout,
+  safeCheckoutUrl,
+} from "../../features/orders/utils/onlinePayment";
+import { cleanTableName } from "../../features/orders/utils/tableQr";
+import {
+  OrderingMode,
+  type RestaurantProfile,
+} from "../../features/restaurant/types/restaurant";
+import {
+  customerAsksTable,
+  isPayFirstAtCashier,
+} from "../../features/restaurant/utils/ordering";
 import { ButtonDimensions } from "../../constant/button";
 import { type PagesCustomerConst, PagesCustomer } from "../../constant/pages";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
@@ -30,47 +44,62 @@ import {
   openServices,
   todayWeekday,
 } from "../../helpers/openingHours";
-import { useRestaurant } from "../../features/restaurant/hook/useRestaurant";
 import { NotificationType } from "../../types/notification";
-import { PERSON_NAME_MAX } from "../../constant/limits";
-
-//Ordine confermato, con il numero da mostrare alla cassa e l'ora di invio (ISO)
-export type ConfirmedOrder = NewOrder & {
-  orderNumber: number;
-  confirmedAt: string;
-};
+import { PERSON_NAME_MAX, TABLE_NAME_MAX } from "../../constant/limits";
 
 interface CartProps {
   cartItems: CartType[];
   setCartItems: React.Dispatch<React.SetStateAction<CartType[]>>;
   setPage: (page: PagesCustomerConst) => void;
   setConfirmedOrder: (order: ConfirmedOrder) => void;
+  //come il ristorante fa ordinare (modalità, tavolo, QR code) e orari di oggi
+  restaurant: RestaurantProfile;
+  //tavolo del QR code inquadrato, se c'è
+  scannedTable: string | null;
 }
+
+//Titolo piccolo sopra un campo
+const FieldLabel = ({ label }: { label: string }) => (
+  <Label
+    label={label}
+    tag={LabelTags.p}
+    size={LabelDimensions.small}
+    color={ThemeVariants.colors.text.secondary}
+    noMargin
+    additionalClasses="mb-1.5"
+  />
+);
 
 export default function Cart({
   cartItems,
   setCartItems,
   setPage,
   setConfirmedOrder,
+  restaurant,
+  scannedTable,
 }: CartProps) {
   const { mutate: confirmOrder, isPending } = useOrderNumber();
   const { data: takeaway } = useTakeawaySettings();
-  const { data: restaurant } = useRestaurant();
   const showNotification = useNotification();
   const now = useCurrentTime();
 
   const [type, setType] = useState<OrderTypeConst>(OrderType.DineIn);
   const [customerName, setCustomerName] = useState("");
+  const [typedTable, setTypedTable] = useState("");
   const [customTime, setCustomTime] = useState("");
+  //si sta andando alla pagina di pagamento: il carrello resta bloccato
+  const [isLeaving, setIsLeaving] = useState(false);
 
   const total = calcTotal(cartItems);
-  //L'asporto segue i giorni e i servizi in cui il locale è aperto oggi
-  const today = restaurant?.openingHours[todayWeekday()];
-  const services = today ? openServices(today) : [];
+  const payOnline = restaurant.orderingMode === OrderingMode.PayOnline;
+  //tipo sagra: si paga alla cassa prima che la cucina prepari
+  const payFirst = isPayFirstAtCashier(restaurant);
+  //L'asporto (se attivo) segue i giorni e i servizi in cui il locale è aperto oggi
+  const services = openServices(restaurant.openingHours[todayWeekday()]);
   const isFixed = takeaway?.mode === PickupMode.Fixed;
   //Servizio di oggi in cui si può ancora ritirare: con l'orario unico finché non è passato,
   //altrimenti fino alla fine della sua fascia. Se non c'è, l'asporto non si può scegliere
-  const service = takeaway
+  const service = takeaway?.enabled
     ? services.find(
         (s) =>
           now <= (isFixed ? takeaway.fixedTimes[s] : takeaway.ranges[s].to),
@@ -87,8 +116,21 @@ export default function Cart({
   const customTimeValid =
     isWithinRanges(todayRanges, customTime) && customTime >= now;
   const pickupTime = fixedTime ?? customTime;
+
+  //Sul posto il tavolo serve se il ristorante fa ordinare dal tavolo: arriva dal QR code
+  //inquadrato oppure lo scrive il cliente
+  const askTable = !isTakeaway && customerAsksTable(restaurant);
+  const tableFromQr = askTable && restaurant.tableQrCode;
+  const table = !askTable
+    ? null
+    : tableFromQr
+      ? scannedTable
+      : cleanTableName(typedTable);
+
   const canConfirm =
-    !isTakeaway || (!!customerName.trim() && (!!fixedTime || customTimeValid));
+    !!customerName.trim() &&
+    (isTakeaway ? !!fixedTime || customTimeValid : !askTable || !!table);
+  const busy = isPending || isLeaving;
 
   if (cartItems.length === 0) {
     return (
@@ -117,22 +159,30 @@ export default function Cart({
   }
 
   const handleConfirm = () => {
-    if (!canConfirm) return;
+    if (!canConfirm || busy) return;
+    const name = customerName.trim();
     const order: NewOrder = isTakeaway
-      ? {
-          items: cartItems,
-          type,
-          customerName: customerName.trim(),
-          pickupTime,
-        }
-      : { items: cartItems, type };
+      ? { items: cartItems, type, customerName: name, pickupTime }
+      : { items: cartItems, type, customerName: name, ...(table && { table }) };
     confirmOrder(order, {
-      onSuccess: ({ orderNumber }) => {
-        setConfirmedOrder({
+      onSuccess: ({ orderNumber, checkoutUrl }) => {
+        const confirmed: ConfirmedOrder = {
           ...order,
           orderNumber,
           confirmedAt: new Date().toISOString(),
-        });
+        };
+        //Pagamento online: il carrello resta finché il pagamento non va a buon fine
+        if (checkoutUrl) {
+          const url = safeCheckoutUrl(checkoutUrl);
+          if (!url)
+            return showNotification(
+              "Errore nel pagamento, riprova",
+              NotificationType.Err,
+            );
+          setIsLeaving(true);
+          return goToCheckout(confirmed, url);
+        }
+        setConfirmedOrder(confirmed);
         setCartItems([]);
         setPage(PagesCustomer.RESERVATION);
       },
@@ -146,7 +196,7 @@ export default function Cart({
 
   return (
     <Container additionalClass="px-4 sm:px-5 py-6 sm:py-7">
-      {isPending && <Loader />}
+      {busy && <Loader />}
 
       <div className="max-w-2xl mx-auto space-y-3">
         {cartItems.map((item) => (
@@ -161,18 +211,18 @@ export default function Cart({
       </div>
 
       <div className="max-w-2xl mx-auto space-y-3 mt-3">
-        {/* Sul posto o da asporto con ritiro in loco */}
-        {canTakeaway && (
-          <div
-            className={`${ThemeVariants.colors.border.all.default} ${ThemeVariants.colors.bg.surface} p-4 rounded-2xl space-y-3`}
-          >
-            <Label
-              label="Come vuoi il tuo ordine?"
-              tag={LabelTags.h3}
-              size={LabelDimensions.medium}
-              weight={LabelWeight.bold}
-              noMargin
-            />
+        {/* Dati dell'ordine: sul posto (col tavolo) o da asporto con ritiro in loco */}
+        <div
+          className={`${ThemeVariants.colors.border.all.default} ${ThemeVariants.colors.bg.surface} p-4 rounded-2xl space-y-3`}
+        >
+          <Label
+            label={canTakeaway ? "Come vuoi il tuo ordine?" : "I tuoi dati"}
+            tag={LabelTags.h3}
+            size={LabelDimensions.medium}
+            weight={LabelWeight.bold}
+            noMargin
+          />
+          {canTakeaway && (
             <div className="flex gap-2">
               <Button
                 iconLeft={<UtensilsCrossed size={16} />}
@@ -193,70 +243,96 @@ export default function Cart({
                 fullWidth
               />
             </div>
+          )}
 
-            {isTakeaway && (
-              <div className="space-y-3 pt-1">
+          <div className="space-y-3 pt-1">
+            <div>
+              <FieldLabel
+                label={isTakeaway ? "Nome per il ritiro" : "Il tuo nome"}
+              />
+              <Input
+                type="text"
+                name="name"
+                placeholder="Es. Mario Rossi"
+                value={customerName}
+                setValue={setCustomerName}
+                variant="secondary"
+                className="w-full"
+                autoComplete="name"
+                maxLength={PERSON_NAME_MAX}
+                ariaLabel={isTakeaway ? "Nome per il ritiro" : "Il tuo nome"}
+              />
+            </div>
+
+            {isTakeaway &&
+              (fixedTime ? (
+                <Label
+                  label={`Ritiro in loco alle ${fixedTime}`}
+                  tag={LabelTags.p}
+                  size={LabelDimensions.medium}
+                  weight={LabelWeight.semibold}
+                  color={ThemeVariants.colors.text.brand}
+                  noMargin
+                />
+              ) : (
                 <div>
-                  <Label
-                    label="Nome per il ritiro"
-                    tag={LabelTags.p}
-                    size={LabelDimensions.small}
-                    color={ThemeVariants.colors.text.secondary}
-                    noMargin
-                    additionalClasses="mb-1.5"
+                  <FieldLabel label="Orario di ritiro" />
+                  <Input
+                    type="time"
+                    placeholder="19:30"
+                    value={customTime}
+                    setValue={setCustomTime}
+                    variant="secondary"
+                    className="w-36"
+                    ariaLabel="Orario di ritiro"
                   />
+                  <p
+                    className={`text-sm mt-1.5 ${customTime && !customTimeValid ? ThemeVariants.colors.text.danger : ThemeVariants.colors.text.secondary}`}
+                  >
+                    Ritiro possibile oggi: {formatRanges(todayRanges)}
+                  </p>
+                </div>
+              ))}
+
+            {askTable &&
+              (!tableFromQr ? (
+                <div>
+                  <FieldLabel label="Numero del tavolo" />
                   <Input
                     type="text"
-                    name="name"
-                    placeholder="Es. Mario Rossi"
-                    value={customerName}
-                    setValue={setCustomerName}
+                    placeholder="Es. 12"
+                    value={typedTable}
+                    setValue={setTypedTable}
                     variant="secondary"
-                    className="w-full"
-                    autoComplete="name"
-                    maxLength={PERSON_NAME_MAX}
-                    ariaLabel="Nome per il ritiro"
+                    className="w-36"
+                    maxLength={TABLE_NAME_MAX}
+                    ariaLabel="Numero del tavolo"
                   />
                 </div>
-                {fixedTime ? (
-                  <Label
-                    label={`Ritiro in loco alle ${fixedTime}`}
-                    tag={LabelTags.p}
-                    size={LabelDimensions.medium}
-                    weight={LabelWeight.semibold}
-                    color={ThemeVariants.colors.text.brand}
-                    noMargin
-                  />
-                ) : (
-                  <div>
-                    <Label
-                      label="Orario di ritiro"
-                      tag={LabelTags.p}
-                      size={LabelDimensions.small}
-                      color={ThemeVariants.colors.text.secondary}
-                      noMargin
-                      additionalClasses="mb-1.5"
-                    />
-                    <Input
-                      type="time"
-                      placeholder="19:30"
-                      value={customTime}
-                      setValue={setCustomTime}
-                      variant="secondary"
-                      className="w-36"
-                      ariaLabel="Orario di ritiro"
-                    />
-                    <p
-                      className={`text-sm mt-1.5 ${customTime && !customTimeValid ? ThemeVariants.colors.text.danger : ThemeVariants.colors.text.secondary}`}
-                    >
-                      Ritiro possibile oggi: {formatRanges(todayRanges)}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
+              ) : scannedTable ? (
+                <Label
+                  label={`Tavolo ${scannedTable}`}
+                  iconLeft={<MapPin size={16} />}
+                  tag={LabelTags.p}
+                  size={LabelDimensions.medium}
+                  weight={LabelWeight.semibold}
+                  color={ThemeVariants.colors.text.brand}
+                  noMargin
+                  additionalClasses="gap-1.5 [overflow-wrap:anywhere]"
+                />
+              ) : (
+                <Label
+                  label="Inquadra il QR code sul tuo tavolo per ordinare da qui"
+                  tag={LabelTags.p}
+                  size={LabelDimensions.small}
+                  weight={LabelWeight.semibold}
+                  variant="danger"
+                  noMargin
+                  additionalClasses="py-2"
+                />
+              ))}
           </div>
-        )}
+        </div>
 
         <div
           className={`${ThemeVariants.colors.border.all.brand} ${ThemeVariants.colors.bg.surface} p-4 rounded-2xl flex justify-between items-center`}
@@ -278,14 +354,32 @@ export default function Cart({
         </div>
 
         <Button
-          label={isTakeaway ? "Prenota asporto" : "Prenota ordine"}
+          iconLeft={payOnline ? <CreditCard size={18} /> : undefined}
+          label={
+            payOnline
+              ? `Paga €${total.toFixed(2)}`
+              : isTakeaway
+                ? "Prenota asporto"
+                : "Prenota ordine"
+          }
           fullWidth
           dimension={ButtonDimensions.auto}
           onClick={handleConfirm}
           variant="primary"
-          disabled={!canConfirm || isPending}
+          disabled={!canConfirm || busy}
           className="h-12 disabled:opacity-50 disabled:cursor-not-allowed"
         />
+        <p
+          className={`text-sm text-center ${ThemeVariants.colors.text.secondary}`}
+        >
+          {payOnline
+            ? "Pagherai sulla pagina sicura del servizio di pagamento"
+            : payFirst
+              ? "Poi vai alla cassa a pagare: la cucina prepara l'ordine dopo il pagamento"
+              : isTakeaway
+                ? "Pagherai alla cassa quando vieni a ritirarlo"
+                : "Pagherai alla cassa a fine pasto"}
+        </p>
       </div>
     </Container>
   );

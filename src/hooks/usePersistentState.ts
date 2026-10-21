@@ -5,6 +5,9 @@ interface PersistOptions<T> {
   storage?: "local" | "session";
   //scarta i dati salvati non validi (o di una versione precedente)
   validate: (value: unknown) => value is T;
+  //valore che vince su quello salvato, letto solo all'apertura (es. il tavolo del QR code);
+  //undefined = si usa quello salvato
+  preferred?: () => T | undefined;
 }
 
 const getStorage = (kind: "local" | "session") => {
@@ -33,7 +36,10 @@ export const usePersistentState = <T>(
   initial: T,
   options: PersistOptions<T>,
 ) => {
-  const [value, setValue] = useState<T>(() => read(key, initial, options));
+  const [value, setValue] = useState<T>(() => {
+    const preferred = options.preferred?.();
+    return preferred !== undefined ? preferred : read(key, initial, options);
+  });
   const kind = options.storage ?? "local";
 
   useEffect(() => {

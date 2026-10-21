@@ -1,5 +1,6 @@
 import { Button } from "../../../components/core/Button";
 import { Input } from "../../../components/core/Input";
+import { SettingSwitch } from "../../../components/SettingSwitch";
 import { ButtonDimensions } from "../../../constant/button";
 import { ThemeVariants } from "../../../constant/colors";
 import { SERVICE_LABELS, SERVICES } from "../../../constant/openingHours";
@@ -14,8 +15,8 @@ interface TakeawaySettingsBoxProps {
   onChange: (settings: TakeawaySettings) => void;
 }
 
-//Impostazioni dell'asporto: orario unico di ritiro per pranzo e cena, oppure le fasce
-//in cui lo sceglie il cliente. I giorni sono quelli di apertura del locale.
+//Impostazioni dell'asporto: attivo o no, poi orario unico di ritiro per pranzo e cena, oppure
+//le fasce in cui lo sceglie il cliente. I giorni sono quelli di apertura del locale.
 //In modifica i cambi vanno nella bozza del profilo, che li salva insieme alle altre box.
 export const TakeawaySettingsBox = ({
   settings,
@@ -34,8 +35,24 @@ export const TakeawaySettingsBox = ({
     });
   const error = takeawayError(settings);
 
+  const enabledSwitch = (
+    <SettingSwitch
+      label="Asporto attivo"
+      description={
+        settings.enabled
+          ? "I clienti possono ordinare da asporto"
+          : "Nessun asporto, in nessun giorno: gli orari restano salvati"
+      }
+      value={settings.enabled}
+      isEditMode={isEditMode}
+      onChange={(enabled) => edit({ enabled })}
+    />
+  );
+  if (!settings.enabled) return enabledSwitch;
+
   return (
     <div className="flex flex-col gap-3">
+      {enabledSwitch}
       {isEditMode ? (
         <>
           <p className="text-sm font-semibold">Orario di ritiro</p>

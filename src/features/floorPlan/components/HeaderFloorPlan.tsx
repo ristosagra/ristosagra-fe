@@ -43,6 +43,8 @@ import { useReservations } from "../../reservations/hook/useReservations";
 interface HeaderFloorPlanProps {
   tables: TableData[];
   isEditing: boolean;
+  //false = senza il pulsante Modifica (solo l'amministratore cambia tavoli e muri)
+  canEditLayout: boolean;
   walls: WallData[];
   zoom: number;
   savedPlan: FloorPlanData | null | undefined;
@@ -63,6 +65,7 @@ interface HeaderFloorPlanProps {
 export const HeaderFloorPlan = ({
   tables,
   isEditing,
+  canEditLayout,
   walls,
   zoom,
   savedPlan,
@@ -280,19 +283,21 @@ export const HeaderFloorPlan = ({
               isActive={rightPanel === RightPanel.Online}
               className="px-2 py-2.5"
             />
-            <Button
-              iconLeft={<Pencil size={16} />}
-              onClick={startEditing}
-              dimension={ButtonDimensions.auto}
-              label={
-                <span className="hidden sm:inline ml-1 text-base">
-                  Modifica
-                </span>
-              }
-              ariaLabel="Modifica la piantina"
-              variant="primary"
-              className={`px-2.5 sm:px-3 py-2.5 ${ThemeVariants.colors.border.all.brand}`}
-            />
+            {canEditLayout && (
+              <Button
+                iconLeft={<Pencil size={16} />}
+                onClick={startEditing}
+                dimension={ButtonDimensions.auto}
+                label={
+                  <span className="hidden sm:inline ml-1 text-base">
+                    Modifica
+                  </span>
+                }
+                ariaLabel="Modifica la piantina"
+                variant="primary"
+                className={`px-2.5 sm:px-3 py-2.5 ${ThemeVariants.colors.border.all.brand}`}
+              />
+            )}
           </div>
         )}
       </div>

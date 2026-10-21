@@ -1,17 +1,25 @@
 import { Fragment, useId, useState } from "react";
 import {
   Check,
+  ChefHat,
   ChevronDown,
   Clock,
   Moon,
   Palette,
   Pencil,
   ShoppingBag,
+  Smartphone,
   Store,
   Sun,
+  Users,
   UtensilsCrossed,
 } from "lucide-react";
 import { MenuEditor } from "./MenuEditor";
+import { OrderingSettings } from "../../features/restaurant/components/OrderingSettings";
+import { StaffSettings } from "../../features/staff/components/StaffSettings";
+import { KitchenSettings } from "../../features/kitchen/components/KitchenSettings";
+import { kitchenSettingsError } from "../../features/kitchen/utils/kitchenSettings";
+import { useCurrentUser } from "../../hooks/useAuth";
 import { TakeawaySettingsBox } from "../../features/orders/components/TakeawaySettingsBox";
 import {
   useSaveTakeawaySettings,
@@ -361,7 +369,8 @@ const OpeningHoursSetting = ({
   );
 };
 
-//Profilo del ristorante: nome del locale, tema e colore, orari di apertura, asporto e menù.
+//Profilo del ristorante (solo amministratore): nome del locale, tema e colore, orari di apertura,
+//ordini dal sito, asporto, personale e menù. Il personale si salva a parte, subito.
 //Si parte in lettura; Modifica rende modificabili tutte le box e Salva salva insieme le modifiche
 export const Profile = () => {
   const { data: restaurant } = useRestaurant();
@@ -370,6 +379,7 @@ export const Profile = () => {
   const { mutateAsync: saveTakeaway } = useSaveTakeawaySettings();
   const menu = useMenuDraft();
   const showNotification = useNotification();
+  const { data: currentUser } = useCurrentUser();
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -394,13 +404,27 @@ export const Profile = () => {
       : null;
   const takeawayDraftError =
     takeawayDraft && takeawayError(takeawayDraft) ? "Da correggere" : null;
+  const kitchenDirty =
+    restaurantDraft.kitchenDispatch !== undefined ||
+    restaurantDraft.kitchenStations !== undefined;
+  const kitchenError =
+    kitchenDirty &&
+    profile &&
+    kitchenSettingsError(profile.kitchenDispatch, profile.kitchenStations ?? [])
+      ? "Da correggere"
+      : null;
   const menuError = menu.isBusy
     ? "Da confermare"
     : menu.isDirty && menu.dishes.length === 0
       ? "Menù vuoto"
       : null;
   const canSave =
-    !isSaving && !nameError && !hoursError && !takeawayDraftError && !menuError;
+    !isSaving &&
+    !nameError &&
+    !hoursError &&
+    !takeawayDraftError &&
+    !kitchenError &&
+    !menuError;
 
   const cancel = () => {
     setRestaurantDraft({});
@@ -413,11 +437,17 @@ export const Profile = () => {
   const save = async () => {
     const tasks: { label: string; run: () => Promise<unknown> }[] = [];
     if (Object.keys(restaurantDraft).length > 0) {
-      const { name } = restaurantDraft;
-      const changes =
-        name === undefined
-          ? restaurantDraft
-          : { ...restaurantDraft, name: name.trim() };
+      const { name, kitchenStations } = restaurantDraft;
+      const changes = {
+        ...restaurantDraft,
+        ...(name !== undefined && { name: name.trim() }),
+        ...(kitchenStations && {
+          kitchenStations: kitchenStations.map((s) => ({
+            ...s,
+            name: s.name.trim(),
+          })),
+        }),
+      };
       tasks.push({
         label: "profilo",
         run: () => updateRestaurant(changes).then(() => setRestaurantDraft({})),
@@ -548,25 +578,71 @@ export const Profile = () => {
             )}
           </SettingsCard>
 
-          <SettingsCard
-            icon={<ShoppingBag size={15} />}
-            title="Asporto"
-            badges={
-              <EditStatus
-                dirty={takeawayDraft !== null}
-                error={takeawayDraftError}
-              />
-            }
-          >
-            {takeaway && (
-              <TakeawaySettingsBox
-                settings={takeawayDraft ?? takeaway}
-                isEditMode={isEditMode}
-                onChange={setTakeawayDraft}
-              />
-            )}
-          </SettingsCard>
+          <div className="flex flex-col gap-4">
+            <SettingsCard
+              icon={<Smartphone size={15} />}
+              title="Ordini dei clienti"
+              badges={
+                <EditStatus
+                  dirty={
+                    restaurantDraft.orderingMode !== undefined ||
+                    restaurantDraft.paymentTiming !== undefined ||
+                    restaurantDraft.tableOrdering !== undefined ||
+                    restaurantDraft.tableQrCode !== undefined ||
+                    restaurantDraft.serviceMode !== undefined ||
+                    restaurantDraft.pickupCall !== undefined
+                  }
+                />
+              }
+            >
+              {profile && (
+                <OrderingSettings
+                  settings={profile}
+                  isEditMode={isEditMode}
+                  onChange={editRestaurant}
+                />
+              )}
+            </SettingsCard>
+
+            <SettingsCard
+              icon={<ShoppingBag size={15} />}
+              title="Asporto"
+              badges={
+                <EditStatus
+                  dirty={takeawayDraft !== null}
+                  error={takeawayDraftError}
+                />
+              }
+            >
+              {takeaway && (
+                <TakeawaySettingsBox
+                  settings={takeawayDraft ?? takeaway}
+                  isEditMode={isEditMode}
+                  onChange={setTakeawayDraft}
+                />
+              )}
+            </SettingsCard>
+
+            <SettingsCard
+              icon={<ChefHat size={15} />}
+              title="Cucina"
+              badges={<EditStatus dirty={kitchenDirty} error={kitchenError} />}
+            >
+              {profile && (
+                <KitchenSettings
+                  dispatch={!!profile.kitchenDispatch}
+                  stations={profile.kitchenStations ?? []}
+                  isEditMode={isEditMode}
+                  onChange={editRestaurant}
+                />
+              )}
+            </SettingsCard>
+          </div>
         </div>
+
+        <SettingsCard icon={<Users size={15} />} title="Personale">
+          {currentUser && <StaffSettings actor={currentUser} />}
+        </SettingsCard>
 
         <SettingsCard
           icon={<UtensilsCrossed size={15} />}

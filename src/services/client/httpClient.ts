@@ -1,5 +1,5 @@
 import { API_URL } from "../../constant/env";
-import { clearToken, getToken } from "../auth/session";
+import { clearSession, getToken } from "../auth/session";
 
 //Oltre questo tempo la richiesta viene interrotta (reti mobili lente o assenti)
 const TIMEOUT_MS = 15000;
@@ -43,7 +43,7 @@ const request = async <T>(
 
   //Sessione scaduta: si torna al login (ricaricando la pagina si svuota anche la cache dei dati)
   if (res.status === 401 && token) {
-    clearToken();
+    clearSession();
     globalThis.location.replace("/login");
   }
   if (!res.ok) throw new HttpError(res.status);

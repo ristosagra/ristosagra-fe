@@ -52,6 +52,19 @@
   }
 }
 
+/* Stampa di un foglio preparato dall'app (es. QR code dei tavoli): si stampa solo quello */
+@media print {
+  html,
+  body {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+  body:has(> .print-sheet) > #root {
+    display: none;
+  }
+}
+
 /* ── DARK (default) ── */
 :root,
 [data-theme="dark"] {

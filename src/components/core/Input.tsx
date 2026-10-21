@@ -19,6 +19,8 @@ interface InputProps {
   step?: number | "any";
   //nome per i lettori di schermo; se manca si usa il placeholder
   ariaLabel?: string;
+  //id di un <datalist> con i valori suggeriti
+  list?: string;
 }
 
 export const Input = ({
@@ -37,6 +39,7 @@ export const Input = ({
   min,
   step,
   ariaLabel,
+  list,
 }: InputProps) => {
   const variantClass = {
     primary: `${ThemeVariants.colors.border.all.brand} ${ThemeVariants.colors.bg.overlay}`,
@@ -57,6 +60,7 @@ export const Input = ({
       inputMode={inputMode}
       min={min}
       step={step}
+      list={list}
       aria-label={ariaLabel ?? placeholder}
       className={cn(
         "p-2 min-w-0 transition-colors focus:border-[var(--brand)]",

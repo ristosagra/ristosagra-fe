@@ -18,7 +18,12 @@ export default function Menu({
   cartItems,
   setCartItems,
   onGoToCart,
-}: MenuProps & { onGoToCart: () => void }) {
+  canOrder,
+}: MenuProps & {
+  onGoToCart: () => void;
+  //false = solo da guardare (si ordina alla cassa): niente carrello
+  canOrder: boolean;
+}) {
   const { data: dishes, isLoading, isError, refetch } = useMenu();
 
   if (isLoading) return <Loader />;
@@ -99,6 +104,7 @@ export default function Menu({
                     dish={dish}
                     cartItems={cartItems}
                     setCartItems={setCartItems}
+                    canOrder={canOrder}
                   />
                 ))}
               </div>
@@ -108,7 +114,7 @@ export default function Menu({
       </Container>
 
       {/* Riepilogo del carrello sempre a portata di mano */}
-      {cartCount > 0 && (
+      {canOrder && cartCount > 0 && (
         <div
           className={`shrink-0 px-4 py-3 ${ThemeVariants.colors.bg.surface} ${ThemeVariants.colors.border.top.default}`}
         >

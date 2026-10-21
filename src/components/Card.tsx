@@ -19,6 +19,8 @@ interface CardProps {
   cartItems: CartType[];
   setCartItems: React.Dispatch<React.SetStateAction<CartType[]>>;
   isCart?: boolean;
+  //false = menù solo da guardare, senza pulsanti per aggiungere
+  canOrder?: boolean;
 }
 
 export const Card = ({
@@ -26,6 +28,7 @@ export const Card = ({
   cartItems,
   setCartItems,
   isCart = false,
+  canOrder = true,
 }: CardProps) => {
   const [showAllergens, setShowAllergens] = useState(false);
   const cartItem = isCart
@@ -91,11 +94,13 @@ export const Card = ({
           color={ThemeVariants.colors.text.brand}
           noMargin
         />
-        <Counter
-          dish={dish}
-          cartItems={cartItems}
-          setCartItems={setCartItems}
-        />
+        {canOrder && (
+          <Counter
+            dish={dish}
+            cartItems={cartItems}
+            setCartItems={setCartItems}
+          />
+        )}
       </div>
     </CardContainer>
   );

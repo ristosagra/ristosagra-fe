@@ -61,6 +61,8 @@ export const NavItem = ({
       className={cn(
         "flex flex-1 sm:flex-none flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 min-w-0",
         "px-1 sm:px-3 sm:py-2 cursor-pointer font-bold text-[11px] leading-tight sm:text-base",
+        //telefoni stretti (es. 320 px) con molte voci: etichette un filo più piccole, per non tagliarle
+        "max-[359px]:px-0 max-[359px]:text-[10px]",
         "sm:border",
         ThemeVariants.borderRadius.md,
         active

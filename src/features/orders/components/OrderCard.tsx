@@ -1,12 +1,15 @@
 import { useState } from "react";
 import {
   Check,
+  ChefHat,
   ChevronDown,
   Clock,
+  MapPin,
   Minus,
   Pencil,
   Plus,
   Trash2,
+  User,
   X,
 } from "lucide-react";
 import { Label } from "../../../components/core/Label";
@@ -24,6 +27,7 @@ import { calcTotal } from "../../../helpers/calcTotal";
 import type { Dish } from "../../../types/menuOrder";
 import { OrderType, type CartType, type Order } from "../types/orders";
 import { useOrderPayment, useUpdateOrderItems } from "../hook/useOrders";
+import { PrintTicketButton } from "./PrintTicketButton";
 import { useNotification } from "../../../hooks/useNotification";
 import { NotificationType } from "../../../types/notification";
 
@@ -33,15 +37,18 @@ interface OrderCardProps {
   onToggleExpand: () => void;
   //piatti del menù da poter aggiungere (solo per gli ordini modificabili)
   menu?: Dish[];
+  //sola lettura (ordini pagati online): niente interruttore del pagamento né modifiche
+  readOnly?: boolean;
 }
 
-//Ordine nella lista della cassa. Gli asporti mostrano nome e orario di ritiro
-//e si possono modificare aggiungendo o togliendo piatti.
+//Ordine nella lista della cassa, con il nome del cliente e il tavolo (sul posto) o l'orario
+//di ritiro (asporto). Gli asporti si possono modificare aggiungendo o togliendo piatti.
 export const OrderCard = ({
   order,
   expanded,
   onToggleExpand,
   menu = [],
+  readOnly = false,
 }: OrderCardProps) => {
   const { mutate: updatePayment } = useOrderPayment();
   const { mutate: updateItems, isPending: isSaving } = useUpdateOrderItems();
@@ -53,6 +60,15 @@ export const OrderCard = ({
 
   const items = draft ?? order.items;
   const total = draft ? calcTotal(draft) : order.total;
+  //nome e tavolo, oppure nome e orario di ritiro (quelli che ci sono)
+  const details = [
+    order.customerName,
+    isTakeaway
+      ? order.pickupTime && `ritiro ${order.pickupTime}`
+      : order.table && `tavolo ${order.table}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const borderTop = order.paid
     ? ThemeVariants.colors.border.top.brand
     : ThemeVariants.colors.border.top.default;
@@ -116,22 +132,41 @@ export const OrderCard = ({
           className="flex-wrap gap-x-3 gap-y-1 min-w-0"
         >
           <div className="flex flex-col items-start min-w-0">
-            <Label
-              label={`#${order.orderNumber}`}
-              tag={LabelTags.p}
-              size={LabelDimensions.xlarge}
-              weight={LabelWeight.bold}
-              color={
-                order.paid
-                  ? ThemeVariants.colors.text.secondary
-                  : ThemeVariants.colors.text.brand
-              }
-              noMargin
-            />
-            {isTakeaway && (
+            <span className="flex items-center gap-2">
               <Label
-                label={`${order.customerName ?? ""} · ritiro ${order.pickupTime ?? ""}`}
-                iconLeft={<Clock size={14} />}
+                label={`#${order.orderNumber}`}
+                tag={LabelTags.p}
+                size={LabelDimensions.xlarge}
+                weight={LabelWeight.bold}
+                color={
+                  order.paid
+                    ? ThemeVariants.colors.text.secondary
+                    : ThemeVariants.colors.text.brand
+                }
+                noMargin
+              />
+              {/* La cucina l'ha preparato */}
+              {order.readyAt && (
+                <span
+                  className={`flex items-center gap-1 text-xs font-semibold ${ThemeVariants.colors.text.success}`}
+                >
+                  <ChefHat size={14} />
+                  Pronto
+                </span>
+              )}
+            </span>
+            {details && (
+              <Label
+                label={details}
+                iconLeft={
+                  isTakeaway ? (
+                    <Clock size={14} />
+                  ) : order.table ? (
+                    <MapPin size={14} />
+                  ) : (
+                    <User size={14} />
+                  )
+                }
                 tag={LabelTags.p}
                 size={LabelDimensions.small}
                 weight={LabelWeight.semibold}
@@ -157,7 +192,9 @@ export const OrderCard = ({
             <Label
               tag={LabelTags.p}
               size={LabelDimensions.small}
-              label={order.paid ? "Pagato" : "Da pagare"}
+              label={
+                order.paid ? "Pagato" : readOnly ? "Non pagato" : "Da pagare"
+              }
               variant={order.paid ? "success" : "danger"}
               noMargin
             />
@@ -172,11 +209,13 @@ export const OrderCard = ({
             />
           </div>
         </Accordion>
-        <Toggle
-          value={order.paid}
-          onChange={() => updatePayment({ id: order.id, paid: !order.paid })}
-          ariaLabel={`Ordine #${order.orderNumber} pagato`}
-        />
+        {!readOnly && (
+          <Toggle
+            value={order.paid}
+            onChange={() => updatePayment({ id: order.id, paid: !order.paid })}
+            ariaLabel={`Ordine #${order.orderNumber} pagato`}
+          />
+        )}
       </div>
 
       {expanded && (
@@ -307,9 +346,12 @@ export const OrderCard = ({
             />
           </div>
 
-          {isTakeaway && (
-            <div className="flex justify-end gap-2 pt-1">
-              {draft ? (
+          {!readOnly && (
+            <div className="flex flex-wrap justify-end gap-2 pt-1">
+              {!draft && (
+                <PrintTicketButton order={order} className="px-3 py-1.5" />
+              )}
+              {!isTakeaway ? null : draft ? (
                 <>
                   <Button
                     iconLeft={<X size={15} />}

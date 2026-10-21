@@ -19,8 +19,11 @@ import { SVGCanvas } from "./SVGCanvas";
 
 export const CanvasFloorPlan = ({
   savedPlan,
+  canEditLayout,
 }: {
   savedPlan: FloorPlanData | null | undefined;
+  //false = niente modalità Modifica (tavoli e muri), solo prenotazioni
+  canEditLayout: boolean;
 }) => {
   const state = useFloorPlanState(savedPlan);
   const { data: reservations = [] } = useReservations();
@@ -98,6 +101,7 @@ export const CanvasFloorPlan = ({
         tables={tables}
         walls={walls}
         isEditing={isEditing}
+        canEditLayout={canEditLayout}
         zoom={zoom}
         rightPanel={rightPanel}
         setRightPanel={setRightPanel}

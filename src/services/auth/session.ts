@@ -1,7 +1,14 @@
-//Sessione della cassa: unico punto in cui si legge e scrive il token.
+import {
+  STAFF_ROLES,
+  type SessionUser,
+} from "../../features/staff/types/staff";
+
+//Sessione del personale: unico punto in cui si leggono e scrivono il token e chi ha fatto l'accesso.
 //Nota: un token nel localStorage è leggibile da eventuali script iniettati (XSS); quando il backend
 //lo supporterà conviene passare a un cookie httpOnly e togliere il token da qui.
 const TOKEN_KEY = "auth_token";
+//Nome e ruolo, solo per sapere cosa mostrare: i permessi li controlla il backend col token
+const USER_KEY = "auth_user";
 
 export const getToken = (): string | null => {
   try {
@@ -19,9 +26,39 @@ export const setToken = (token: string) => {
   }
 };
 
-export const clearToken = () => {
+const isSessionUser = (v: unknown): v is SessionUser => {
+  if (typeof v !== "object" || v === null) return false;
+  const u = v as Record<string, unknown>;
+  return (
+    typeof u.id === "string" &&
+    typeof u.name === "string" &&
+    STAFF_ROLES.includes(u.role as SessionUser["role"])
+  );
+};
+
+export const getSessionUser = (): SessionUser | null => {
+  try {
+    const parsed: unknown = JSON.parse(
+      localStorage.getItem(USER_KEY) ?? "null",
+    );
+    return isSessionUser(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+export const setSessionUser = (user: SessionUser) => {
+  try {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  } catch {
+    // localStorage non disponibile: si richiede al backend a ogni apertura
+  }
+};
+
+export const clearSession = () => {
   try {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
   } catch {
     // niente da cancellare
   }

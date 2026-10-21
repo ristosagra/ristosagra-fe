@@ -32,6 +32,8 @@ export const Toggle = ({
       onClick={onChange}
       className={cn(
         "relative cursor-pointer w-12 h-6 shrink-0 rounded-full transition-colors",
+        //area da toccare più grande dell'interruttore, comoda sul cellulare
+        "after:absolute after:-inset-2",
         variantClass,
       )}
     >

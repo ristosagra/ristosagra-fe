@@ -18,6 +18,12 @@ const CashierLogin = lazy(() =>
     default: m.CashierLogin,
   })),
 );
+//Schermo "Pronti" del ritiro al banco (per una TV): non serve ai clienti sul telefono
+const PickupScreen = lazy(() =>
+  import("./pages/PickupScreen").then((m) => ({
+    default: m.PickupScreen,
+  })),
+);
 
 function App() {
   useTheme();
@@ -29,6 +35,7 @@ function App() {
         <Routes>
           <Route path="/" element={<CustomerHome />} />
           <Route path="/login" element={<CashierLogin />} />
+          <Route path="/pronti" element={<PickupScreen />} />
           <Route
             path="/dashboard"
             element={

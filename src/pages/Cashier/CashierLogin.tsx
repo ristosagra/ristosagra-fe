@@ -8,7 +8,11 @@ import { Button } from "../../components/core/Button";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
 import { ButtonDimensions } from "../../constant/button";
 import { ThemeVariants } from "../../constant/colors";
-import { hasSession, setToken } from "../../services/auth/session";
+import {
+  hasSession,
+  setSessionUser,
+  setToken,
+} from "../../services/auth/session";
 import { HttpError } from "../../services/client/httpClient";
 
 const WRONG_CREDENTIALS = "Credenziali errate";
@@ -30,9 +34,11 @@ export function CashierLogin() {
     login(
       { username: username.trim(), password },
       {
-        onSuccess: ({ success, token }) => {
+        onSuccess: ({ success, token, user }) => {
           if (success && token) {
             setToken(token);
+            //se il backend non lo manda, l'area del personale lo chiede con /api/auth/me
+            if (user) setSessionUser(user);
             navigate("/dashboard", { replace: true });
           } else {
             setPassword("");
@@ -58,7 +64,7 @@ export function CashierLogin() {
         className="w-full max-w-sm m-auto p-6 sm:p-8 flex flex-col gap-4"
       >
         <Label
-          label="Accesso cassa"
+          label="Accesso personale"
           tag={LabelTags.h1}
           weight={LabelWeight.bold}
           color={ThemeVariants.colors.text.brand}

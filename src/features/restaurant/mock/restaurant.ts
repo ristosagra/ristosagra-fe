@@ -1,9 +1,13 @@
 import { createMockStore, fakeDelay } from "../../../mock/store";
 import { DEFAULT_APPEARANCE } from "../constant/brandColors";
 import { sameEveryDay } from "../../../helpers/openingHours";
-import type {
-  RestaurantProfile,
-  RestaurantProfileUpdate,
+import {
+  OrderingMode,
+  PaymentTiming,
+  PickupCall,
+  ServiceMode,
+  type RestaurantProfile,
+  type RestaurantProfileUpdate,
 } from "../types/restaurant";
 
 //Aperto tutti i giorni a pranzo e a cena
@@ -17,6 +21,19 @@ const DEFAULT_PROFILE: RestaurantProfile = {
   name: "Ristosagra",
   ...DEFAULT_APPEARANCE,
   openingHours: DEFAULT_OPENING_HOURS,
+  orderingMode: OrderingMode.PayAtCashier,
+  paymentTiming: PaymentTiming.AfterMeal,
+  tableOrdering: false,
+  tableQrCode: false,
+  serviceMode: ServiceMode.Table,
+  pickupCall: PickupCall.Screen,
+  //postazioni già pronte per provare lo smistamento (si attiva dal profilo)
+  kitchenDispatch: false,
+  kitchenStations: [
+    { id: "st-primi", name: "Primi" },
+    { id: "st-griglia", name: "Griglia" },
+    { id: "st-bar", name: "Bar" },
+  ],
 };
 
 const restaurantStore = createMockStore<RestaurantProfile>(
@@ -24,8 +41,9 @@ const restaurantStore = createMockStore<RestaurantProfile>(
   () => DEFAULT_PROFILE,
 );
 
-//i profili salvati prima di tema, colore e orari non li hanno: si usano quelli predefiniti
-const readProfile = (): RestaurantProfile => ({
+//i profili salvati prima di alcune impostazioni (tema, orari, ordini...) non le hanno: si usano quelle predefinite.
+//Lo usano anche gli ordini finti, che seguono le regole scelte dal ristorante
+export const readProfile = (): RestaurantProfile => ({
   ...DEFAULT_PROFILE,
   ...restaurantStore.get(),
 });
