@@ -12,7 +12,6 @@ import {
 } from "../../features/orders/hook/useOrders";
 import {
   OrderType,
-  PickupMode,
   type CartType,
   type ConfirmedOrder,
   type NewOrder,
@@ -23,6 +22,10 @@ import {
   safeCheckoutUrl,
 } from "../../features/orders/utils/onlinePayment";
 import { cleanTableName } from "../../features/orders/utils/tableQr";
+import {
+  pickupTimeValid,
+  takeawayToday,
+} from "../../features/orders/utils/takeawayUtils";
 import {
   OrderingMode,
   type RestaurantProfile,
@@ -40,9 +43,8 @@ import { useNotification } from "../../hooks/useNotification";
 import { useCurrentTime } from "../../hooks/useCurrentTime";
 import {
   formatRanges,
-  isWithinRanges,
-  openServices,
-  todayWeekday,
+  isOpenNow,
+  todayHoursLabel,
 } from "../../helpers/openingHours";
 import { NotificationType } from "../../types/notification";
 import { PERSON_NAME_MAX, TABLE_NAME_MAX } from "../../constant/limits";
@@ -94,28 +96,21 @@ export default function Cart({
   const payOnline = restaurant.orderingMode === OrderingMode.PayOnline;
   //tipo sagra: si paga alla cassa prima che la cucina prepari
   const payFirst = isPayFirstAtCashier(restaurant);
-  //L'asporto (se attivo) segue i giorni e i servizi in cui il locale è aperto oggi
-  const services = openServices(restaurant.openingHours[todayWeekday()]);
-  const isFixed = takeaway?.mode === PickupMode.Fixed;
-  //Servizio di oggi in cui si può ancora ritirare: con l'orario unico finché non è passato,
-  //altrimenti fino alla fine della sua fascia. Se non c'è, l'asporto non si può scegliere
-  const service = takeaway?.enabled
-    ? services.find(
-        (s) =>
-          now <= (isFixed ? takeaway.fixedTimes[s] : takeaway.ranges[s].to),
-      )
-    : undefined;
-  const canTakeaway = !!service;
-  const isTakeaway = canTakeaway && type === OrderType.Takeaway;
-  const fixedTime =
-    takeaway?.mode === PickupMode.Fixed && service
-      ? takeaway.fixedTimes[service]
-      : null;
-  //l'orario scelto dal cliente deve stare nelle fasce dei servizi di oggi e non essere già passato
-  const todayRanges = takeaway ? services.map((s) => takeaway.ranges[s]) : [];
-  const customTimeValid =
-    isWithinRanges(todayRanges, customTime) && customTime >= now;
+  //Sul posto si ordina solo mentre il locale è aperto; l'asporto (se attivo) si prenota per
+  //un servizio di oggi non ancora finito (vedi takeawayToday)
+  const dineInOpen = isOpenNow(restaurant.openingHours, now);
+  const slot = takeawayToday(restaurant.openingHours, takeaway, now);
+  const canTakeaway = !!slot;
+  //a locale chiuso resta solo l'asporto
+  const isTakeaway =
+    canTakeaway && (type === OrderType.Takeaway || !dineInOpen);
+  const fixedTime = slot?.fixedTime ?? null;
+  const todayRanges = slot?.ranges ?? [];
+  const customTimeValid = !!slot && pickupTimeValid(slot, customTime, now);
   const pickupTime = fixedTime ?? customTime;
+  //niente da fare: chiuso e senza asporto
+  const closed = !dineInOpen && !canTakeaway;
+  const todayHours = todayHoursLabel(restaurant.openingHours);
 
   //Sul posto il tavolo serve se il ristorante fa ordinare dal tavolo: arriva dal QR code
   //inquadrato oppure lo scrive il cliente
@@ -128,6 +123,7 @@ export default function Cart({
       : cleanTableName(typedTable);
 
   const canConfirm =
+    !closed &&
     !!customerName.trim() &&
     (isTakeaway ? !!fixedTime || customTimeValid : !askTable || !!table);
   const busy = isPending || isLeaving;
@@ -222,6 +218,23 @@ export default function Cart({
             weight={LabelWeight.bold}
             noMargin
           />
+          {(closed || (canTakeaway && !dineInOpen)) && (
+            <Label
+              label={
+                closed
+                  ? todayHours
+                    ? `Ora siamo chiusi: puoi ordinare negli orari di apertura (oggi ${todayHours})`
+                    : "Oggi siamo chiusi: non si possono inviare ordini"
+                  : `Ora siamo chiusi: sul posto si ordina negli orari di apertura${todayHours ? ` (oggi ${todayHours})` : ""}, intanto puoi prenotare l'asporto`
+              }
+              tag={LabelTags.p}
+              size={LabelDimensions.small}
+              weight={LabelWeight.semibold}
+              variant="danger"
+              noMargin
+              additionalClasses="py-2"
+            />
+          )}
           {canTakeaway && (
             <div className="flex gap-2">
               <Button
@@ -230,7 +243,8 @@ export default function Cart({
                 onClick={() => setType(OrderType.DineIn)}
                 dimension={ButtonDimensions.auto}
                 variant={isTakeaway ? "secondary" : "primary"}
-                className="px-3 py-2"
+                disabled={!dineInOpen}
+                className="px-3 py-2 disabled:opacity-40 disabled:cursor-not-allowed"
                 fullWidth
               />
               <Button

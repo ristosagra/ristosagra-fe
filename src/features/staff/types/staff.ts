@@ -6,6 +6,8 @@ export const StaffRole = {
   Deputy: "deputy",
   //crea gli ordini al bancone e incassa
   Cashier: "cashier",
+  //responsabile di sala: tavoli e prenotazioni, ordini ai tavoli, comande della cucina in sola lettura
+  HeadWaiter: "headWaiter",
   //vede i tavoli e prende gli ordini al tavolo
   Waiter: "waiter",
   //riceve tutte le comande e le smista alle postazioni della cucina
@@ -23,6 +25,7 @@ export const STAFF_ROLE_LABELS: Record<StaffRoleConst, string> = {
   [StaffRole.Admin]: "Amministratore",
   [StaffRole.Deputy]: "Vice amministratore",
   [StaffRole.Cashier]: "Cassa",
+  [StaffRole.HeadWaiter]: "Caposala",
   [StaffRole.Waiter]: "Cameriere",
   [StaffRole.Chef]: "Capo cucina",
   [StaffRole.Kitchen]: "Cucina",

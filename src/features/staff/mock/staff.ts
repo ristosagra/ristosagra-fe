@@ -1,83 +1,26 @@
-import { createMockStore, fakeDelay } from "../../../mock/store";
-import { clearSession, getToken } from "../../../services/auth/session";
+import { fakeDelay } from "../../../mock/store";
 import { HttpError } from "../../../services/client/httpClient";
-import {
-  StaffRole,
-  type NewStaffMember,
-  type StaffMember,
-  type StaffUpdate,
+import { readTakeaway } from "../../orders/mock/takeaway";
+import { readProfile } from "../../restaurant/mock/restaurant";
+import type {
+  NewStaffMember,
+  StaffMember,
+  StaffRoleConst,
+  StaffUpdate,
 } from "../types/staff";
 import {
   assignableRoles,
   canEditMember,
   canManageMember,
-  isManager,
+  roleUnavailableReason,
 } from "../utils/permissions";
-
-//Personale finto salvato nel browser. Solo nei dati finti le password sono in chiaro:
-//il backend le deve salvare cifrate (hash) e non restituirle mai
-type MockStaff = NewStaffMember & { id: string };
-
-const seed = (
-  id: string,
-  name: string,
-  role: StaffMember["role"],
-  username: string,
-): MockStaff => ({
-  id,
-  name,
-  role,
-  username,
-  password: username,
-  enabled: true,
-});
-
-//Credenziali di prova, una per ruolo (password = username)
-const SEED: MockStaff[] = [
-  seed("s-admin", "Titolare", StaffRole.Admin, "admin"),
-  seed("s-vice", "Laura", StaffRole.Deputy, "vice"),
-  seed("s-cassa", "Cassa 1", StaffRole.Cashier, "cassa"),
-  seed("s-cameriere", "Marco", StaffRole.Waiter, "cameriere"),
-  seed("s-capocucina", "Chef", StaffRole.Chef, "capocucina"),
-  seed("s-cucina", "Cucina", StaffRole.Kitchen, "cucina"),
-  seed("s-banco", "Banco", StaffRole.Counter, "banco"),
-];
-
-//la versione cambia quando si aggiungono ruoli: si riparte dalle credenziali di prova
-export const staffStore = createMockStore<MockStaff[]>("staff.v3", () => SEED);
-
-//Il token finto contiene l'id della persona
-export const mockToken = (id: string) => `mock-token-${id}`;
-
-const withoutPassword = ({
-  id,
-  name,
-  role,
-  username,
-  enabled,
-}: MockStaff): StaffMember => ({ id, name, role, username, enabled });
-
-//Chi ha fatto l'accesso secondo il token. Se non c'è più o non può accedere, come farebbe
-//il backend con un 401 si chiude la sessione e si torna al login
-export const currentMockUser = (): StaffMember => {
-  const token = getToken();
-  const member = staffStore
-    .get()
-    .find((m) => token === mockToken(m.id) && m.enabled);
-  if (!member) {
-    clearSession();
-    globalThis.location.replace("/login");
-    throw new HttpError(401);
-  }
-  return withoutPassword(member);
-};
-
-//Solo titolare e vice gestiscono il personale
-const requireManager = () => {
-  const actor = currentMockUser();
-  if (!isManager(actor.role)) throw new HttpError(403);
-  return actor;
-};
+import { passwordError, usernameError } from "../utils/staffForm";
+import {
+  requireManager,
+  staffStore,
+  withoutPassword,
+  type MockStaff,
+} from "./auth";
 
 const sameUsername = (a: string, b: string) =>
   a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -91,7 +34,26 @@ const checkUsername = (member: MockStaff, all: MockStaff[]) => {
     throw new HttpError(409);
 };
 
-//Regole che il backend deve applicare al personale (vedi API.md)
+//Un ruolo che con le impostazioni del ristorante non serve non si dà (chi lo ha già lo tiene)
+const checkRoleInUse = (role: StaffRoleConst) => {
+  if (roleUnavailableReason(role, readProfile(), readTakeaway()))
+    throw new HttpError(400);
+};
+
+//Campi validi: nome, username e password (se c'è) entro i limiti
+const checkFields = (member: Partial<NewStaffMember>, isNew: boolean) => {
+  if (member.name !== undefined && !member.name.trim())
+    throw new HttpError(400);
+  if (member.username !== undefined && usernameError(member.username))
+    throw new HttpError(400);
+  if (
+    (isNew || member.password !== undefined) &&
+    passwordError(member.password ?? "", true)
+  )
+    throw new HttpError(400);
+};
+
+//Regole che il backend deve applicare al personale (vedi API.md), per tutti, titolare compreso
 export const fakeStaffApi = {
   getStaff: async (): Promise<StaffMember[]> => {
     await fakeDelay(300);
@@ -105,6 +67,8 @@ export const fakeStaffApi = {
     //un solo titolare; i vice li nomina solo lui
     if (!assignableRoles(actor.role).includes(member.role))
       throw new HttpError(403);
+    checkRoleInUse(member.role);
+    checkFields(member, true);
     const all = staffStore.get();
     const created: MockStaff = { ...member, id: `s-${Date.now()}` };
     checkUsername(created, all);
@@ -124,8 +88,10 @@ export const fakeStaffApi = {
     const member = withoutPassword(current);
     if (!canEditMember(actor, member)) throw new HttpError(403);
     //ruolo e accesso: mai al titolare né a se stessi, e solo verso ruoli che si possono dare
+    const changesRole =
+      changes.role !== undefined && changes.role !== current.role;
     const changesAccess =
-      (changes.role !== undefined && changes.role !== current.role) ||
+      changesRole ||
       (changes.enabled !== undefined && changes.enabled !== current.enabled);
     if (
       changesAccess &&
@@ -133,6 +99,8 @@ export const fakeStaffApi = {
         !assignableRoles(actor.role).includes(changes.role ?? current.role))
     )
       throw new HttpError(403);
+    if (changesRole && changes.role) checkRoleInUse(changes.role);
+    checkFields(changes, false);
     const updated = { ...current, ...changes };
     checkUsername(updated, all);
     staffStore.set(all.map((m) => (m.id === id ? updated : m)));

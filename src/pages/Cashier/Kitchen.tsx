@@ -1,8 +1,11 @@
+import { Spinner } from "../../components/core/Spinner";
 import { useState } from "react";
-import { ChevronDown, LoaderCircle } from "lucide-react";
+import { CollapsibleSection } from "../../components/core/CollapsibleSection";
+import { Input } from "../../components/core/Input";
 import { Label } from "../../components/core/Label";
 import { useOrders } from "../../features/orders/hook/useOrders";
 import type { Order } from "../../features/orders/types/orders";
+import { matchesSearch } from "../../features/orders/utils/orderPlace";
 import { useRestaurant } from "../../features/restaurant/hook/useRestaurant";
 import { usesKitchenDispatch } from "../../features/restaurant/utils/ordering";
 import { KitchenOrderCard } from "../../features/kitchen/components/KitchenOrderCard";
@@ -16,7 +19,10 @@ import {
   stationBacklog,
   unsentLines,
 } from "../../features/kitchen/utils/kitchen";
-import { canDispatch } from "../../features/staff/utils/permissions";
+import {
+  canDispatch,
+  kitchenReadOnly,
+} from "../../features/staff/utils/permissions";
 import type { StaffRoleConst } from "../../features/staff/types/staff";
 import { ThemeVariants } from "../../constant/colors";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
@@ -37,11 +43,12 @@ const isString = (v: unknown): v is string => typeof v === "string";
 const SimpleKitchen = ({
   orders,
   queuedAt,
+  readOnly,
 }: {
   orders: Order[];
   queuedAt: (o: Order) => string;
+  readOnly: boolean;
 }) => {
-  const [showReady, setShowReady] = useState(false);
   const toPrepare = orders.filter((o) => !o.readyAt);
   const ready = orders
     .filter((o) => o.readyAt)
@@ -58,37 +65,29 @@ const SimpleKitchen = ({
       ) : (
         <div className={GRID}>
           {toPrepare.map((o) => (
-            <KitchenOrderCard key={o.id} order={o} queuedAt={queuedAt(o)} />
+            <KitchenOrderCard
+              key={o.id}
+              order={o}
+              queuedAt={queuedAt(o)}
+              readOnly={readOnly}
+            />
           ))}
         </div>
       )}
 
       {ready.length > 0 && (
-        <section>
-          <button
-            type="button"
-            onClick={() => setShowReady((s) => !s)}
-            aria-expanded={showReady}
-            className="flex items-center gap-2 py-2 font-bold cursor-pointer"
-          >
-            Pronte ({ready.length})
-            <ChevronDown
-              size={18}
-              aria-hidden
-              className={cn(
-                "transition-transform duration-300",
-                showReady && "rotate-180",
-              )}
-            />
-          </button>
-          {showReady && (
-            <div className={cn(GRID, "mt-2")}>
-              {ready.map((o) => (
-                <KitchenOrderCard key={o.id} order={o} queuedAt={queuedAt(o)} />
-              ))}
-            </div>
-          )}
-        </section>
+        <CollapsibleSection title={`Pronte (${ready.length})`}>
+          <div className={GRID}>
+            {ready.map((o) => (
+              <KitchenOrderCard
+                key={o.id}
+                order={o}
+                queuedAt={queuedAt(o)}
+                readOnly={readOnly}
+              />
+            ))}
+          </div>
+        </CollapsibleSection>
       )}
     </div>
   );
@@ -96,10 +95,13 @@ const SimpleKitchen = ({
 
 //Cucina. Senza smistamento tutti vedono tutte le comande. Con lo smistamento il capo cucina
 //(e titolare/vice) le manda alle postazioni dalla scheda Smistamento; ogni postazione ha la sua
-//scheda, scelta una volta sul dispositivo. Se si paga prima, solo gli ordini pagati
+//scheda, scelta una volta sul dispositivo. Se si paga prima, solo gli ordini pagati. Il caposala
+//vede tutto (Smistamento compreso) in sola lettura. Si cerca per nome, tavolo o numero
 export const Kitchen = ({ role }: { role: StaffRoleConst }) => {
   const { data: orders = [], isLoading } = useOrders(KITCHEN_REFRESH_MS);
   const { data: restaurant } = useRestaurant();
+  const [search, setSearch] = useState("");
+  const readOnly = kitchenReadOnly(role);
   //scheda scelta su questo dispositivo (es. il tablet della griglia)
   const [savedTab, setTab] = usePersistentState<string>(
     "ristosagra.kitchenTab",
@@ -111,7 +113,7 @@ export const Kitchen = ({ role }: { role: StaffRoleConst }) => {
   const dispatch = usesKitchenDispatch(restaurant);
   const stations = restaurant?.kitchenStations ?? [];
   const tabs = [
-    ...(canDispatch(role)
+    ...(canDispatch(role) || readOnly
       ? [
           {
             id: DISPATCH_TAB,
@@ -160,7 +162,16 @@ export const Kitchen = ({ role }: { role: StaffRoleConst }) => {
               : waiting === 1
                 ? "1 comanda da preparare"
                 : `${waiting} comande da preparare`}
+            {readOnly && " · sola lettura"}
           </p>
+          <Input
+            type="search"
+            placeholder="Cerca nome, tavolo o numero..."
+            value={search}
+            setValue={setSearch}
+            className="w-full sm:w-64"
+            ariaLabel="Cerca per nome, tavolo o numero"
+          />
         </div>
 
         {/* Con lo smistamento: Smistamento e una scheda per postazione, col numero in coda */}
@@ -206,27 +217,30 @@ export const Kitchen = ({ role }: { role: StaffRoleConst }) => {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-10">
-          <LoaderCircle
-            size={32}
-            aria-label="Caricamento"
-            className={`animate-spin ${ThemeVariants.colors.text.brand}`}
-          />
-        </div>
+        <Spinner />
       ) : !dispatch ? (
         <SimpleKitchen
-          orders={visible}
+          orders={visible.filter((o) => matchesSearch(o, search))}
           queuedAt={(o) => queueTime(o, restaurant)}
+          readOnly={readOnly}
         />
       ) : tab === DISPATCH_TAB ? (
         <DispatchBoard
           orders={visible}
           stations={stations}
           profile={restaurant}
+          search={search}
+          readOnly={readOnly}
         />
       ) : (
         tab && (
-          <StationBoard orders={visible} stationId={tab} profile={restaurant} />
+          <StationBoard
+            orders={visible}
+            stationId={tab}
+            profile={restaurant}
+            search={search}
+            readOnly={readOnly}
+          />
         )
       )}
     </div>

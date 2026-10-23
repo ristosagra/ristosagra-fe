@@ -8,14 +8,17 @@ import type { Order } from "../../orders/types/orders";
 import { OrderHeader, TicketLines } from "./TicketParts";
 import { ticketCardClass } from "../utils/ticketStyle";
 
-//Cucina senza smistamento: l'ordine intero, segnato pronto (o rimesso da preparare) con un tocco
+//Cucina senza smistamento: l'ordine intero, segnato pronto (o rimesso da preparare) con un tocco.
+//In sola lettura (caposala) senza pulsante
 export const KitchenOrderCard = ({
   order,
   queuedAt,
+  readOnly = false,
 }: {
   order: Order;
   //da quando è in coda (invio o pagamento)
   queuedAt: string;
+  readOnly?: boolean;
 }) => {
   const { mutate: setReady, isPending } = useOrderReady();
   const showNotification = useNotification();
@@ -37,21 +40,23 @@ export const KitchenOrderCard = ({
     <article className={ticketCardClass(isReady)}>
       <OrderHeader
         order={order}
-        time={order.readyAt ?? queuedAt}
-        timeTitle={isReady ? "Pronto alle" : "In coda dalle"}
+        queuedAt={queuedAt}
+        readyAt={order.readyAt}
         dimmed={isReady}
       />
       <TicketLines order={order} lines={order.items.map((_, i) => i)} />
-      <Button
-        iconLeft={isReady ? <Undo2 size={18} /> : <Check size={18} />}
-        label={isReady ? "Rimetti da preparare" : "Pronto"}
-        onClick={toggle}
-        dimension={ButtonDimensions.auto}
-        variant={isReady ? "secondary" : "primary"}
-        disabled={isPending}
-        fullWidth
-        className="h-12 mt-auto disabled:opacity-50 disabled:cursor-wait"
-      />
+      {!readOnly && (
+        <Button
+          iconLeft={isReady ? <Undo2 size={18} /> : <Check size={18} />}
+          label={isReady ? "Rimetti da preparare" : "Pronto"}
+          onClick={toggle}
+          dimension={ButtonDimensions.auto}
+          variant={isReady ? "secondary" : "primary"}
+          disabled={isPending}
+          fullWidth
+          className="h-12 mt-auto disabled:opacity-50 disabled:cursor-wait"
+        />
+      )}
     </article>
   );
 };

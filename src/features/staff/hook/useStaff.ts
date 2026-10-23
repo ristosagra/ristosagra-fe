@@ -14,15 +14,17 @@ export const useStaff = () =>
     queryFn: async () => (await loadApi()).getStaff(),
   });
 
-//Dopo ogni modifica si rilegge l'elenco (e chi ha fatto l'accesso, se ha cambiato il proprio nome)
+//Dopo ogni modifica si rilegge l'elenco (e chi ha fatto l'accesso, se ha cambiato il proprio
+//nome): la modifica finisce quando l'elenco nuovo è arrivato, così la bozza si toglie senza salti
 const useStaffMutation = <T>(run: (input: T) => Promise<unknown>) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: run,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["staff"] });
-      queryClient.invalidateQueries({ queryKey: ["me"] });
-    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["staff"] }),
+        queryClient.invalidateQueries({ queryKey: ["me"] }),
+      ]),
   });
 };
 

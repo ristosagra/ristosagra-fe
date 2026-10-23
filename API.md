@@ -39,7 +39,7 @@ Se backend e frontend stanno su domini diversi, il backend deve consentire l'ori
 
 ## Riepilogo endpoint
 
-**Pubblica** = usata dai clienti senza login. Le altre richiedono il token e sono ammesse solo per i [ruoli](#personale-e-ruoli) indicati: **gestori** = `admin` (titolare) e `deputy` (vice amministratore), `cashier` (cassa), `waiter` (cameriere), `chef` (capo cucina), `kitchen` (cucina), `counter` (banco ritiro); **personale** = tutti i ruoli.
+**Pubblica** = usata dai clienti senza login. Le altre richiedono il token e sono ammesse solo per i [ruoli](#personale-e-ruoli) indicati: **gestori** = `admin` (titolare) e `deputy` (vice amministratore), `cashier` (cassa), `headWaiter` (caposala), `waiter` (cameriere), `chef` (capo cucina), `kitchen` (cucina), `counter` (banco ritiro); **personale** = tutti i ruoli.
 
 | Metodo | Percorso | Accesso | Sezione |
 |---|---|---|---|
@@ -52,11 +52,11 @@ Se backend e frontend stanno su domini diversi, il backend deve consentire l'ori
 | GET | `/api/restaurant` | pubblica | [Ristorante](#ristorante) |
 | PATCH | `/api/restaurant` | gestori | [Ristorante](#ristorante) |
 | GET | `/api/menu` | pubblica | [Menù](#menù) |
-| POST | `/api/menu` | gestori | [Menù](#menù) |
-| PATCH | `/api/menu` | gestori | [Menù](#menù) |
+| GET | `/api/menus` | gestori | [Menù](#menù) |
+| PATCH | `/api/menus` | gestori | [Menù](#menù) |
 | POST | `/api/order` | pubblica | [Ordini](#ordini) |
-| POST | `/api/orders` | gestori, cashier, waiter | [Ordini](#ordini) |
-| GET | `/api/orders` | gestori, cashier, chef, kitchen, counter | [Ordini](#ordini) |
+| POST | `/api/orders` | gestori, cashier, headWaiter, waiter | [Ordini](#ordini) |
+| GET | `/api/orders` | gestori, cashier, headWaiter, chef, kitchen, counter | [Ordini](#ordini) |
 | PATCH | `/api/orders/:id/payment` | gestori, cashier | [Ordini](#ordini) |
 | PATCH | `/api/orders/:id/items` | gestori, cashier | [Ordini](#ordini) |
 | PATCH | `/api/orders/:id/ready` | gestori, chef, kitchen | [Ordini](#ordini) |
@@ -69,11 +69,11 @@ Se backend e frontend stanno su domini diversi, il backend deve consentire l'ori
 | PATCH | `/api/takeaway/settings` | gestori | [Asporto](#impostazioni-asporto) |
 | GET | `/api/reservations/availability` | pubblica | [Prenotazioni](#prenotazioni) |
 | POST | `/api/reservations` | pubblica | [Prenotazioni](#prenotazioni) |
-| GET | `/api/reservations` | gestori, waiter | [Prenotazioni](#prenotazioni) |
-| PATCH | `/api/reservations/:id` | gestori, waiter | [Prenotazioni](#prenotazioni) |
-| DELETE | `/api/reservations/:id` | gestori, waiter | [Prenotazioni](#prenotazioni) |
-| GET | `/api/floor-plan` | gestori, cashier, waiter | [Piantina](#piantina) |
-| POST | `/api/floor-plan` | gestori, waiter | [Piantina](#piantina) |
+| GET | `/api/reservations` | gestori, headWaiter, waiter | [Prenotazioni](#prenotazioni) |
+| PATCH | `/api/reservations/:id` | gestori, headWaiter, waiter | [Prenotazioni](#prenotazioni) |
+| DELETE | `/api/reservations/:id` | gestori, headWaiter, waiter | [Prenotazioni](#prenotazioni) |
+| GET | `/api/floor-plan` | gestori, cashier, headWaiter, waiter | [Piantina](#piantina) |
+| POST | `/api/floor-plan` | gestori, headWaiter, waiter | [Piantina](#piantina) |
 
 > ⚠️ L'ordine inviato dal cliente usa `/api/order` (singolare, pubblica); `POST /api/orders` (plurale) è l'ordine creato dal personale, con il token. Se si cambiano i percorsi, aggiornare anche `src/features/orders/api/orders.ts`.
 
@@ -125,12 +125,14 @@ Il titolare (`admin`) decide chi lavora nel ristorante, con quale ruolo, usernam
 | Amministratore | `admin` | Profilo (impostazioni, personale, menù), Piantina, Nuovo ordine, Ordini, Cucina | Uno solo, sempre attivo |
 | Vice amministratore | `deputy` | Come il titolare | Nominato ed eliminabile solo dal titolare |
 | Cassa | `cashier` | Nuovo ordine, Ordini (lista e conti per tavolo) | Crea ordini al bancone e incassa |
+| Caposala | `headWaiter` | Piantina (prenotazioni ai tavoli), Nuovo ordine, Cucina in sola lettura (anche lo smistamento) | Come il cameriere per gli ordini; in cucina vede cosa è pronto e cosa manca ma non segna né smista nulla (niente `PATCH` della cucina) |
 | Cameriere | `waiter` | Piantina (prenotazioni ai tavoli), Nuovo ordine | Ordini solo sul posto, con tavolo obbligatorio, da pagare alla cassa (`paid: false`); solo col pagamento a fine pasto |
-| Capo cucina | `chef` | Cucina (smistamento e postazioni) | Manda le comande alle postazioni |
+| Capo cucina | `chef` | Cucina (smistamento e postazioni) | Manda le comande alle postazioni; serve solo con lo smistamento (`kitchenDispatch`) |
 | Cucina | `kitchen` | Cucina (le postazioni) | Prepara le comande e le segna pronte |
-| Banco ritiro | `counter` | Ritiro | Col ritiro al banco: chiama i numeri pronti e consegna gli ordini (la pagina Ritiro la vedono anche gestori, cassa e capo cucina) |
+| Banco ritiro | `counter` | Ritiro | Col ritiro al banco: chiama i numeri pronti e consegna gli ordini (la pagina Ritiro la vedono anche gestori, cassa e capo cucina). Se l'ordine si porta al tavolo e l'asporto è attivo diventa **Banco ritiro asporto**: stesso ruolo e stesse credenziali, consegna solo l'asporto (vedi [Ritiro al banco](#ritiro-al-banco)) |
 
-- Solo i gestori modificano tavoli e muri della piantina; i camerieri gestiscono le prenotazioni ai tavoli.
+- Un ruolo che con le impostazioni del ristorante non serve (capo cucina senza smistamento, banco ritiro senza ritiro al banco né asporto) il frontend non lo propone a chi crea o modifica una persona; chi lo ha già lo tiene, ma non ha pagine. Il backend lo rifiuta (`400`), anche per il titolare.
+- Solo i gestori modificano tavoli e muri della piantina; caposala e camerieri gestiscono le prenotazioni ai tavoli.
 - Con `orderingMode: "payOnline"` nessuno crea ordini (Nuovo ordine nascosto) e gli Ordini sono in sola lettura.
 - Pagando prima di mangiare (`paymentTiming: "beforeMeal"`, tipo sagra) i camerieri non prendono ordini e la cassa non ha i conti per tavolo (vedi [Modalità di ordine](#modalità-di-ordine)).
 - **Il frontend nasconde soltanto**: il backend deve controllare il ruolo su ogni chiamata (colonna **Accesso** del [riepilogo](#riepilogo-endpoint)) e rispondere `403` agli altri.
@@ -168,7 +170,7 @@ Regole (simulate dai dati finti in `src/features/staff/mock/staff.ts`):
 - `name` 1–60 caratteri; `role` tra quelli ammessi.
 - Un solo `admin`: non si crea un secondo titolare, e il titolare non si può eliminare, bloccare (`enabled: false`) o cambiare di ruolo (`403`).
 - Il **titolare** gestisce tutti e lui solo dà o toglie il ruolo `deputy` ed elimina i vice.
-- Un **vice** gestisce `cashier`, `waiter`, `chef` e `kitchen` (creare, modificare, bloccare, eliminare, assegnare uno di questi ruoli); di se stesso può cambiare solo nome, username e password; non può toccare il titolare né gli altri vice (`403`).
+- Un **vice** gestisce `cashier`, `headWaiter`, `waiter`, `chef`, `kitchen` e `counter` (creare, modificare, bloccare, eliminare, assegnare uno di questi ruoli); di se stesso può cambiare solo nome, username e password; non può toccare il titolare né gli altri vice (`403`).
 - Nessuno cambia il proprio ruolo o il proprio accesso, né elimina se stesso.
 - Cambiando password, ruolo o `enabled` conviene invalidare le sessioni aperte di quella persona.
 - `id` stringa, codificato con `encodeURIComponent` nei percorsi.
@@ -187,7 +189,7 @@ Risposta `200`: [`RestaurantProfile`](#restaurantprofile)
 {
   "name": "Sagra del Borgo",
   "theme": "dark",
-  "brandColor": "orange",
+  "brandColor": "#e8712a",
   "openingHours": {
     "mon": {
       "open": true,
@@ -199,7 +201,6 @@ Risposta `200`: [`RestaurantProfile`](#restaurantprofile)
   },
   "orderingMode": "payAtCashier",
   "paymentTiming": "afterMeal",
-  "tableOrdering": true,
   "tableQrCode": true,
   "serviceMode": "counter",
   "pickupCall": "screen",
@@ -212,13 +213,13 @@ Risposta `200`: [`RestaurantProfile`](#restaurantprofile)
 ```
 
 - `openingHours` (vedi [`WeeklyHours`](#weeklyhours)): il frontend accetta prenotazioni solo per oggi, negli orari di apertura di oggi e per un orario non ancora passato. Gli stessi giorni e servizi valgono per l'[asporto](#impostazioni-asporto).
-- `orderingMode`, `paymentTiming`, `tableOrdering`, `tableQrCode`: cosa possono fare i clienti dal sito e quando pagano, vedi [Modalità di ordine](#modalità-di-ordine).
+- `orderingMode`, `paymentTiming`, `tableQrCode`: cosa possono fare i clienti dal sito e quando pagano, vedi [Modalità di ordine](#modalità-di-ordine).
 - `serviceMode`, `pickupCall`: l'ordine si porta al tavolo o si ritira al banco, vedi [Ritiro al banco](#ritiro-al-banco).
 - `kitchenDispatch`, `kitchenStations`: come lavora la cucina, vedi [Cucina e smistamento](#cucina-e-smistamento).
 
 ### `PATCH /api/restaurant` — gestori
 
-Richiesta: solo i campi modificati (uno o più di `name`, `theme`, `brandColor`, `openingHours`, `orderingMode`, `paymentTiming`, `tableOrdering`, `tableQrCode`, `serviceMode`, `pickupCall`, `kitchenDispatch`, `kitchenStations`). `kitchenStations` si invia sempre completo; con `kitchenDispatch: true` serve almeno una postazione, con nomi (max 30) presenti e diversi; gli `id` delle postazioni nuove li genera il frontend (`"st-<timestamp>"`) e il backend li conserva. `openingHours` si invia sempre completo (tutti e 7 i giorni).
+Richiesta: solo i campi modificati (uno o più di `name`, `theme`, `brandColor`, `openingHours`, `orderingMode`, `paymentTiming`, `tableQrCode`, `serviceMode`, `pickupCall`, `kitchenDispatch`, `kitchenStations`). `kitchenStations` si invia sempre completo; con `kitchenDispatch: true` serve almeno una postazione, con nomi (max 30) presenti e diversi; gli `id` delle postazioni nuove li genera il frontend (`"st-<timestamp>"`) e il backend li conserva. `openingHours` si invia sempre completo (tutti e 7 i giorni). `brandColor` è un colore esadecimale `"#rrggbb"` (qualunque: il profilo ha una tavolozza e il selettore del dispositivo); il frontend accetta ancora i vecchi nomi.
 
 ```json
 { "theme": "light" }
@@ -226,29 +227,32 @@ Richiesta: solo i campi modificati (uno o più di `name`, `theme`, `brandColor`,
 
 Risposta `200`: il [`RestaurantProfile`](#restaurantprofile) completo aggiornato (il frontend lo usa al posto di quello in memoria).
 
+- Il profilo dopo la modifica deve restare valido (nome 1–40, valori ammessi, orari validi per tutti i 7 giorni, postazioni valide con lo smistamento): altrimenti `400`.
+
 ---
 
 ## Menù
 
+Il ristorante può avere **più menù**, ognuno usato in alcuni giorni della settimana (es. "Settimana" dal lunedì al venerdì e "Weekend" il sabato e la domenica). Un giorno sta in un solo menù. Il menù che ha il giorno di oggi è quello **attivo**: lo vedono i clienti e la cassa. Un menù senza giorni resta salvato ma non si usa.
+
 ### `GET /api/menu` — pubblica
 
-Risposta `200`: [`Dish[]`](#dish). Array vuoto se il menù non è ancora configurato.
+Risposta `200`: [`Dish[]`](#dish) del menù attivo oggi. Array vuoto se nessun menù ha il giorno di oggi (o non ci sono menù).
 
+- "Oggi" è il giorno dell'ora locale del ristorante, come per gli [orari](#weeklyhours).
 - **L'ordine dell'array conta**: le categorie compaiono nell'ordine del loro primo piatto e i piatti nell'ordine dell'array. Il backend deve conservarlo.
 
-### `POST /api/menu` — gestori
+### `GET /api/menus` — gestori
 
-Usata quando il menù è vuoto (primo salvataggio). Richiesta: `Dish[]` con **tutti** i piatti.
+Risposta `200`: [`RestaurantMenu[]`](#restaurantmenu), tutti i menù con i loro giorni e piatti, nell'ordine in cui li mostra il profilo. Array vuoto se non ce ne sono.
 
-### `PATCH /api/menu` — gestori
+### `PATCH /api/menus` — gestori
 
-Usata quando il menù esiste già. Richiesta: `Dish[]` con il **menù completo** (sostituisce quello precedente: i piatti assenti sono stati eliminati).
+Richiesta: `RestaurantMenu[]` con l'**elenco completo** dei menù (sostituisce quello salvato: menù e piatti assenti sono stati eliminati). Risposta `200`: `RestaurantMenu[]` salvati, che il frontend usa al posto di quelli in memoria.
 
-Per entrambe:
-
-- Risposta `200`: `Dish[]` salvati, che il frontend usa come nuovo menù.
-- **I piatti nuovi hanno `id` negativo** (`-1`, `-2`, …), provvisorio: il backend deve assegnare l'id definitivo e restituirlo nella risposta.
-- Validare lato server: `name` 1–80 caratteri, `description` max 300, `category` max 40, `price` tra 0 e 10000 (centesimi), `allergens` solo valori dell'[elenco ufficiale](#allergeni).
+- I menù nuovi hanno un `id` generato dal frontend (`"m-<timestamp>"`), che il backend conserva.
+- **I piatti nuovi hanno `id` negativo** (`-1`, `-2`, …), provvisorio: il backend assegna l'id definitivo, **unico tra tutti i menù** (gli ordini indicano i piatti con `dish.id`), e lo restituisce. Duplicando un menù i suoi piatti arrivano come nuovi.
+- Validare lato server (regole simulate in `src/features/menu/mock/menu.ts`), altrimenti `400`: almeno un menù; `name` 1–40 caratteri, diverso da quello degli altri menù (senza distinguere maiuscole); almeno un piatto per menù; `days` solo `"mon"`…`"sun"` e ogni giorno al massimo in un menù. Piatti: `name` 1–80 caratteri, `description` max 300, `category` max 40, `price` tra 0 e 10000, `allergens` solo valori dell'[elenco ufficiale](#allergeni).
 
 ---
 
@@ -260,21 +264,24 @@ Il ristorante sceglie nel profilo ([`RestaurantProfile`](#restaurantprofile)) co
 
 | `orderingMode` | Clienti | Cassa |
 |---|---|---|
-| `"menuOnly"` | Vedono solo il menù, senza carrello | Crea gli ordini con [`POST /api/orders`](#post-apiorders--gestori-cashier-waiter) e incassa |
+| `"menuOnly"` | Vedono solo il menù, senza carrello | Crea gli ordini con [`POST /api/orders`](#post-apiorders--gestori-cashier-headwaiter-waiter): gli ordini nascono già pagati (`paid: true`); a fine pasto quelli di cameriere e caposala si incassano dai **Conti** |
 | `"payAtCashier"` | Ordinano dal sito ([`POST /api/order`](#post-apiorder--pubblica)) e pagano alla cassa | Segna gli ordini come pagati; può anche crearli |
-| `"payOnline"` | Ordinano e pagano dal sito ([pagamento online](#pagamento-online)) | Vede gli ordini in **sola lettura** (niente pagamento, modifiche o nuovi ordini) |
+| `"payOnline"` | Ordinano e pagano dal sito ([pagamento online](#pagamento-online)) | Vede in **sola lettura** solo gli ordini pagati (niente pagamento, modifiche o nuovi ordini) |
 
-Quando si paga alla cassa (`menuOnly` e `payAtCashier`) conta anche `paymentTiming`:
+Il pagato / da pagare di ogni ordine (interruttore ed etichetta nella lista Ordini, scelta "Pagato" in Nuovo ordine) c'è solo con `payAtCashier`: con `payOnline` gli ordini sono già pagati, con `menuOnly` la cassa crea l'ordine quando il cliente paga.
+
+Quando si paga alla cassa (`menuOnly` e `payAtCashier`) conta anche `paymentTiming`, tranne col ritiro al banco (`serviceMode: "counter"`), dove si paga **sempre prima di mangiare** (vale come `"beforeMeal"`, qualunque sia il valore salvato):
 
 | `paymentTiming` | Come funziona | Cucina | Cassa |
 |---|---|---|---|
 | `"afterMeal"` (tipo ristorante) | Si ordina al tavolo (cameriere o telefono) e si paga a fine pasto | Vede subito ogni ordine | Vista **Conti** per tavolo |
 | `"beforeMeal"` (tipo sagra) | Si ordina dal telefono o alla cassa e si paga subito, poi ci si siede | Vede l'ordine **solo dopo il pagamento**, in ordine di pagamento (`paidAt`) | Stampa il **bigliettino** col numero da dare al cliente; niente conti per tavolo |
 
-- Tipo sagra il cliente non sa ancora dove si siederà: il sito non chiede il tavolo e i camerieri non prendono ordini. Il numero d'ordine (bigliettino e telefono del cliente) è quello con cui gli si porta l'ordine o lo si chiama.
+- Tipo sagra (o col ritiro al banco) il cliente non sa ancora dove si siederà: il sito non chiede il tavolo, caposala e camerieri non prendono ordini e quelli della cassa non hanno né tavolo né nome. Il numero d'ordine (bigliettino e telefono del cliente) è quello con cui gli si porta l'ordine o lo si chiama.
 - Anche con `payOnline` la cucina vede solo gli ordini pagati.
-- `tableOrdering: true` (solo con `payOnline` o con `payAtCashier` a fine pasto): il cliente che mangia sul posto ordina seduto e l'ordine riporta il suo tavolo (`table`, obbligatorio). Con `false` gli ordini sul posto non hanno tavolo.
-- `tableQrCode: true` (solo con `tableOrdering`): il tavolo non lo scrive il cliente, arriva dal QR code sul tavolo. L'amministratore stampa i QR code dal profilo, uno per tavolo della [piantina](#piantina) che ha un nome; ognuno apre il sito su `/?tavolo=<nome del tavolo>` (es. `/?tavolo=T-3`, codificato come parametro URL). Il frontend lo ricorda finché la scheda è aperta e lo toglie dall'indirizzo. Senza QR inquadrato il cliente non può ordinare sul posto (può ancora fare asporto).
+- Il cliente che mangia sul posto indica il tavolo (`table`, obbligatorio) quando ordina dal sito già seduto: con `payOnline`, oppure con `payAtCashier` a fine pasto e l'ordine portato al tavolo (chi serve deve sapere dove portarlo). Se si paga alla cassa prima di mangiare (tipo sagra o ritiro al banco) e con `menuOnly` gli ordini dei clienti sul posto non hanno tavolo.
+- **Orari di apertura**: sul posto si ordina (clienti e personale, titolare compreso) solo mentre il locale è aperto, cioè dentro un servizio aperto di oggi ([`openingHours`](#weeklyhours)), altrimenti `400`. L'asporto si può prenotare anche prima, per un servizio di oggi non ancora finito.
+- `tableQrCode: true` (solo quando l'ordine riporta il tavolo, vedi sopra): il tavolo non lo scrive il cliente, arriva dal QR code sul tavolo. L'amministratore stampa i QR code dal profilo, uno per tavolo della [piantina](#piantina) che ha un nome; ognuno apre il sito su `/?tavolo=<nome del tavolo>` (es. `/?tavolo=T-3`, codificato come parametro URL). Il frontend lo ricorda finché la scheda è aperta e lo toglie dall'indirizzo. Senza QR inquadrato il cliente non può ordinare sul posto (può ancora fare asporto).
 - Il QR code si può falsificare: se serve, il backend può verificare che `table` sia il nome di un tavolo della piantina.
 
 ### `POST /api/order` — pubblica
@@ -314,12 +321,13 @@ Ordine inviato dal cliente. Richiesta: [`NewOrder`](#neworder)
 - Regole (il frontend le rispetta, il backend deve rifiutare il resto, es. `400`/`403`):
   - con `orderingMode: "menuOnly"` i clienti non possono ordinare: `403`;
   - `customerName` obbligatorio (1–60 caratteri) per ogni ordine;
-  - sul posto (`type: "dinein"`): `table` obbligatorio (1–20 caratteri) se `tableOrdering` è `true`, altrimenti assente; niente `pickupTime`;
+  - sul posto (`type: "dinein"`): solo mentre il locale è aperto; `table` obbligatorio (1–20 caratteri) quando il cliente ordina già seduto (vedi [Modalità di ordine](#modalità-di-ordine)), altrimenti assente; niente `pickupTime`;
+  - piatti: solo del [menù di oggi](#menù), `quantity` intero > 0 (nome e prezzo si prendono dal menù salvato);
   - asporto: solo se l'asporto è attivo ([`enabled`](#impostazioni-asporto)); niente `table`. `pickupTime` non deve essere già passato e deve riguardare un servizio (pranzo o cena) in cui il locale è aperto oggi. Con `mode: "fixed"` deve essere l'orario unico di quel servizio, con `mode: "custom"` deve stare nella sua fascia.
 - Risposta `200`: [`OrderCreated`](#ordercreated)
   - pagamento alla cassa: `{ "orderNumber": 112 }` — numero da mostrare alla cassa;
   - pagamento online: `{ "orderNumber": 112, "checkoutUrl": "https://checkout.…" }`, vedi sotto.
-- **Il backend non deve fidarsi dei prezzi inviati**: totale e prezzi vanno ricalcolati dal menù salvato usando `dish.id` e `quantity`. Verificare anche che i piatti esistano e che `quantity` sia un intero > 0.
+- **Il backend non deve fidarsi dei prezzi inviati**: totale e prezzi vanno ricalcolati dal menù salvato usando `dish.id` e `quantity`. Verificare anche che i piatti esistano nel menù attivo oggi e che `quantity` sia un intero > 0.
 - Il numero d'ordine è assegnato dal backend (i dati finti partono da 100 e incrementano).
 
 ### Pagamento online
@@ -331,11 +339,11 @@ Con `orderingMode: "payOnline"` il frontend non tocca mai i dati di pagamento: u
 3. Il servizio rimanda il cliente al sito: su `https://<sito>/?pagamento=ok` se ha pagato, su `https://<sito>/?pagamento=annullato` se ha annullato (indirizzi da configurare nel backend). Con `ok` il frontend svuota il carrello e mostra il numero d'ordine come pagato; con `annullato` torna al carrello.
 4. **L'ordine diventa `paid: true` solo quando il backend riceve la conferma dal servizio** (webhook o verifica lato server), mai per il ritorno su `?pagamento=ok`, che chiunque può aprire.
 
-- Gli ordini non pagati restano in `GET /api/orders` con `paid: false` (la cassa li vede come "Non pagato"); il backend può cancellarli dopo un po' se il pagamento non arriva.
+- Gli ordini non pagati restano in `GET /api/orders` con `paid: false` (la cassa non li mostra: online un ordine conta quando è pagato); il backend può cancellarli dopo un po' se il pagamento non arriva.
 - Nei dati finti non c'è un servizio di pagamento: l'ordine è subito pagato e `checkoutUrl` è `/?pagamento=ok` (stesso sito).
 - Il frontend accetta solo `checkoutUrl` `https` o dello stesso sito.
 
-### `POST /api/orders` — gestori, cashier, waiter
+### `POST /api/orders` — gestori, cashier, headWaiter, waiter
 
 Ordine creato dal personale (modalità `menuOnly` e `payAtCashier`): dalla cassa per un cliente al bancone o dal cameriere al tavolo. Richiesta: [`CashierOrder`](#cashierorder)
 
@@ -349,13 +357,15 @@ Ordine creato dal personale (modalità `menuOnly` e `payAtCashier`): dalla cassa
 }
 ```
 
-- `customerName` e `table` facoltativi; per l'asporto `customerName` è obbligatorio e `pickupTime` facoltativo (la cassa non controlla gli orari).
-- `paid`: `true` se il cliente ha già pagato (predefinito nella cassa). Solo gestori e `cashier` incassano: per il `waiter` deve essere `false`.
-- `waiter`: solo `type: "dinein"` con `table` obbligatorio, e solo col pagamento a fine pasto (`paymentTiming: "afterMeal"`), altrimenti `403`.
+- Valgono le regole del profilo come per i clienti, **per tutti i ruoli, titolare compreso**: sul posto solo mentre il locale è aperto; asporto solo se è attivo e oggi resta un servizio. Piatti solo del menù di oggi.
+- Sul posto, a fine pasto, `table` è obbligatorio (1–20 caratteri, altrimenti `400`) e `customerName` facoltativo. Se si paga prima (tipo sagra o ritiro al banco) il tavolo non si sa ancora: il frontend non invia né `table` né `customerName` e l'ordine si porta cercando il numero del bigliettino.
+- Asporto: `customerName` obbligatorio. Se i clienti ordinano dal sito (`payAtCashier`) `pickupTime` segue le stesse regole dei clienti (orario unico o dentro le fasce, non già passato); con `menuOnly` l'orario si concorda ed è facoltativo.
+- `paid`: `true` se il cliente ha già pagato. Solo gestori e `cashier` incassano: per `headWaiter` e `waiter` deve essere `false`. La cassa sceglie pagato o da pagare solo con `payAtCashier` a fine pasto; con `menuOnly` o se si paga prima (tipo sagra, ritiro al banco) deve essere `true`, altrimenti `400`.
+- `headWaiter` e `waiter`: solo `type: "dinein"` con `table` obbligatorio, e solo col pagamento a fine pasto (`paymentTiming: "afterMeal"`), altrimenti `403`.
 - Risposta `200`: `{ "orderNumber": 114 }`. Stesse verifiche su piatti, prezzi e totale di `POST /api/order`.
 - Con `orderingMode: "payOnline"` rifiutare (`403`).
 
-### `GET /api/orders` — gestori, cashier, chef, kitchen, counter
+### `GET /api/orders` — gestori, cashier, headWaiter, chef, kitchen, counter
 
 Risposta `200`: [`Order[]`](#order). Il frontend la ripete ogni **30 s** (la cucina ogni **10 s**).
 
@@ -366,7 +376,8 @@ Risposta `200`: [`Order[]`](#order). Il frontend la ripete ogni **30 s** (la cuc
 La cucina segna la comanda pronta (`{ "ready": true }`) o la rimette da preparare (`{ "ready": false }`). Risposta: nessun corpo richiesto.
 
 - Il backend imposta `readyAt` (ora del server) con `true` e lo toglie con `false`.
-- Usata solo **senza smistamento**; con lo smistamento `readyAt` lo calcola il backend dalle comande delle postazioni (vedi [Cucina e smistamento](#cucina-e-smistamento)).
+- Usata solo **senza smistamento** (con lo smistamento `403`): `readyAt` lo calcola il backend dalle comande delle postazioni (vedi [Cucina e smistamento](#cucina-e-smistamento)).
+- Se si paga prima (online, tipo sagra, ritiro al banco) solo sugli ordini pagati, altrimenti `400`: la cucina non li vede.
 - La cucina vede gli ordini senza `readyAt` da chi ha ordinato per primo; se si paga prima (online o tipo sagra) solo quelli pagati, in ordine di `paidAt`.
 
 ### `PATCH /api/orders/:id/payment` — gestori, cashier
@@ -375,22 +386,23 @@ Segna l'ordine come pagato o da pagare. Richiesta: `{ "paid": true }`. Risposta:
 
 - Il backend imposta `paidAt` (ora del server) la prima volta che l'ordine diventa pagato e lo toglie se torna da pagare: tipo sagra la cucina lavora in ordine di pagamento.
 
-- Con `orderingMode: "payOnline"` il frontend non la usa (sola lettura): il backend dovrebbe rifiutarla (`403`).
+- Con `orderingMode: "payOnline"` il frontend non la usa (sola lettura): il backend la rifiuta (`403`).
+- Con `menuOnly` si usa solo per incassare (`{ "paid": true }`, dai Conti): rimettere un ordine da pagare è `400`.
 
 ### `PATCH /api/orders/:id/items` — gestori, cashier
 
-Modifica i piatti di un ordine da asporto. Richiesta: `{ "items": CartType[] }` con l'elenco **completo** dei piatti dopo la modifica. Risposta: nessun corpo richiesto.
+Modifica i piatti di un ordine **da asporto** (gli altri: `400`). Si possono tenere i piatti già nell'ordine o aggiungerne dal menù di oggi. Richiesta: `{ "items": CartType[] }` con l'elenco **completo** dei piatti dopo la modifica. Risposta: nessun corpo richiesto.
 
 - Il backend deve ricalcolare `total` (il frontend lo legge da `GET /api/orders`).
-- Con `orderingMode: "payOnline"` il frontend non la usa (sola lettura): il backend dovrebbe rifiutarla (`403`).
+- Con `orderingMode: "payOnline"` il frontend non la usa (sola lettura): il backend la rifiuta (`403`).
 
 ---
 
 ## Cucina e smistamento
 
-Senza smistamento (`kitchenDispatch: false`) chi è in cucina vede tutte le comande e segna pronto l'ordine intero con [`PATCH /api/orders/:id/ready`](#patch-apiordersidready--gestori-chef-kitchen).
+Senza smistamento (`kitchenDispatch: false`, "con i bigliettini") il lavoro tra le postazioni si divide a mano, con i bigliettini di carta: chi è in cucina vede tutte le comande e segna pronto l'ordine intero con [`PATCH /api/orders/:id/ready`](#patch-apiordersidready--gestori-chef-kitchen). Il capo cucina non serve.
 
-Con lo smistamento (`kitchenDispatch: true` e almeno una postazione in `kitchenStations`) le comande arrivano al **capo cucina** (`chef`, e ai gestori), che le manda alle postazioni (es. Primi, Griglia, Bar): l'ordine intero o solo alcune righe, a postazioni diverse. Vede quante comande ha in coda ogni postazione per non sovraccaricarne nessuna. Ogni postazione (`kitchen`, scelta sul dispositivo) vede solo le sue comande, da chi ha ordinato per primo, e le segna pronte.
+Con lo smistamento (`kitchenDispatch: true` e almeno una postazione in `kitchenStations`) le comande arrivano al **capo cucina** (`chef`, e ai gestori), che le manda alle postazioni (es. Primi, Griglia, Bar): l'ordine intero o solo alcune righe, a postazioni diverse. Vede quante comande ha in coda ogni postazione per non sovraccaricarne nessuna. Ogni postazione (`kitchen`, scelta sul dispositivo) vede solo le sue comande, da chi ha ordinato per primo, e le segna pronte. Il caposala (`headWaiter`) vede smistamento e postazioni in sola lettura.
 
 Le parti mandate stanno in `Order.tickets` ([`StationTicket`](#stationticket)); le righe sono indicate dal loro indice in `items`.
 
@@ -404,11 +416,12 @@ Manda alcune righe dell'ordine a una postazione. Richiesta:
 
 Risposta `200`: lo [`StationTicket`](#stationticket) creato (con `id` e `sentAt`).
 
-- `stationId` deve essere una postazione di `kitchenStations`; `items` non vuoto, indici esistenti e non già mandati ad altre postazioni: altrimenti `400`.
+- Tutte le chiamate dello smistamento solo con `kitchenDispatch: true` e almeno una postazione, altrimenti `403`.
+- `stationId` deve essere una postazione di `kitchenStations`; `items` non vuoto, indici esistenti e non già mandati ad altre postazioni; se si paga prima, solo ordini pagati: altrimenti `400`.
 
 ### `DELETE /api/orders/:id/tickets/:ticketId` — gestori, chef
 
-Ritira una comanda non ancora pronta (es. mandata alla postazione sbagliata): le sue righe tornano da smistare. Risposta: nessun corpo richiesto.
+Ritira una comanda non ancora pronta (es. mandata alla postazione sbagliata): le sue righe tornano da smistare. Una comanda già pronta non si ritira (`400`). Risposta: nessun corpo richiesto.
 
 ### `PATCH /api/orders/:id/tickets/:ticketId/ready` — gestori, chef, kitchen
 
@@ -432,6 +445,8 @@ Con `serviceMode: "counter"` il cliente ritira l'ordine al banco quando il suo n
 
 In entrambi i casi il telefono del cliente (pagina col suo numero) mostra "In preparazione" o "Pronto: ritiralo al banco" e vibra quando è pronto. Chi è al banco (pagina **Ritiro**: ruolo `counter`, gestori, cassa e capo cucina) vede gli ordini pronti con i piatti e li segna consegnati. Se si paga prima (online o tipo sagra) valgono solo gli ordini pagati, come per la cucina.
 
+**Ritiro dell'asporto.** Con `serviceMode: "table"` e l'[asporto](#impostazioni-asporto) attivo la pagina Ritiro c'è lo stesso, ma solo per gli ordini da asporto: chi è al banco (il ruolo `counter` si chiama allora "Banco ritiro asporto") li consegna con [`PATCH /api/orders/:id/delivered`](#patch-apiordersiddelivered--gestori-cashier-chef-counter). Niente schermo Pronti né stato sul telefono: `GET /api/pickup-board` resta `404`. Con `"table"` e l'asporto spento il banco non serve.
+
 ### `GET /api/pickup-board` — pubblica
 
 Risposta `200`: [`PickupBoard`](#pickupboard), **solo numeri d'ordine** (niente nomi né piatti: è pubblica).
@@ -449,6 +464,7 @@ Risposta `200`: [`PickupBoard`](#pickupboard), **solo numeri d'ordine** (niente 
 Ordine consegnato al cliente (`{ "delivered": true }`) o di nuovo da consegnare (`{ "delivered": false }`, per rimediare a un errore). Risposta: nessun corpo richiesto.
 
 - Il backend imposta `deliveredAt` (ora del server) e lo toglie con `false`; un ordine consegnato sparisce dal tabellone.
+- Solo se c'è un banco (ritiro al banco o asporto attivo, altrimenti `403`); col solo asporto al banco solo gli ordini da asporto; si consegna solo un ordine pronto (`readyAt`): altrimenti `400`.
 
 ---
 
@@ -471,13 +487,14 @@ Risposta `200`: [`TakeawaySettings`](#takeawaysettings)
 ```
 
 - `enabled: false`: niente asporto, in nessun giorno (i clienti non lo vedono e la cassa non lo propone); gli orari restano salvati per quando si riattiva. Rifiutare gli ordini da asporto (`400`).
+- Con `orderingMode: "menuOnly"` l'asporto lo prende solo la cassa (es. al telefono) e l'orario si concorda: `mode`, `fixedTimes` e `ranges` non si usano (il profilo non li fa modificare).
 - **Giorni e servizi**: l'asporto non ha una settimana sua, segue quella del locale ([`RestaurantProfile.openingHours`](#weeklyhours)). Si ritira a pranzo solo nei giorni in cui il locale è aperto a pranzo, a cena solo in quelli aperti a cena. Se oggi non resta un servizio ancora prenotabile il frontend non propone l'asporto.
 - `mode: "fixed"`: chi ordina ritira all'orario unico del servizio, `fixedTimes.lunch` o `fixedTimes.dinner` (`ranges` viene ignorato). Il frontend usa il primo servizio aperto di oggi il cui orario unico non è ancora passato.
 - `mode: "custom"`: il cliente sceglie l'orario (`pickupTime` dell'ordine) dentro `ranges.lunch` o `ranges.dinner`, solo per i servizi aperti oggi (`fixedTimes` viene ignorato).
 
 ### `PATCH /api/takeaway/settings` — gestori
 
-Richiesta: `TakeawaySettings` completo. Risposta `200`: `TakeawaySettings` salvato.
+Richiesta: `TakeawaySettings` completo. Risposta `200`: `TakeawaySettings` salvato. Fasce non valide (vedi sotto): `400`.
 
 ---
 
@@ -514,14 +531,14 @@ Richiesta: [`NewReservation`](#newreservation)
 
 - `seatRequests` e `notes` sono facoltativi (assenti se vuoti).
 - Risposta `200`: la [`Reservation`](#reservation) creata, con `id` (stringa) e `createdAt`; il frontend la usa per la conferma al cliente.
-- **Se i posti non bastano** (`people > remainingSeats`) rispondere con un errore (es. `409`): il cliente vede "Non ci sono più abbastanza posti liberi".
+- **Se i posti non bastano** (`people > remainingSeats`) rispondere `409`: il cliente vede "Non ci sono più abbastanza posti liberi".
 - Validare: `name` 1–60 caratteri, `people` intero ≥ 1, `arrivalTime` `HH:MM` dentro gli orari di apertura di oggi ([`openingHours`](#weeklyhours)) e non già passato, `notes` max 200, `seatRequests` solo [valori ammessi](#seatrequest).
 
-### `GET /api/reservations` — gestori, waiter
+### `GET /api/reservations` — gestori, headWaiter, waiter
 
 Risposta `200`: [`Reservation[]`](#reservation). Il frontend la ripete ogni **15 s** per vedere quelle nuove.
 
-### `PATCH /api/reservations/:id` — gestori, waiter
+### `PATCH /api/reservations/:id` — gestori, headWaiter, waiter
 
 Richiesta: campi modificati; oggi il frontend invia sempre:
 
@@ -531,7 +548,7 @@ Richiesta: campi modificati; oggi il frontend invia sempre:
 
 Risposta `200`: la [`Reservation`](#reservation) aggiornata.
 
-### `DELETE /api/reservations/:id` — gestori, waiter
+### `DELETE /api/reservations/:id` — gestori, headWaiter, waiter
 
 Risposta: nessun corpo richiesto. Il frontend toglie poi la prenotazione dalla piantina e la salva.
 
@@ -543,20 +560,20 @@ L'`id` nei percorsi è codificato con `encodeURIComponent`.
 
 La piantina è un unico documento JSON con tavoli, sedie (e relative prenotazioni) e muri. Il backend può salvarla così com'è; l'unica parte che deve leggere è `chairs[].booking` (per i posti disponibili).
 
-### `GET /api/floor-plan` — gestori, cashier, waiter
+### `GET /api/floor-plan` — gestori, cashier, headWaiter, waiter
 
 Risposta `200`: [`FloorPlanData`](#floorplandata), oppure `null` se non è ancora stata creata.
 
 - La cassa la legge solo per suggerire i nomi dei tavoli in Nuovo ordine (e l'amministratore per i QR code).
 
-### `POST /api/floor-plan` — gestori, waiter
+### `POST /api/floor-plan` — gestori, headWaiter, waiter
 
 Richiesta: [`FloorPlanData`](#floorplandata) **completa**. Al primo salvataggio `id` è assente: lo assegna il backend.
 
 Risposta `200`: `FloorPlanData` salvata (con `id` e `updatedAt`).
 
 - Chiamata **spesso**: oltre al pulsante Salva della modalità Modifica, ogni volta che il personale prenota, toglie o segna come arrivati dei posti, il frontend salva automaticamente dopo circa 600 ms.
-- La modalità Modifica (tavoli e muri) è solo dell'amministratore; i camerieri salvano la piantina solo per le prenotazioni. Se serve, il backend può rifiutare un `waiter` che cambia tavoli o muri (confrontando tutto tranne `chairs[].booking`).
+- La modalità Modifica (tavoli e muri) è solo dell'amministratore; i camerieri salvano la piantina solo per le prenotazioni. Il backend rifiuta (`403`) un `waiter` o `headWaiter` che cambia tavoli o muri (confrontando tutto tranne `chairs[].booking`): così una piantina vecchia salvata per una prenotazione non cancella le modifiche dell'amministratore.
 
 ### Come sono collegate prenotazioni e piantina
 
@@ -575,12 +592,23 @@ Notazione TypeScript; `?` = campo facoltativo.
 
 ```ts
 interface Dish {
-  id: number;            // assegnato dal backend (negativo = nuovo, vedi Menù)
+  id: number;            // assegnato dal backend, unico tra tutti i menù (negativo = nuovo, vedi Menù)
   name: string;          // max 80
   description: string;   // può essere "", max 300
   price: number;         // euro, 0–10000
   category: string;      // testo libero, max 40 (predefinite: Antipasti, Primi, Secondi, Dolci, Bevande)
   allergens?: string[];  // vedi Allergeni
+}
+```
+
+### RestaurantMenu
+
+```ts
+interface RestaurantMenu {
+  id: string;     // "m-<timestamp>", generato dal frontend per i menù nuovi
+  name: string;   // 1–40, diverso dagli altri menù
+  days: ("mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun")[]; // giorni in cui si usa; un giorno in un solo menù; [] = non usato
+  dishes: Dish[]; // almeno uno, nell'ordine in cui li vedono i clienti
 }
 ```
 
@@ -606,7 +634,7 @@ interface NewOrder {
   items: CartType[];
   type: "dinein" | "takeaway";
   customerName?: string; // max 60; obbligatorio negli ordini dei clienti
-  table?: string;        // solo sul posto, max 20; obbligatorio con tableOrdering
+  table?: string;        // solo sul posto, max 20; obbligatorio quando il cliente ordina già seduto e negli ordini del personale a fine pasto
   pickupTime?: string;   // solo asporto, "HH:MM"
 }
 ```
@@ -744,12 +772,11 @@ interface Reservation extends NewReservation {
 interface RestaurantProfile {
   name: string; // max 40
   theme: "dark" | "light";
-  brandColor: "orange" | "red" | "pink" | "violet" | "blue" | "teal" | "green" | "brown";
+  brandColor: string; // "#rrggbb" scelto dalla tavolozza (i profili vecchi possono avere "orange", "red", "pink", "violet", "blue", "teal", "green", "brown")
   openingHours: WeeklyHours; // giorni e orari di apertura
   orderingMode: "menuOnly" | "payAtCashier" | "payOnline"; // vedi Modalità di ordine
   paymentTiming: "afterMeal" | "beforeMeal"; // pagando alla cassa: tipo ristorante o tipo sagra
-  tableOrdering: boolean;    // i clienti ordinano dal tavolo e indicano il tavolo
-  tableQrCode: boolean;      // il tavolo arriva dal QR code (solo con tableOrdering)
+  tableQrCode: boolean;      // quando l'ordine riporta il tavolo, arriva dal QR code invece di essere scritto
   serviceMode: "table" | "counter"; // portato al tavolo o ritiro al banco
   pickupCall: "screen" | "voice";  // col banco: schermo Pronti o chiamata a voce
   kitchenDispatch: boolean;  // le comande passano dal capo cucina alle postazioni
@@ -768,7 +795,7 @@ interface KitchenStation {
 interface SessionUser {
   id: string;
   name: string;  // max 60
-  role: "admin" | "deputy" | "cashier" | "waiter" | "chef" | "kitchen" | "counter";
+  role: "admin" | "deputy" | "cashier" | "headWaiter" | "waiter" | "chef" | "kitchen" | "counter";
 }
 ```
 
@@ -873,7 +900,7 @@ Esempio ridotto:
 ## Da fare lato backend (sicurezza)
 
 - Ricalcolare prezzi e totali degli ordini dal menù salvato (mai dai dati del client).
-- Far rispettare la [modalità di ordine](#modalità-di-ordine) scelta dal ristorante anche lato server (es. niente ordini dei clienti con `menuOnly`, cassa in sola lettura con `payOnline`).
+- Far rispettare la [modalità di ordine](#modalità-di-ordine) e tutte le impostazioni del profilo anche lato server, **per ogni ruolo compreso il titolare** (es. niente ordini dei clienti con `menuOnly`, cassa in sola lettura con `payOnline`, ordini sul posto solo negli orari di apertura, smistamento solo se attivo). I dati finti in `src/features/*/mock/` simulano queste regole e i ruoli della colonna **Accesso**.
 - Pagamento online: segnare gli ordini come pagati solo alla conferma del servizio di pagamento (webhook firmato o verifica server-to-server), mai dal ritorno del cliente su `?pagamento=ok`. Le chiavi del servizio restano solo nel backend.
 - Validare tutti i campi con i limiti indicati sopra: quelli del frontend si possono aggirare.
 - Proteggere tutte le chiamate del personale col token, controllando il ruolo (colonna **Accesso**), e limitare i tentativi di login.

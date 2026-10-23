@@ -1,8 +1,8 @@
+import { Spinner } from "../../components/core/Spinner";
 import { useState } from "react";
 import {
   Check,
   ChevronUp,
-  LoaderCircle,
   Plus,
   ShoppingBag,
   UtensilsCrossed,
@@ -28,12 +28,22 @@ import {
 } from "../../features/orders/types/orders";
 import { PrintTicketButton } from "../../features/orders/components/PrintTicketButton";
 import { cleanTableName } from "../../features/orders/utils/tableQr";
+import {
+  pickupTimeValid,
+  takeawayToday,
+} from "../../features/orders/utils/takeawayUtils";
 import { ButtonDimensions } from "../../constant/button";
 import { ThemeVariants } from "../../constant/colors";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
 import { PERSON_NAME_MAX, TABLE_NAME_MAX } from "../../constant/limits";
 import { calcTotal } from "../../helpers/calcTotal";
 import { cn } from "../../helpers/cn";
+import {
+  formatRanges,
+  isOpenNow,
+  todayHoursLabel,
+} from "../../helpers/openingHours";
+import { useCurrentTime } from "../../hooks/useCurrentTime";
 import {
   decrementFunction,
   incrementFunction,
@@ -43,23 +53,37 @@ import { NotificationType } from "../../types/notification";
 import type { Dish } from "../../types/menuOrder";
 import { useFloorPlan } from "../../features/floorPlan/hook/useFloorPlan";
 import { tableNames } from "../../features/floorPlan/helpers/tableNames";
+import type { StaffRoleConst } from "../../features/staff/types/staff";
 import {
-  StaffRole,
-  type StaffRoleConst,
-} from "../../features/staff/types/staff";
-import { canTakePayments } from "../../features/staff/utils/permissions";
+  canTakePayments,
+  takesTableOrders,
+} from "../../features/staff/utils/permissions";
+import { useRestaurant } from "../../features/restaurant/hook/useRestaurant";
+import {
+  customersOrderOnline,
+  isPayFirstAtCashier,
+  marksOrdersPaid,
+  staffOrderNeedsTable,
+} from "../../features/restaurant/utils/ordering";
 
 const TABLES_LIST_ID = "nuovo-ordine-tavoli";
 
-//Nuovo ordine creato dal personale: piatti dal menù, sul posto o da asporto (se attivo), nome e
-//tavolo. La cassa lo crea per chi è al bancone e dice se è già pagato; il cameriere lo prende al
-//tavolo (tavolo obbligatorio, solo sul posto) e il cliente paga poi alla cassa
+//Nuovo ordine creato dal personale: piatti dal menù, sul posto o da asporto (se attivo). La cassa
+//lo crea per chi è al bancone (già pagato; se i clienti ordinano dal sito e pagano alla cassa
+//sceglie se è pagato); cameriere e caposala lo prendono al tavolo (solo sul posto) e il cliente
+//paga poi alla cassa. Sul posto tavolo (obbligatorio) e nome solo a fine pasto: se si paga prima
+//(tipo sagra o ritiro al banco) il tavolo non si sa ancora e vale il numero d'ordine. Valgono le
+//regole del profilo come per i clienti, anche per l'amministratore: sul posto solo a locale
+//aperto, l'asporto per un servizio di oggi non ancora finito e, se i clienti ordinano dal sito,
+//all'orario unico o nelle fasce di ritiro (con Solo menù l'orario si concorda)
 export const NewOrder = ({ role }: { role: StaffRoleConst }) => {
   const { data: menu = [], isLoading } = useMenu();
   const { data: takeaway } = useTakeawaySettings();
+  const { data: restaurant } = useRestaurant();
   const { data: floorPlan } = useFloorPlan();
   const { mutate: createOrder, isPending } = useCreateCashierOrder();
   const showNotification = useNotification();
+  const now = useCurrentTime();
 
   const [items, setItems] = useState<CartType[]>([]);
   const [search, setSearch] = useState("");
@@ -74,9 +98,30 @@ export const NewOrder = ({ role }: { role: StaffRoleConst }) => {
   const [summaryOpen, setSummaryOpen] = useState(false);
 
   const takesPayments = canTakePayments(role);
-  const isWaiter = role === StaffRole.Waiter;
-  const canTakeaway = !!takeaway?.enabled && !isWaiter;
-  const isTakeaway = canTakeaway && type === OrderType.Takeaway;
+  //pagato o da pagare si sceglie solo se i clienti ordinano dal sito e pagano alla cassa a fine
+  //pasto: se si paga prima chi è alla cassa paga subito
+  const asksPaid =
+    takesPayments &&
+    marksOrdersPaid(restaurant) &&
+    !isPayFirstAtCashier(restaurant);
+  const tableStaff = takesTableOrders(role);
+  const dineInOpen = !!restaurant && isOpenNow(restaurant.openingHours, now);
+  const slot =
+    restaurant && !tableStaff
+      ? takeawayToday(restaurant.openingHours, takeaway, now)
+      : null;
+  const canTakeaway = !!slot;
+  //a locale chiuso resta solo l'asporto
+  const isTakeaway =
+    canTakeaway && (type === OrderType.Takeaway || !dineInOpen);
+  //orario di ritiro: con i clienti che ordinano dal sito valgono le stesse regole
+  const pickupRules = customersOrderOnline(restaurant) ? slot : null;
+  const fixedTime = pickupRules?.fixedTime ?? null;
+  const closed = !!restaurant && !dineInOpen && !canTakeaway;
+  const todayHours = restaurant && todayHoursLabel(restaurant.openingHours);
+  const needsTable = tableStaff || staffOrderNeedsTable(restaurant);
+  //nome e tavolo: all'asporto il nome, sul posto entrambi solo a fine pasto
+  const asksCustomer = isTakeaway || needsTable;
   //tavoli della piantina, suggeriti mentre si scrive
   const tables = tableNames(floorPlan);
   const total = calcTotal(items);
@@ -85,15 +130,23 @@ export const NewOrder = ({ role }: { role: StaffRoleConst }) => {
   const grouped = Object.entries(
     groupDishesByCategory(menu.filter((d) => d.name.toLowerCase().includes(q))),
   );
-  //all'asporto serve il nome, per chiamare il cliente quando ritira; al cameriere il tavolo
-  const missing =
-    items.length === 0
+  //all'asporto serve il nome, per chiamare il cliente quando ritira; sul posto il tavolo
+  const missing = closed
+    ? todayHours
+      ? `Il locale ora è chiuso: gli ordini si creano negli orari di apertura (oggi ${todayHours})`
+      : "Oggi il locale è chiuso: non si creano ordini"
+    : items.length === 0
       ? null
       : isTakeaway && !customerName.trim()
         ? "Scrivi il nome di chi ritira"
-        : isWaiter && !cleanTableName(table)
-          ? "Scrivi il tavolo"
-          : null;
+        : isTakeaway &&
+            pickupRules &&
+            !pickupRules.fixedTime &&
+            !pickupTimeValid(pickupRules, pickupTime, now)
+          ? `Scegli l'orario di ritiro: ${formatRanges(pickupRules.ranges)}`
+          : !isTakeaway && needsTable && !cleanTableName(table)
+            ? "Scrivi il tavolo"
+            : null;
   const canCreate = items.length > 0 && !missing && !isPending;
 
   const quantityOf = (dish: Dish) =>
@@ -121,12 +174,12 @@ export const NewOrder = ({ role }: { role: StaffRoleConst }) => {
     const order: CashierOrder = {
       items,
       type: isTakeaway ? OrderType.Takeaway : OrderType.DineIn,
-      //chi non incassa (il cameriere) crea ordini da pagare alla cassa
-      paid: takesPayments && paid,
-      ...(name && { customerName: name }),
+      //chi non incassa (cameriere, caposala) crea ordini da pagare alla cassa
+      paid: takesPayments && (!asksPaid || paid),
+      ...(asksCustomer && name && { customerName: name }),
       ...(isTakeaway
-        ? pickupTime && { pickupTime }
-        : tableName && { table: tableName }),
+        ? (fixedTime ?? pickupTime) && { pickupTime: fixedTime ?? pickupTime }
+        : needsTable && tableName && { table: tableName }),
     };
     createOrder(order, {
       onSuccess: ({ orderNumber }) => {
@@ -177,13 +230,7 @@ export const NewOrder = ({ role }: { role: StaffRoleConst }) => {
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center py-10">
-            <LoaderCircle
-              size={32}
-              aria-label="Caricamento"
-              className={`animate-spin ${ThemeVariants.colors.text.brand}`}
-            />
-          </div>
+          <Spinner />
         ) : grouped.length === 0 ? (
           <p
             className={`py-10 text-center ${ThemeVariants.colors.text.secondary}`}
@@ -371,7 +418,9 @@ export const NewOrder = ({ role }: { role: StaffRoleConst }) => {
                 onClick={() => setType(OrderType.DineIn)}
                 dimension={ButtonDimensions.auto}
                 variant={isTakeaway ? "secondary" : "primary"}
-                className="px-3 py-2"
+                //a locale chiuso sul posto non si ordina
+                disabled={!dineInOpen}
+                className="px-3 py-2 disabled:opacity-40 disabled:cursor-not-allowed"
                 fullWidth
               />
               <Button
@@ -385,54 +434,77 @@ export const NewOrder = ({ role }: { role: StaffRoleConst }) => {
               />
             </div>
           )}
+          {canTakeaway && !dineInOpen && (
+            <p className={`text-sm ${ThemeVariants.colors.text.danger}`}>
+              Il locale ora è chiuso: sul posto si ordina negli orari di
+              apertura{todayHours ? ` (oggi ${todayHours})` : ""}, intanto si
+              può prenotare l'asporto
+            </p>
+          )}
 
-          <div className="flex gap-2">
-            <Input
-              type="text"
-              placeholder={
-                isTakeaway ? "Nome (obbligatorio)" : "Nome (facoltativo)"
-              }
-              value={customerName}
-              setValue={setCustomerName}
-              maxLength={PERSON_NAME_MAX}
-              variant="secondary"
-              className="flex-1 text-sm"
-              ariaLabel="Nome del cliente"
-            />
-            {isTakeaway ? (
+          {/* Sul posto tipo sagra (o col ritiro al banco) niente nome né tavolo: vale il numero */}
+          {asksCustomer && (
+            <div className="flex gap-2">
               <Input
-                type="time"
-                placeholder="19:30"
-                value={pickupTime}
-                setValue={setPickupTime}
+                type="text"
+                placeholder={
+                  isTakeaway ? "Nome (obbligatorio)" : "Nome (facoltativo)"
+                }
+                value={customerName}
+                setValue={setCustomerName}
+                maxLength={PERSON_NAME_MAX}
                 variant="secondary"
-                className="w-28 text-sm"
-                ariaLabel="Orario di ritiro (facoltativo)"
+                className="flex-1 text-sm"
+                ariaLabel="Nome del cliente"
               />
-            ) : (
-              <>
+              {isTakeaway && fixedTime ? (
+                //orario unico deciso dal ristorante
+                <span
+                  className={`shrink-0 self-center text-sm font-semibold ${ThemeVariants.colors.text.brand}`}
+                >
+                  Ritiro {fixedTime}
+                </span>
+              ) : isTakeaway ? (
                 <Input
-                  type="text"
-                  placeholder="Tavolo"
-                  value={table}
-                  setValue={setTable}
-                  maxLength={TABLE_NAME_MAX}
+                  type="time"
+                  placeholder="19:30"
+                  value={pickupTime}
+                  setValue={setPickupTime}
                   variant="secondary"
-                  className="w-24 text-sm"
-                  ariaLabel={isWaiter ? "Tavolo" : "Tavolo (facoltativo)"}
-                  list={TABLES_LIST_ID}
+                  className="w-28 text-sm"
+                  ariaLabel={
+                    pickupRules
+                      ? "Orario di ritiro"
+                      : "Orario di ritiro (facoltativo)"
+                  }
                 />
-                <datalist id={TABLES_LIST_ID}>
-                  {tables.map((t) => (
-                    <option key={t} value={t} />
-                  ))}
-                </datalist>
-              </>
-            )}
-          </div>
+              ) : (
+                <>
+                  <Input
+                    type="text"
+                    placeholder="Tavolo*"
+                    value={table}
+                    setValue={setTable}
+                    maxLength={TABLE_NAME_MAX}
+                    variant="secondary"
+                    className="w-24 text-sm"
+                    ariaLabel="Tavolo (obbligatorio)"
+                    list={TABLES_LIST_ID}
+                    required
+                  />
+                  <datalist id={TABLES_LIST_ID}>
+                    {tables.map((t) => (
+                      <option key={t} value={t} />
+                    ))}
+                  </datalist>
+                </>
+              )}
+            </div>
+          )}
 
-          {/* Il cameriere non incassa: i suoi ordini si pagano alla cassa */}
-          {takesPayments && (
+          {/* Pagato o da pagare solo se i clienti ordinano dal sito e pagano alla cassa:
+              altrimenti la cassa crea l'ordine già pagato (cameriere e caposala non incassano) */}
+          {asksPaid && (
             <SettingSwitch
               label="Pagato"
               description={
@@ -453,7 +525,9 @@ export const NewOrder = ({ role }: { role: StaffRoleConst }) => {
             </span>
           </div>
           {missing && (
-            <p className={`text-sm ${ThemeVariants.colors.text.secondary}`}>
+            <p
+              className={`text-sm ${closed ? ThemeVariants.colors.text.danger : ThemeVariants.colors.text.secondary}`}
+            >
               {missing}
             </p>
           )}

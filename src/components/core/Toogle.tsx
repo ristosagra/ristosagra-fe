@@ -7,6 +7,8 @@ interface ToggleProps {
   variant?: "primary" | "secondary";
   //cosa attiva/disattiva l'interruttore, per i lettori di schermo
   ariaLabel?: string;
+  //non si può cambiare (es. un'impostazione che non vale con le altre scelte)
+  disabled?: boolean;
 }
 
 export const Toggle = ({
@@ -14,6 +16,7 @@ export const Toggle = ({
   onChange,
   variant = "primary",
   ariaLabel,
+  disabled = false,
 }: ToggleProps) => {
   const variantClass = {
     primary: value
@@ -30,8 +33,10 @@ export const Toggle = ({
       aria-label={ariaLabel}
       title={ariaLabel}
       onClick={onChange}
+      disabled={disabled}
       className={cn(
-        "relative cursor-pointer w-12 h-6 shrink-0 rounded-full transition-colors",
+        "relative w-12 h-6 shrink-0 rounded-full transition-colors",
+        disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer",
         //area da toccare più grande dell'interruttore, comoda sul cellulare
         "after:absolute after:-inset-2",
         variantClass,

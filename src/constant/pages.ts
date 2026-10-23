@@ -20,3 +20,15 @@ export const PagesCashier = {
 
 export type PagesCashierConst =
   (typeof PagesCashier)[keyof typeof PagesCashier];
+
+//Sezioni del profilo del ristorante, aperte dalla pagina Profilo: ognuna si modifica a parte
+export const PagesProfile = {
+  APPEARANCE: "appearance",
+  HOURS: "hours",
+  ORDERS: "orders",
+  STAFF: "staff",
+  MENU: "menu",
+} as const;
+
+export type PagesProfileConst =
+  (typeof PagesProfile)[keyof typeof PagesProfile];

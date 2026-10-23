@@ -17,6 +17,16 @@ export const WEEKDAY_LABELS: Record<WeekdayConst, string> = {
   [Weekday.Sun]: "Domenica",
 };
 
+export const WEEKDAY_SHORT_LABELS: Record<WeekdayConst, string> = {
+  [Weekday.Mon]: "Lun",
+  [Weekday.Tue]: "Mar",
+  [Weekday.Wed]: "Mer",
+  [Weekday.Thu]: "Gio",
+  [Weekday.Fri]: "Ven",
+  [Weekday.Sat]: "Sab",
+  [Weekday.Sun]: "Dom",
+};
+
 //Nell'ordine della giornata: pranzo e poi cena
 export const SERVICES: ServiceConst[] = Object.values(Service);
 

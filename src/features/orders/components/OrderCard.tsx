@@ -39,6 +39,8 @@ interface OrderCardProps {
   menu?: Dish[];
   //sola lettura (ordini pagati online): niente interruttore del pagamento né modifiche
   readOnly?: boolean;
+  //pagato / da pagare: solo se i clienti ordinano dal sito e pagano alla cassa
+  showPayment?: boolean;
 }
 
 //Ordine nella lista della cassa, con il nome del cliente e il tavolo (sul posto) o l'orario
@@ -49,12 +51,15 @@ export const OrderCard = ({
   onToggleExpand,
   menu = [],
   readOnly = false,
+  showPayment = true,
 }: OrderCardProps) => {
   const { mutate: updatePayment } = useOrderPayment();
   const { mutate: updateItems, isPending: isSaving } = useUpdateOrderItems();
   const showNotification = useNotification();
 
   const isTakeaway = order.type === OrderType.Takeaway;
+  //senza pagato / da pagare tutti gli ordini si vedono uguali
+  const paid = showPayment && order.paid;
   const [draft, setDraft] = useState<CartType[] | null>(null);
   const [dishToAdd, setDishToAdd] = useState("");
 
@@ -69,7 +74,7 @@ export const OrderCard = ({
   ]
     .filter(Boolean)
     .join(" · ");
-  const borderTop = order.paid
+  const borderTop = paid
     ? ThemeVariants.colors.border.top.brand
     : ThemeVariants.colors.border.top.default;
 
@@ -120,7 +125,7 @@ export const OrderCard = ({
   return (
     <div
       className={`overflow-hidden transition-colors ${ThemeVariants.borderRadius.xl} ${
-        order.paid
+        paid
           ? `${ThemeVariants.colors.bg.hover} ${ThemeVariants.colors.border.all.brand}`
           : `${ThemeVariants.colors.bg.surface} ${ThemeVariants.colors.border.all.default}`
       }`}
@@ -139,7 +144,7 @@ export const OrderCard = ({
                 size={LabelDimensions.xlarge}
                 weight={LabelWeight.bold}
                 color={
-                  order.paid
+                  paid
                     ? ThemeVariants.colors.text.secondary
                     : ThemeVariants.colors.text.brand
                 }
@@ -183,33 +188,35 @@ export const OrderCard = ({
               size={LabelDimensions.medium}
               weight={LabelWeight.normal}
               color={
-                order.paid
+                paid
                   ? ThemeVariants.colors.text.secondary
                   : ThemeVariants.colors.text.white
               }
               noMargin
             />
-            <Label
-              tag={LabelTags.p}
-              size={LabelDimensions.small}
-              label={
-                order.paid ? "Pagato" : readOnly ? "Non pagato" : "Da pagare"
-              }
-              variant={order.paid ? "success" : "danger"}
-              noMargin
-            />
+            {showPayment && (
+              <Label
+                tag={LabelTags.p}
+                size={LabelDimensions.small}
+                label={
+                  order.paid ? "Pagato" : readOnly ? "Non pagato" : "Da pagare"
+                }
+                variant={order.paid ? "success" : "danger"}
+                noMargin
+              />
+            )}
             <ChevronDown
               size={20}
               aria-hidden
               className={`shrink-0 transition-transform duration-300 ${
-                order.paid
+                paid
                   ? ThemeVariants.colors.text.secondary
                   : ThemeVariants.colors.text.white
               } ${expanded ? "rotate-180" : ""}`}
             />
           </div>
         </Accordion>
-        {!readOnly && (
+        {!readOnly && showPayment && (
           <Toggle
             value={order.paid}
             onChange={() => updatePayment({ id: order.id, paid: !order.paid })}

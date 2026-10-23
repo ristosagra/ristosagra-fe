@@ -52,6 +52,21 @@ export const stationBacklog = (orders: Order[], stationId: string) =>
 //Da quante comande in coda una postazione è considerata carica
 export const BUSY_STATION_BACKLOG = 5;
 
+//Dopo quanti minuti in lavorazione un ordine è in ritardo (timer in rosso)
+export const LATE_MINUTES = 20;
+
+//Minuti interi passati da un istante ISO fino a "to" (ms)
+export const minutesSince = (iso: string, to: number) =>
+  Math.max(0, Math.floor((to - Date.parse(iso)) / 60000));
+
+//"< 1 min", "12 min", "1 h 05"
+export const formatMinutes = (minutes: number) =>
+  minutes < 1
+    ? "< 1 min"
+    : minutes < 60
+      ? `${minutes} min`
+      : `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")}`;
+
 export interface StationWork {
   order: Order;
   ticket: StationTicket;

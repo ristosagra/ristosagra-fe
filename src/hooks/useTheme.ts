@@ -1,12 +1,12 @@
 import { useEffect } from "react";
 import { useRestaurant } from "../features/restaurant/hook/useRestaurant";
 import {
-  BRAND_PALETTE,
   DEFAULT_APPEARANCE,
+  darkerShade,
+  toBrandHex,
 } from "../features/restaurant/constant/brandColors";
 import {
   RestaurantTheme,
-  type BrandColorConst,
   type RestaurantThemeConst,
 } from "../features/restaurant/types/restaurant";
 
@@ -23,21 +23,17 @@ const BROWSER_BAR_COLOR: Record<RestaurantThemeConst, string> = {
 //I valori arrivano da localStorage o dal backend: si accettano solo quelli previsti
 const isTheme = (v: unknown): v is RestaurantThemeConst =>
   Object.values(RestaurantTheme).includes(v as RestaurantThemeConst);
-const isBrandColor = (v: unknown): v is BrandColorConst =>
-  typeof v === "string" && Object.hasOwn(BRAND_PALETTE, v);
 
-//Applica tema e colore: data-theme sull'<html> e le due tonalità del colore
-//come variabili CSS, da cui index.css ricava tutte le varianti
+//Applica tema e colore: data-theme sull'<html> e le due tonalità del colore (quella scelta
+//per il tema scuro, una più scura per il chiaro) come variabili CSS, da cui index.css ricava
+//tutte le varianti
 const applyAppearance = (theme: unknown, brandColor: unknown) => {
   const safeTheme = isTheme(theme) ? theme : DEFAULT_APPEARANCE.theme;
-  const safeColor = isBrandColor(brandColor)
-    ? brandColor
-    : DEFAULT_APPEARANCE.brandColor;
-  const color = BRAND_PALETTE[safeColor];
+  const safeColor = toBrandHex(brandColor) ?? DEFAULT_APPEARANCE.brandColor;
   const root = document.documentElement;
   root.dataset.theme = safeTheme;
-  root.style.setProperty("--accent-dark", color.dark);
-  root.style.setProperty("--accent-light", color.light);
+  root.style.setProperty("--accent-dark", safeColor);
+  root.style.setProperty("--accent-light", darkerShade(safeColor));
   document
     .querySelector('meta[name="theme-color"]')
     ?.setAttribute("content", BROWSER_BAR_COLOR[safeTheme]);

@@ -1,13 +1,13 @@
-import { useState } from "react";
-import { Check, ChevronDown, Undo2 } from "lucide-react";
+import { Check, Undo2 } from "lucide-react";
+import { CollapsibleSection } from "../../../components/core/CollapsibleSection";
 import { Button } from "../../../components/core/Button";
 import { ButtonDimensions } from "../../../constant/button";
 import { ThemeVariants } from "../../../constant/colors";
-import { cn } from "../../../helpers/cn";
 import { useNotification } from "../../../hooks/useNotification";
 import { NotificationType } from "../../../types/notification";
 import { useTicketReady } from "../../orders/hook/useOrders";
 import type { Order } from "../../orders/types/orders";
+import { matchesSearch } from "../../orders/utils/orderPlace";
 import type { RestaurantProfile } from "../../restaurant/types/restaurant";
 import {
   byQueue,
@@ -21,9 +21,12 @@ import { ticketCardClass } from "../utils/ticketStyle";
 const StationTicketCard = ({
   work: { order, ticket },
   queuedAt,
+  readOnly,
 }: {
   work: StationWork;
   queuedAt: string;
+  //caposala: vede, non segna pronto
+  readOnly: boolean;
 }) => {
   const { mutate: setReady, isPending } = useTicketReady();
   const showNotification = useNotification();
@@ -43,41 +46,50 @@ const StationTicketCard = ({
 
   return (
     <article className={ticketCardClass(isReady)}>
+      {/* il timer è quello dell'ordine: da quando è in coda, fino a quando la postazione è pronta */}
       <OrderHeader
         order={order}
-        time={ticket.readyAt ?? queuedAt}
-        timeTitle={isReady ? "Pronta alle" : "Ordinato alle"}
+        queuedAt={queuedAt}
+        readyAt={ticket.readyAt}
         dimmed={isReady}
       />
       <TicketLines order={order} lines={ticket.items} />
-      <Button
-        iconLeft={isReady ? <Undo2 size={18} /> : <Check size={18} />}
-        label={isReady ? "Rimetti da preparare" : "Pronto"}
-        onClick={toggle}
-        dimension={ButtonDimensions.auto}
-        variant={isReady ? "secondary" : "primary"}
-        disabled={isPending}
-        fullWidth
-        className="h-12 mt-auto disabled:opacity-50 disabled:cursor-wait"
-      />
+      {!readOnly && (
+        <Button
+          iconLeft={isReady ? <Undo2 size={18} /> : <Check size={18} />}
+          label={isReady ? "Rimetti da preparare" : "Pronto"}
+          onClick={toggle}
+          dimension={ButtonDimensions.auto}
+          variant={isReady ? "secondary" : "primary"}
+          disabled={isPending}
+          fullWidth
+          className="h-12 mt-auto disabled:opacity-50 disabled:cursor-wait"
+        />
+      )}
     </article>
   );
 };
 
 const GRID = "grid gap-3 sm:grid-cols-2 xl:grid-cols-3";
 
-//Postazione della cucina: le sue comande da chi ha ordinato per primo, poi quelle pronte
+//Postazione della cucina: le sue comande da chi ha ordinato per primo, poi quelle pronte.
+//La ricerca filtra per nome, tavolo o numero
 export const StationBoard = ({
   orders,
   stationId,
   profile,
+  search,
+  readOnly,
 }: {
   orders: Order[];
   stationId: string;
   profile: RestaurantProfile | undefined;
+  search: string;
+  readOnly: boolean;
 }) => {
-  const [showReady, setShowReady] = useState(false);
-  const work = stationWork(orders, stationId);
+  const work = stationWork(orders, stationId).filter((w) =>
+    matchesSearch(w.order, search),
+  );
   const sortByQueue = byQueue(profile);
   const toDo = work
     .filter((w) => !w.ticket.readyAt)
@@ -107,41 +119,25 @@ export const StationBoard = ({
               key={w.ticket.id}
               work={w}
               queuedAt={queueTime(w.order, profile)}
+              readOnly={readOnly}
             />
           ))}
         </div>
       )}
 
       {done.length > 0 && (
-        <section>
-          <button
-            type="button"
-            onClick={() => setShowReady((s) => !s)}
-            aria-expanded={showReady}
-            className="flex items-center gap-2 py-2 font-bold cursor-pointer"
-          >
-            Pronte ({done.length})
-            <ChevronDown
-              size={18}
-              aria-hidden
-              className={cn(
-                "transition-transform duration-300",
-                showReady && "rotate-180",
-              )}
-            />
-          </button>
-          {showReady && (
-            <div className={cn(GRID, "mt-2")}>
-              {done.map((w) => (
-                <StationTicketCard
-                  key={w.ticket.id}
-                  work={w}
-                  queuedAt={queueTime(w.order, profile)}
-                />
-              ))}
-            </div>
-          )}
-        </section>
+        <CollapsibleSection title={`Pronte (${done.length})`}>
+          <div className={GRID}>
+            {done.map((w) => (
+              <StationTicketCard
+                key={w.ticket.id}
+                work={w}
+                queuedAt={queueTime(w.order, profile)}
+                readOnly={readOnly}
+              />
+            ))}
+          </div>
+        </CollapsibleSection>
       )}
     </div>
   );

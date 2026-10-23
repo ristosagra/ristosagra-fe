@@ -8,6 +8,10 @@ import type {
 } from "../types/floorPlan";
 import { defaultChairs } from "../helpers/chair";
 import { createMockStore, fakeDelay } from "../../../mock/store";
+import { HttpError } from "../../../services/client/httpClient";
+import { requireRole } from "../../staff/mock/auth";
+import { StaffRole } from "../../staff/types/staff";
+import { canEditFloorPlan } from "../../staff/utils/permissions";
 
 function chair(side: SideConst | "round", offset: number): Chair {
   return { side, offset };
@@ -174,14 +178,47 @@ export const floorPlanStore = createMockStore<FloorPlanData | null>(
   generateFakeFloorPlan,
 );
 
+//Copia con le chiavi in ordine alfabetico, per confrontare due oggetti col JSON
+const sortedKeys = (v: unknown): unknown =>
+  Array.isArray(v)
+    ? v.map(sortedKeys)
+    : v && typeof v === "object"
+      ? Object.fromEntries(
+          Object.keys(v)
+            .sort()
+            .map((k) => [k, sortedKeys((v as Record<string, unknown>)[k])]),
+        )
+      : v;
+
+//Tavoli e muri senza le prenotazioni sulle sedie: quello che solo i gestori cambiano
+const layoutOf = (plan: FloorPlanData | null) =>
+  JSON.stringify(
+    sortedKeys({
+      tables: (plan?.tables ?? []).map((t) => ({
+        ...t,
+        chairs: t.chairs.map((c) => ({ side: c.side, offset: c.offset })),
+      })),
+      walls: plan?.walls ?? [],
+    }),
+  );
+
+//Regole che il backend deve applicare (vedi API.md): la leggono anche la cassa (nomi dei tavoli)
+//e caposala e camerieri, che la salvano solo per le prenotazioni
 export const fakeFloorPlanApi = {
   getFloorPlan: async (): Promise<FloorPlanData | null> => {
     await fakeDelay(600);
+    requireRole(StaffRole.Cashier, StaffRole.HeadWaiter, StaffRole.Waiter);
     return floorPlanStore.get();
   },
 
   saveFloorPlan: async (plan: FloorPlanData): Promise<FloorPlanData> => {
     await fakeDelay(800);
+    const actor = requireRole(StaffRole.HeadWaiter, StaffRole.Waiter);
+    if (
+      !canEditFloorPlan(actor.role) &&
+      layoutOf(plan) !== layoutOf(floorPlanStore.get())
+    )
+      throw new HttpError(403);
     const saved = {
       ...plan,
       id: plan.id ?? "floor-plan-1",

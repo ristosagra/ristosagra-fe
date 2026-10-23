@@ -20,11 +20,12 @@ import RestaurantFloorPlan from "./RestaurantFloorPlan";
 import { PagesCashier, type PagesCashierConst } from "../../constant/pages";
 import { ThemeVariants } from "../../constant/colors";
 import { useRestaurant } from "../../features/restaurant/hook/useRestaurant";
-import { STAFF_ROLE_LABELS } from "../../features/staff/types/staff";
+import { useTakeawaySettings } from "../../features/orders/hook/useOrders";
 import {
   canEditFloorPlan,
   staffHomePage,
   staffPages,
+  staffRoleLabel,
 } from "../../features/staff/utils/permissions";
 import { useCurrentUser } from "../../hooks/useAuth";
 import { useLogout } from "../../hooks/useLogout";
@@ -59,6 +60,8 @@ export const CashierHome = () => {
     refetch: retryUser,
   } = useCurrentUser();
   const { data: restaurant, isLoading: restaurantLoading } = useRestaurant();
+  //con l'asporto c'è anche il banco che lo consegna
+  const { data: takeaway, isLoading: takeawayLoading } = useTakeawaySettings();
   const logout = useLogout();
 
   //Senza sapere chi è entrato non si sa cosa mostrare
@@ -86,9 +89,10 @@ export const CashierHome = () => {
         </div>
       </div>
     );
-  if (!user || userLoading || restaurantLoading) return <Loader />;
+  if (!user || userLoading || restaurantLoading || takeawayLoading)
+    return <Loader />;
 
-  const pages = staffPages(user.role, restaurant);
+  const pages = staffPages(user.role, restaurant, takeaway);
   //una pagina non più permessa (es. l'amministratore ha cambiato le impostazioni) riporta alla prima
   const home = staffHomePage(user.role);
   const current =
@@ -97,7 +101,7 @@ export const CashierHome = () => {
       : pages.includes(home)
         ? home
         : pages[0];
-  const who = `${user.name} · ${STAFF_ROLE_LABELS[user.role]}`;
+  const who = `${user.name} · ${staffRoleLabel(user.role, restaurant, takeaway)}`;
 
   return (
     <div className="h-dvh flex flex-col overflow-hidden">
@@ -168,7 +172,7 @@ export const CashierHome = () => {
         {current === PagesCashier.CASH && <CashierDashboard />}
         {current === PagesCashier.KITCHEN && <Kitchen role={user.role} />}
         {current === PagesCashier.PICKUP && <Pickup />}
-        {/* Es. Banco ritiro mentre l'ordine si porta al tavolo: per ora nessuna pagina */}
+        {/* Es. Banco ritiro mentre l'ordine si porta al tavolo e l'asporto è spento */}
         {!current && (
           <p
             className={`h-full flex items-center justify-center p-6 text-center ${ThemeVariants.colors.text.secondary}`}

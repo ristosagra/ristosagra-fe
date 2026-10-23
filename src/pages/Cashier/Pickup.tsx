@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { Spinner } from "../../components/core/Spinner";
+import { CollapsibleSection } from "../../components/core/CollapsibleSection";
 import {
-  ChevronDown,
   HandPlatter,
-  LoaderCircle,
   Megaphone,
   MonitorPlay,
   ShoppingBag,
@@ -14,10 +13,13 @@ import { Label } from "../../components/core/Label";
 import {
   useOrderDelivered,
   useOrders,
+  useTakeawaySettings,
 } from "../../features/orders/hook/useOrders";
 import { OrderType, type Order } from "../../features/orders/types/orders";
+import { orderPlace } from "../../features/orders/utils/orderPlace";
 import { useRestaurant } from "../../features/restaurant/hook/useRestaurant";
 import { PickupCall } from "../../features/restaurant/types/restaurant";
+import { takeawayOnlyDesk } from "../../features/restaurant/utils/ordering";
 import { byQueue, kitchenOrders } from "../../features/kitchen/utils/kitchen";
 import { timeOf } from "../../features/kitchen/utils/ticketStyle";
 import { ButtonDimensions } from "../../constant/button";
@@ -32,18 +34,9 @@ const PICKUP_REFRESH_MS = 5000;
 //Consegnati recenti mostrati (per rimediare a una consegna segnata per errore)
 const RECENT_DELIVERED = 20;
 
-//Dove va l'ordine: asporto con l'orario di ritiro, tavolo o sul posto, e il nome
+//Dove va l'ordine (asporto con l'orario di ritiro, tavolo o sul posto) e il nome
 const whereLabel = (o: Order) =>
-  [
-    o.type === OrderType.Takeaway
-      ? `Asporto${o.pickupTime ? ` · ritiro ${o.pickupTime}` : ""}`
-      : o.table
-        ? `Tavolo ${o.table}`
-        : "Sul posto",
-    o.customerName,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  [orderPlace(o), o.customerName].filter(Boolean).join(" · ");
 
 //Ordine pronto: numero grande da chiamare, piatti da controllare e "Consegnato"
 const ReadyCard = ({ order }: { order: Order }) => {
@@ -139,14 +132,18 @@ const UndoDelivery = ({ order }: { order: Order }) => {
 };
 
 //Banco del ritiro: i numeri pronti da chiamare (sullo schermo Pronti o a voce) e consegnare,
-//quelli ancora in cucina e gli ultimi consegnati. Si paga prima? Solo gli ordini pagati
+//quelli ancora in cucina e gli ultimi consegnati. Si paga prima? Solo gli ordini pagati.
+//Se l'ordine si porta al tavolo, al banco si consegna solo l'asporto (niente schermo Pronti)
 export const Pickup = () => {
   const { data: orders = [], isLoading } = useOrders(PICKUP_REFRESH_MS);
   const { data: restaurant } = useRestaurant();
-  const [showDelivered, setShowDelivered] = useState(false);
-  const byScreen = restaurant?.pickupCall !== PickupCall.Voice;
+  const { data: takeaway } = useTakeawaySettings();
+  const takeawayOnly = takeawayOnlyDesk(restaurant, takeaway);
+  const byScreen = !takeawayOnly && restaurant?.pickupCall !== PickupCall.Voice;
 
-  const visible = kitchenOrders(orders, restaurant);
+  const visible = kitchenOrders(orders, restaurant).filter(
+    (o) => !takeawayOnly || o.type === OrderType.Takeaway,
+  );
   //chi è pronto da più tempo per primo
   const ready = visible
     .filter((o) => o.readyAt && !o.deliveredAt)
@@ -166,7 +163,7 @@ export const Pickup = () => {
       >
         <div>
           <Label
-            label="Ritiro"
+            label={takeawayOnly ? "Ritiro asporto" : "Ritiro"}
             tag={LabelTags.h1}
             size={LabelDimensions.xlarge}
             weight={LabelWeight.bold}
@@ -177,10 +174,18 @@ export const Pickup = () => {
           <p
             className={`flex items-center gap-1.5 text-sm ${ThemeVariants.colors.text.secondary}`}
           >
-            {byScreen ? <MonitorPlay size={14} /> : <Megaphone size={14} />}
-            {byScreen
-              ? "I numeri pronti compaiono sullo schermo Pronti"
-              : "Chiama a voce i numeri pronti"}
+            {takeawayOnly ? (
+              <ShoppingBag size={14} />
+            ) : byScreen ? (
+              <MonitorPlay size={14} />
+            ) : (
+              <Megaphone size={14} />
+            )}
+            {takeawayOnly
+              ? "Consegna gli ordini da asporto pronti: quelli sul posto si portano al tavolo"
+              : byScreen
+                ? "I numeri pronti compaiono sullo schermo Pronti"
+                : "Chiama a voce i numeri pronti"}
           </p>
         </div>
         {byScreen && (
@@ -202,13 +207,7 @@ export const Pickup = () => {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-10">
-          <LoaderCircle
-            size={32}
-            aria-label="Caricamento"
-            className={`animate-spin ${ThemeVariants.colors.text.brand}`}
-          />
-        </div>
+        <Spinner />
       ) : (
         <div className="flex flex-col gap-6">
           <section className="flex flex-col gap-3">
@@ -255,50 +254,34 @@ export const Pickup = () => {
           </section>
 
           {delivered.length > 0 && (
-            <section>
-              <button
-                type="button"
-                onClick={() => setShowDelivered((s) => !s)}
-                aria-expanded={showDelivered}
-                className="flex items-center gap-2 py-2 font-bold cursor-pointer"
-              >
-                Consegnati di recente ({delivered.length})
-                <ChevronDown
-                  size={18}
-                  aria-hidden
-                  className={cn(
-                    "transition-transform duration-300",
-                    showDelivered && "rotate-180",
-                  )}
-                />
-              </button>
-              {showDelivered && (
-                <ul className="flex flex-col gap-2 mt-2">
-                  {delivered.map((o) => (
-                    <li
-                      key={o.id}
-                      className={cn(
-                        "flex items-center justify-between gap-3 px-4 py-2",
-                        ThemeVariants.borderRadius.lg,
-                        ThemeVariants.colors.bg.surface,
-                        ThemeVariants.colors.border.all.default,
-                      )}
-                    >
-                      <span className="min-w-0 [overflow-wrap:anywhere]">
-                        <span className="font-bold">{o.orderNumber}</span>
-                        <span
-                          className={`text-sm ${ThemeVariants.colors.text.secondary}`}
-                        >
-                          {" "}
-                          · {whereLabel(o)}
-                        </span>
+            <CollapsibleSection
+              title={`Consegnati di recente (${delivered.length})`}
+            >
+              <ul className="flex flex-col gap-2">
+                {delivered.map((o) => (
+                  <li
+                    key={o.id}
+                    className={cn(
+                      "flex items-center justify-between gap-3 px-4 py-2",
+                      ThemeVariants.borderRadius.lg,
+                      ThemeVariants.colors.bg.surface,
+                      ThemeVariants.colors.border.all.default,
+                    )}
+                  >
+                    <span className="min-w-0 [overflow-wrap:anywhere]">
+                      <span className="font-bold">{o.orderNumber}</span>
+                      <span
+                        className={`text-sm ${ThemeVariants.colors.text.secondary}`}
+                      >
+                        {" "}
+                        · {whereLabel(o)}
                       </span>
-                      <UndoDelivery order={o} />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
+                    </span>
+                    <UndoDelivery order={o} />
+                  </li>
+                ))}
+              </ul>
+            </CollapsibleSection>
           )}
         </div>
       )}

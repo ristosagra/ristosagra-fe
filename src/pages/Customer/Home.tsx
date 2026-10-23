@@ -11,19 +11,25 @@ import {
   type OrderingModeConst,
 } from "../../features/restaurant/types/restaurant";
 import { isPayFirstAtCashier } from "../../features/restaurant/utils/ordering";
+import { useCurrentTime } from "../../hooks/useCurrentTime";
+import { isOpenNow, todayHoursLabel } from "../../helpers/openingHours";
 
 //Cosa può fare il cliente, in base a come il ristorante fa ordinare
 const INTRO: Record<OrderingModeConst, string> = {
-  [OrderingMode.MenuOnly]: "Sfoglia il menù e ordina alla cassa.",
+  [OrderingMode.MenuOnly]:
+    "Sfoglia il menù e ordina al cameriere o alla cassa: pagherai a fine pasto.",
   [OrderingMode.PayAtCashier]:
     "Sfoglia il menù e aggiungi i piatti al carrello. Quando sei pronto, invia il tuo ordine e paga alla cassa.",
   [OrderingMode.PayOnline]:
     "Sfoglia il menù e aggiungi i piatti al carrello. Quando sei pronto, ordina e paga direttamente dal telefono.",
 };
 
-//Tipo sagra: si ordina dal telefono e si paga subito alla cassa
+//Tipo sagra (o ritiro al banco): si ordina dal telefono e si paga subito alla cassa
 const PAY_FIRST_INTRO =
   "Sfoglia il menù e ordina dal telefono, poi vai alla cassa a pagare: dopo il pagamento il tuo ordine va in cucina.";
+
+//Solo menù e si paga prima: si ordina e si paga alla cassa
+const MENU_PAY_FIRST_INTRO = "Sfoglia il menù, poi ordina e paga alla cassa.";
 
 export const Home = ({
   setPage,
@@ -37,6 +43,11 @@ export const Home = ({
   table?: string | null;
 }) => {
   const { data: restaurant } = useRestaurant();
+  const now = useCurrentTime();
+  //fuori orario il menù si guarda, ma ordinare sul posto si può solo da aperti
+  const closedNow = !!restaurant && !isOpenNow(restaurant.openingHours, now);
+  const todayHours = restaurant && todayHoursLabel(restaurant.openingHours);
+  const payFirst = isPayFirstAtCashier(restaurant);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -66,11 +77,12 @@ export const Home = ({
             label={
               !restaurant
                 ? " "
-                : restaurant.orderingMode === OrderingMode.PayAtCashier &&
-                    isPayFirstAtCashier(restaurant)
-                  ? PAY_FIRST_INTRO
-                  : (INTRO[restaurant.orderingMode] ??
-                    INTRO[OrderingMode.PayAtCashier])
+                : payFirst && restaurant.orderingMode === OrderingMode.MenuOnly
+                  ? MENU_PAY_FIRST_INTRO
+                  : payFirst
+                    ? PAY_FIRST_INTRO
+                    : (INTRO[restaurant.orderingMode] ??
+                      INTRO[OrderingMode.PayAtCashier])
             }
             color={ThemeVariants.colors.text.secondary}
             size={LabelDimensions.medium}
@@ -78,6 +90,20 @@ export const Home = ({
             noMargin
           />
         </div>
+        {closedNow && (
+          <Label
+            tag={LabelTags.p}
+            label={
+              todayHours
+                ? `Ora siamo chiusi · oggi ${todayHours}`
+                : "Oggi siamo chiusi"
+            }
+            size={LabelDimensions.medium}
+            color={ThemeVariants.colors.text.danger}
+            additionalClasses="font-semibold justify-center text-center"
+            noMargin
+          />
+        )}
         {table && (
           <Label
             tag={LabelTags.p}

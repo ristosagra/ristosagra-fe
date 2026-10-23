@@ -11,30 +11,22 @@ import {
 } from "lucide-react";
 import { Button } from "../../../components/core/Button";
 import { Input } from "../../../components/core/Input";
-import { Toggle } from "../../../components/core/Toogle";
 import { SettingSwitch } from "../../../components/SettingSwitch";
 import { ButtonDimensions } from "../../../constant/button";
 import { ThemeVariants } from "../../../constant/colors";
 import { PERSON_NAME_MAX } from "../../../constant/limits";
 import { cn } from "../../../helpers/cn";
-import { useNotification } from "../../../hooks/useNotification";
-import { HttpError } from "../../../services/client/httpClient";
-import { NotificationType } from "../../../types/notification";
-import {
-  useCreateStaff,
-  useDeleteStaff,
-  useStaff,
-  useUpdateStaff,
-} from "../hook/useStaff";
+import { useTakeawaySettings } from "../../orders/hook/useOrders";
+import { useRestaurant } from "../../restaurant/hook/useRestaurant";
+import { NEW_MEMBER, type StaffDraft } from "../hook/useStaffDraft";
 import {
   PASSWORD_MAX,
-  STAFF_ROLE_LABELS,
   StaffRole,
   USERNAME_MAX,
+  type NewStaffMember,
   type SessionUser,
   type StaffMember,
   type StaffRoleConst,
-  type StaffUpdate,
 } from "../types/staff";
 import {
   generatePassword,
@@ -46,85 +38,84 @@ import {
   assignableRoles,
   canEditMember,
   canManageMember,
+  roleUnavailableReason,
+  staffRoleLabel,
 } from "../utils/permissions";
 
-const saveErrorMessage = (err: unknown) =>
-  err instanceof HttpError && err.status === 409
-    ? "Questo username è già usato da un'altra persona"
-    : "Errore nel salvataggio, riprova";
+//Ruoli secondo le impostazioni del ristorante: nome (es. Banco ritiro asporto) e se servono
+interface RoleInfo {
+  label: (role: StaffRoleConst) => string;
+  unavailable: (role: StaffRoleConst) => string | null;
+}
 
 interface StaffFormProps {
   //chi sta facendo le modifiche (titolare o vice)
   actor: SessionUser;
   //assente = persona nuova
   member?: StaffMember;
-  onDone: () => void;
+  //persona aggiunta in questa modifica (la password serve ancora)
+  isNew: boolean;
+  //password già scritta in bozza
+  initialPassword: string;
+  //ruolo salvato: si può tenere anche se con le impostazioni attuali non serve
+  savedRole?: StaffRoleConst;
+  roleInfo: RoleInfo;
+  usernameTaken: (username: string) => boolean;
+  onConfirm: (values: NewStaffMember) => void;
+  onCancel: () => void;
 }
 
-//Dati di una persona: nome, ruolo, username, password e accesso. Modificando una persona
-//la password si cambia solo se se ne scrive una nuova. Ruolo e accesso solo se chi modifica
-//può gestirla (non il titolare, non se stessi, i vice solo dal titolare)
-const StaffForm = ({ actor, member, onDone }: StaffFormProps) => {
-  const isNew = !member;
+//Dati di una persona: nome, ruolo, username, password e accesso. Conferma li mette nella bozza
+//della sezione, che si salva con Salva. Modificando una persona la password si cambia solo se se
+//ne scrive una nuova. Ruolo e accesso solo se chi modifica può gestirla (non il titolare, non se
+//stessi, i vice solo dal titolare). I ruoli che con le impostazioni del ristorante non servono
+//non si possono dare (chi li ha già li tiene)
+const StaffForm = ({
+  actor,
+  member,
+  isNew,
+  initialPassword,
+  savedRole,
+  roleInfo,
+  usernameTaken,
+  onConfirm,
+  onCancel,
+}: StaffFormProps) => {
   const manageable = !member || canManageMember(actor, member);
   const roles = assignableRoles(actor.role);
-  const { mutate: create, isPending: isCreating } = useCreateStaff();
-  const { mutate: update, isPending: isUpdating } = useUpdateStaff();
-  const showNotification = useNotification();
 
   const [name, setName] = useState(member?.name ?? "");
   const [role, setRole] = useState<StaffRoleConst>(
     member?.role ?? StaffRole.Cashier,
   );
   const [username, setUsername] = useState(member?.username ?? "");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(isNew);
+  const [password, setPassword] = useState(initialPassword);
+  const [showPassword, setShowPassword] = useState(
+    isNew || initialPassword !== "",
+  );
   const [enabled, setEnabled] = useState(member?.enabled ?? true);
-  const [error, setError] = useState<string | null>(null);
-  //cambiando un campo l'errore del salvataggio precedente non vale più
-  const edit =
-    <T,>(setter: (value: T) => void) =>
-    (value: T) => {
-      setter(value);
-      setError(null);
-    };
 
-  const isPending = isCreating || isUpdating;
+  //ruoli che non servono: bloccati, tranne quello che la persona ha già
+  const blockedRoles = roles.filter(
+    (r) => r !== savedRole && roleInfo.unavailable(r),
+  );
   const formError =
     (!name.trim() && "Nome mancante") ||
     usernameError(username) ||
+    (usernameTaken(username) &&
+      "Questo username è già usato da un'altra persona") ||
     passwordError(password, isNew);
 
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (formError || isPending) return;
-    setError(null);
-    const values = {
+    if (formError) return;
+    onConfirm({
       name: name.trim(),
       role,
       username: username.trim(),
       enabled,
-    };
-    const options = {
-      onSuccess: () => {
-        showNotification(
-          isNew ? `${values.name} aggiunto al personale` : "Modifiche salvate",
-          NotificationType.Ok,
-        );
-        onDone();
-      },
-      onError: (err: unknown) => setError(saveErrorMessage(err)),
-    };
-    if (!member) return create({ ...values, password }, options);
-    //solo i campi cambiati, la password solo se è stata scritta
-    const changes: StaffUpdate = {};
-    if (values.name !== member.name) changes.name = values.name;
-    if (values.role !== member.role) changes.role = values.role;
-    if (values.username !== member.username) changes.username = values.username;
-    if (values.enabled !== member.enabled) changes.enabled = values.enabled;
-    if (password) changes.password = password;
-    if (Object.keys(changes).length === 0) return onDone();
-    update({ id: member.id, changes }, options);
+      password,
+    });
   };
 
   return (
@@ -138,13 +129,13 @@ const StaffForm = ({ actor, member, onDone }: StaffFormProps) => {
       )}
     >
       <p className="text-sm font-semibold">
-        {isNew ? "Nuova persona" : `Modifica ${member.name}`}
+        {member ? `Modifica ${member.name}` : "Nuova persona"}
       </p>
       <Input
         type="text"
         placeholder="Nome (es. Marco)"
         value={name}
-        setValue={edit(setName)}
+        setValue={setName}
         maxLength={PERSON_NAME_MAX}
         variant="secondary"
         className="w-full text-sm"
@@ -154,24 +145,35 @@ const StaffForm = ({ actor, member, onDone }: StaffFormProps) => {
 
       {!manageable ? (
         <p className={`text-sm ${ThemeVariants.colors.text.secondary}`}>
-          Ruolo:{" "}
-          <span className="font-semibold">{STAFF_ROLE_LABELS[role]}</span>
+          Ruolo: <span className="font-semibold">{roleInfo.label(role)}</span>
         </p>
       ) : (
-        <div
-          role="radiogroup"
-          aria-label="Ruolo"
-          className="flex flex-wrap gap-2"
-        >
-          {roles.map((r) => (
-            <Button
+        <div className="flex flex-col gap-1.5">
+          <div
+            role="radiogroup"
+            aria-label="Ruolo"
+            className="flex flex-wrap gap-2"
+          >
+            {roles.map((r) => (
+              <Button
+                key={r}
+                label={<span className="text-sm">{roleInfo.label(r)}</span>}
+                onClick={() => setRole(r)}
+                dimension={ButtonDimensions.auto}
+                variant={role === r ? "primary" : "secondary"}
+                disabled={blockedRoles.includes(r)}
+                className="px-3 py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+              />
+            ))}
+          </div>
+          {blockedRoles.map((r) => (
+            <p
               key={r}
-              label={<span className="text-sm">{STAFF_ROLE_LABELS[r]}</span>}
-              onClick={() => edit(setRole)(r)}
-              dimension={ButtonDimensions.auto}
-              variant={role === r ? "primary" : "secondary"}
-              className="px-3 py-2"
-            />
+              className={`text-sm ${ThemeVariants.colors.text.secondary}`}
+            >
+              <span className="font-semibold">{roleInfo.label(r)}</span>:{" "}
+              {roleInfo.unavailable(r)}
+            </p>
           ))}
         </div>
       )}
@@ -180,7 +182,7 @@ const StaffForm = ({ actor, member, onDone }: StaffFormProps) => {
         type="text"
         placeholder="Username per accedere"
         value={username}
-        setValue={edit(setUsername)}
+        setValue={setUsername}
         maxLength={USERNAME_MAX}
         variant="secondary"
         className="w-full text-sm"
@@ -194,7 +196,7 @@ const StaffForm = ({ actor, member, onDone }: StaffFormProps) => {
             isNew ? "Password" : "Nuova password (vuota = resta quella)"
           }
           value={password}
-          setValue={edit(setPassword)}
+          setValue={setPassword}
           maxLength={PASSWORD_MAX}
           variant="secondary"
           className="flex-1 text-sm"
@@ -215,7 +217,7 @@ const StaffForm = ({ actor, member, onDone }: StaffFormProps) => {
           iconLeft={<Shuffle size={16} />}
           label={<span className="text-sm ml-1.5 max-sm:hidden">Genera</span>}
           onClick={() => {
-            edit(setPassword)(generatePassword());
+            setPassword(generatePassword());
             setShowPassword(true);
           }}
           dimension={ButtonDimensions.auto}
@@ -239,19 +241,19 @@ const StaffForm = ({ actor, member, onDone }: StaffFormProps) => {
         />
       )}
 
-      {(error || formError) && (
+      {formError && (
         <p
           role="alert"
-          className={`text-sm ${error ? ThemeVariants.colors.text.danger : ThemeVariants.colors.text.secondary}`}
+          className={`text-sm ${ThemeVariants.colors.text.secondary}`}
         >
-          {error ?? formError}
+          {formError}
         </p>
       )}
       <div className="flex justify-end gap-2">
         <Button
           iconLeft={<X size={15} />}
           label={<span className="text-sm ml-1">Annulla</span>}
-          onClick={onDone}
+          onClick={onCancel}
           dimension={ButtonDimensions.auto}
           variant="secondary"
           className="px-3 py-2"
@@ -260,11 +262,13 @@ const StaffForm = ({ actor, member, onDone }: StaffFormProps) => {
           type="submit"
           iconLeft={<Check size={15} />}
           label={
-            <span className="text-sm ml-1">{isNew ? "Aggiungi" : "Salva"}</span>
+            <span className="text-sm ml-1">
+              {member ? "Conferma" : "Aggiungi"}
+            </span>
           }
           dimension={ButtonDimensions.auto}
           variant="primary"
-          disabled={!!formError || isPending}
+          disabled={!!formError}
           className="px-3 py-2 disabled:opacity-40 disabled:cursor-not-allowed"
         />
       </div>
@@ -275,109 +279,96 @@ const StaffForm = ({ actor, member, onDone }: StaffFormProps) => {
 interface StaffRowProps {
   actor: SessionUser;
   member: StaffMember;
+  roleInfo: RoleInfo;
+  isEditMode: boolean;
+  //non ancora salvata (nuova o cambiata)
+  pending: boolean;
+  //salvataggio non riuscito
+  error?: string;
+  //altro form aperto: si conferma o annulla prima quello
+  locked: boolean;
   onEdit: () => void;
+  onDelete: () => void;
 }
 
-//Una persona nell'elenco: accesso attivabile al volo, modifica ed eliminazione, quando chi
-//guarda può farlo (vedi canEditMember / canManageMember)
-const StaffRow = ({ actor, member, onEdit }: StaffRowProps) => {
-  const { mutate: update, isPending: isUpdating } = useUpdateStaff();
-  const { mutate: remove, isPending: isDeleting } = useDeleteStaff();
-  const showNotification = useNotification();
-  const [confirmDelete, setConfirmDelete] = useState(false);
+//Una persona nell'elenco. In modifica, quando chi guarda può farlo (vedi canEditMember /
+//canManageMember), si cambia o si toglie. Chi non può accedere si vede spento, ma i pulsanti
+//restano normali
+const StaffRow = ({
+  actor,
+  member,
+  roleInfo,
+  isEditMode,
+  pending,
+  error,
+  locked,
+  onEdit,
+  onDelete,
+}: StaffRowProps) => {
   const isMe = member.id === actor.id;
-  const editable = canEditMember(actor, member);
-  const manageable = canManageMember(actor, member);
-
-  const toggleAccess = () =>
-    update(
-      { id: member.id, changes: { enabled: !member.enabled } },
-      {
-        onError: () =>
-          showNotification("Errore nel salvataggio", NotificationType.Err),
-      },
-    );
-
-  const doDelete = () =>
-    remove(member.id, {
-      onSuccess: () =>
-        showNotification(`${member.name} eliminato`, NotificationType.Ok),
-      onError: () =>
-        showNotification("Errore nell'eliminazione", NotificationType.Err),
-    });
+  const editable = isEditMode && canEditMember(actor, member);
+  const manageable = isEditMode && canManageMember(actor, member);
+  const roleUnused = roleInfo.unavailable(member.role);
 
   return (
     <li
       className={cn(
         "flex flex-wrap items-center gap-x-3 gap-y-2 p-3",
         ThemeVariants.borderRadius.md,
-        ThemeVariants.colors.border.all.default,
-        !member.enabled && "opacity-70",
+        member.enabled
+          ? ThemeVariants.colors.border.all.default
+          : "border border-dashed border-[var(--border)]",
       )}
     >
       <div className="flex-1 min-w-40">
-        <p className="font-semibold [overflow-wrap:anywhere]">
-          {member.name}
-          {isMe && (
+        <div className={cn(!member.enabled && "opacity-50")}>
+          <p className="font-semibold [overflow-wrap:anywhere]">
+            {member.name}
+            {isMe && (
+              <span
+                className={`font-normal ${ThemeVariants.colors.text.secondary}`}
+              >
+                {" "}
+                (tu)
+              </span>
+            )}
+          </p>
+          <p className={`text-sm ${ThemeVariants.colors.text.secondary}`}>
             <span
-              className={`font-normal ${ThemeVariants.colors.text.secondary}`}
+              className={
+                member.enabled ? ThemeVariants.colors.text.brand : undefined
+              }
             >
-              {" "}
-              (tu)
-            </span>
+              {roleInfo.label(member.role)}
+            </span>{" "}
+            · utente <span className="font-semibold">{member.username}</span>
+            {!member.enabled && " · accesso bloccato"}
+          </p>
+          {roleUnused && (
+            <p className={`text-sm ${ThemeVariants.colors.text.secondary}`}>
+              Ruolo non usato con le impostazioni attuali: {roleUnused}
+            </p>
           )}
-        </p>
-        <p className={`text-sm ${ThemeVariants.colors.text.secondary}`}>
-          <span className={ThemeVariants.colors.text.brand}>
-            {STAFF_ROLE_LABELS[member.role]}
-          </span>{" "}
-          · utente <span className="font-semibold">{member.username}</span>
-          {!member.enabled && (
-            <span className={ThemeVariants.colors.text.danger}>
-              {" "}
-              · accesso bloccato
-            </span>
-          )}
-        </p>
+        </div>
+        {(error || pending) && (
+          <p
+            className={`text-sm ${error ? ThemeVariants.colors.text.danger : ThemeVariants.colors.text.brand}`}
+          >
+            {error ?? "Da salvare"}
+          </p>
+        )}
       </div>
 
-      {confirmDelete ? (
-        <div className="flex items-center gap-2">
-          <span className="text-sm">Eliminare?</span>
-          <Button
-            label={<span className="text-sm">Sì</span>}
-            onClick={doDelete}
-            dimension={ButtonDimensions.auto}
-            variant="danger"
-            disabled={isDeleting}
-            className="px-3 py-2"
-          />
-          <Button
-            label={<span className="text-sm">No</span>}
-            onClick={() => setConfirmDelete(false)}
-            dimension={ButtonDimensions.auto}
-            variant="secondary"
-            className="px-3 py-2"
-          />
-        </div>
-      ) : (
+      {(editable || manageable) && (
         <div className="flex items-center gap-2 ml-auto">
-          {manageable && (
-            <span className="mr-2 flex items-center">
-              <Toggle
-                value={member.enabled}
-                onChange={() => !isUpdating && toggleAccess()}
-                ariaLabel={`Accesso di ${member.name}`}
-              />
-            </span>
-          )}
           {editable && (
             <Button
               iconLeft={<Pencil size={15} />}
               onClick={onEdit}
               dimension={ButtonDimensions.auto}
               variant="secondary"
-              className="w-9 h-9"
+              disabled={locked}
+              className="w-9 h-9 disabled:opacity-40 disabled:cursor-not-allowed"
               ariaLabel={`Modifica ${member.name}`}
             />
           )}
@@ -389,10 +380,11 @@ const StaffRow = ({ actor, member, onEdit }: StaffRowProps) => {
                   className={ThemeVariants.colors.text.danger}
                 />
               }
-              onClick={() => setConfirmDelete(true)}
+              onClick={onDelete}
               dimension={ButtonDimensions.auto}
               variant="secondary"
-              className="w-9 h-9"
+              disabled={locked}
+              className="w-9 h-9 disabled:opacity-40 disabled:cursor-not-allowed"
               ariaLabel={`Elimina ${member.name}`}
             />
           )}
@@ -402,62 +394,105 @@ const StaffRow = ({ actor, member, onEdit }: StaffRowProps) => {
   );
 };
 
-//Personale del ristorante, gestito dal titolare e dai vice: chi lavora, con che ruolo, con quale
-//username e password entra e se può accedere. Le modifiche si salvano subito
-export const StaffSettings = ({ actor }: { actor: SessionUser }) => {
-  const { data: staff = [], isLoading, isError } = useStaff();
-  //persona in modifica ("new" = nuova)
-  const [editing, setEditing] = useState<string | null>(null);
-  const secondary = `text-sm ${ThemeVariants.colors.text.secondary}`;
+interface StaffSettingsProps {
+  actor: SessionUser;
+  //bozza della sezione Personale
+  draft: StaffDraft;
+  isEditMode: boolean;
+}
 
-  if (isLoading) return <p className={secondary}>Caricamento del personale…</p>;
-  if (isError)
+//Personale del ristorante, gestito dal titolare e dai vice: chi lavora, con che ruolo, con quale
+//username e password entra e se può accedere. In lettura l'elenco; con Modifica si aggiungono,
+//cambiano ed eliminano persone, che si salvano tutte con Salva. I ruoli seguono le impostazioni
+//del ristorante (es. Banco ritiro solo se c'è qualcosa da consegnare al banco)
+export const StaffSettings = ({
+  actor,
+  draft,
+  isEditMode,
+}: StaffSettingsProps) => {
+  const { data: restaurant, isLoading: restaurantLoading } = useRestaurant();
+  const { data: takeaway, isLoading: takeawayLoading } = useTakeawaySettings();
+  const { editing, setEditing } = draft;
+  const secondary = `text-sm ${ThemeVariants.colors.text.secondary}`;
+  const roleInfo: RoleInfo = {
+    label: (role) => staffRoleLabel(role, restaurant, takeaway),
+    unavailable: (role) => roleUnavailableReason(role, restaurant, takeaway),
+  };
+
+  if (draft.isLoading || restaurantLoading || takeawayLoading)
+    return <p className={secondary}>Caricamento del personale…</p>;
+  if (draft.isError)
     return (
       <p className={`text-sm ${ThemeVariants.colors.text.danger}`}>
         Errore nel caricamento del personale
       </p>
     );
 
+  const form = (member?: StaffMember) => (
+    <StaffForm
+      actor={actor}
+      member={member}
+      isNew={!member || draft.isNewMember(member.id)}
+      initialPassword={member ? draft.pendingPassword(member.id) : ""}
+      savedRole={member && draft.savedRole(member.id)}
+      roleInfo={roleInfo}
+      usernameTaken={(username) =>
+        draft.usernameTaken(username, member?.id ?? null)
+      }
+      onConfirm={draft.confirm}
+      onCancel={() => setEditing(null)}
+    />
+  );
+
   return (
     <div className="flex flex-col gap-3">
       <p className={secondary}>
         Ognuno entra nell'area del personale con il suo username e vede solo la
         parte del suo ruolo. I vice amministratori hanno gli stessi poteri del
-        titolare, ma solo il titolare li nomina e li elimina. Le modifiche qui
-        si salvano subito.
+        titolare, ma solo il titolare li nomina e li elimina.{" "}
+        {isEditMode
+          ? "Le modifiche alle persone si salvano tutte con Salva."
+          : "Clicca Modifica per aggiungere, cambiare o eliminare persone."}
       </p>
       <ul className="flex flex-col gap-2">
-        {sortStaff(staff).map((m) =>
-          editing === m.id ? (
-            <li key={m.id}>
-              <StaffForm
-                actor={actor}
-                member={m}
-                onDone={() => setEditing(null)}
-              />
-            </li>
+        {sortStaff(draft.members).map((m) =>
+          isEditMode && editing === m.id ? (
+            <li key={m.id}>{form(m)}</li>
           ) : (
             <StaffRow
               key={m.id}
               actor={actor}
               member={m}
+              roleInfo={roleInfo}
+              isEditMode={isEditMode}
+              pending={draft.isPending(m.id)}
+              error={draft.errors[m.id]}
+              locked={editing !== null}
               onEdit={() => setEditing(m.id)}
+              onDelete={() => draft.removeMember(m.id)}
             />
           ),
         )}
       </ul>
-      {editing === "new" ? (
-        <StaffForm actor={actor} onDone={() => setEditing(null)} />
-      ) : (
-        <Button
-          iconLeft={<UserPlus size={15} />}
-          label={<span className="text-sm ml-1.5">Aggiungi persona</span>}
-          onClick={() => setEditing("new")}
-          dimension={ButtonDimensions.auto}
-          variant="primary"
-          className="px-3 py-2 self-start"
-        />
+      {draft.deletedNames.length > 0 && (
+        <p className={`text-sm ${ThemeVariants.colors.text.danger}`}>
+          Da eliminare salvando: {draft.deletedNames.join(", ")}
+        </p>
       )}
+      {isEditMode &&
+        (editing === NEW_MEMBER ? (
+          form()
+        ) : (
+          <Button
+            iconLeft={<UserPlus size={15} />}
+            label={<span className="text-sm ml-1.5">Aggiungi persona</span>}
+            onClick={() => setEditing(NEW_MEMBER)}
+            dimension={ButtonDimensions.auto}
+            variant="primary"
+            disabled={editing !== null}
+            className="px-3 py-2 self-start disabled:opacity-40 disabled:cursor-not-allowed"
+          />
+        ))}
     </div>
   );
 };

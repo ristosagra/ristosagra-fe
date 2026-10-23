@@ -1,667 +1,210 @@
-import { Fragment, useId, useState } from "react";
+import { useState } from "react";
 import {
-  Check,
-  ChefHat,
-  ChevronDown,
+  ChevronRight,
   Clock,
-  Moon,
   Palette,
-  Pencil,
-  ShoppingBag,
   Smartphone,
   Store,
-  Sun,
   Users,
   UtensilsCrossed,
 } from "lucide-react";
-import { MenuEditor } from "./MenuEditor";
-import { OrderingSettings } from "../../features/restaurant/components/OrderingSettings";
-import { StaffSettings } from "../../features/staff/components/StaffSettings";
-import { KitchenSettings } from "../../features/kitchen/components/KitchenSettings";
-import { kitchenSettingsError } from "../../features/kitchen/utils/kitchenSettings";
-import { useCurrentUser } from "../../hooks/useAuth";
-import { TakeawaySettingsBox } from "../../features/orders/components/TakeawaySettingsBox";
+import { AppearanceSection } from "./profile/AppearanceSection";
+import { HoursSection } from "./profile/HoursSection";
+import { MenuSection } from "./profile/MenuSection";
+import { OrdersSection } from "./profile/OrdersSection";
+import { StaffSection } from "./profile/StaffSection";
+import { useMenus } from "../../features/menu/hook/useMenu";
+import { activeMenu } from "../../features/menu/utils/menuUtils";
+import { useTakeawaySettings } from "../../features/orders/hook/useOrders";
 import {
-  useSaveTakeawaySettings,
-  useTakeawaySettings,
-} from "../../features/orders/hook/useOrders";
-import { takeawayError } from "../../features/orders/utils/takeawayUtils";
-import type { TakeawaySettings } from "../../features/orders/types/orders";
-import { useMenuDraft } from "../../features/menu/hook/useMenuDraft";
-import {
-  useRestaurant,
-  useUpdateRestaurant,
-} from "../../features/restaurant/hook/useRestaurant";
-import {
-  RESTAURANT_NAME_MAX,
-  RestaurantTheme,
-  type BrandColorConst,
-  type RestaurantProfileUpdate,
-  type RestaurantThemeConst,
-} from "../../features/restaurant/types/restaurant";
-import {
-  BRAND_COLORS,
-  BRAND_PALETTE,
+  DEFAULT_BRAND_COLOR,
+  colorName,
+  toBrandHex,
 } from "../../features/restaurant/constant/brandColors";
-import { Accordion } from "../../components/core/Accordion";
-import { Button } from "../../components/core/Button";
-import { Input } from "../../components/core/Input";
-import { Label } from "../../components/core/Label";
-import { Loader } from "../../components/core/Loader";
-import { SaveChanges } from "../../components/SaveChanges";
-import { WeeklyHoursEditor } from "../../components/WeeklyHoursEditor";
-import { useNotification } from "../../hooks/useNotification";
+import { useRestaurant } from "../../features/restaurant/hook/useRestaurant";
+import { ORDERING_MODE_LABELS } from "../../features/restaurant/constant/ordering";
+import { RestaurantTheme } from "../../features/restaurant/types/restaurant";
+import {
+  usesCounterPickup,
+  usesKitchenDispatch,
+} from "../../features/restaurant/utils/ordering";
+import { useStaff } from "../../features/staff/hook/useStaff";
 import { ThemeVariants } from "../../constant/colors";
-import { ButtonDimensions } from "../../constant/button";
-import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
-import {
-  SERVICE_LABELS,
-  SERVICES,
-  WEEKDAY_LABELS,
-  WEEKDAYS,
-} from "../../constant/openingHours";
-import {
-  formatRanges,
-  openServices,
-  weeklyHoursValid,
-} from "../../helpers/openingHours";
+import { WEEKDAYS } from "../../constant/openingHours";
+import { PagesProfile, type PagesProfileConst } from "../../constant/pages";
+import { openServices } from "../../helpers/openingHours";
 import { cn } from "../../helpers/cn";
-import { NotificationType } from "../../types/notification";
-import type { WeeklyHours } from "../../types/openingHours";
 
-interface BadgeProps {
-  label: string;
-  variant: "success" | "danger" | "brand";
-}
-
-//Etichetta accanto al titolo di una box: stato del menù, modifiche da salvare o da correggere
-const Badge = ({ label, variant }: BadgeProps) => (
-  <span
-    className={cn(
-      "text-xs px-2 py-0.5 rounded-full font-medium normal-case",
-      {
-        success: `${ThemeVariants.colors.bg.success} ${ThemeVariants.colors.text.white} ${ThemeVariants.colors.border.all.success}`,
-        danger: `${ThemeVariants.colors.bg.danger} ${ThemeVariants.colors.text.white} ${ThemeVariants.colors.border.all.danger}`,
-        brand: `${ThemeVariants.colors.bg.hover} ${ThemeVariants.colors.text.brand} ${ThemeVariants.colors.border.all.brand}`,
-      }[variant],
-    )}
-  >
-    {label}
-  </span>
-);
-
-//In modifica dice se una box ha cambi da salvare o da correggere (utile quando è chiusa)
-const EditStatus = ({
-  dirty,
-  error,
-}: {
-  dirty: boolean;
-  error?: string | null;
-}) =>
-  error ? (
-    <Badge label={error} variant="danger" />
-  ) : dirty ? (
-    <Badge label="Da salvare" variant="brand" />
-  ) : null;
-
-interface SettingsCardProps {
+interface SectionLinkProps {
   icon: React.ReactNode;
   title: string;
-  //etichette accanto al titolo
-  badges?: React.ReactNode;
-  //false per una box sempre aperta, senza pulsante per chiuderla
-  collapsible?: boolean;
-  children: React.ReactNode;
+  //com'è adesso, in breve
+  summary?: string;
+  //qualcosa da sistemare (es. nessun menù per oggi)
+  warning?: boolean;
+  onClick: () => void;
 }
 
-//Box del profilo: quelle apribili partono chiuse. Da chiuse il contenuto resta montato
-//(solo nascosto), così non si perde quello che si sta scrivendo, es. un piatto in modifica
-const SettingsCard = ({
+//Collegamento a una sezione del profilo
+const SectionLink = ({
   icon,
   title,
-  badges,
-  collapsible = true,
-  children,
-}: SettingsCardProps) => {
-  const [open, setOpen] = useState(!collapsible);
-  const bodyId = useId();
-
-  const heading = (
+  summary,
+  warning,
+  onClick,
+}: SectionLinkProps) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={cn(
+      "flex items-center gap-4 p-4 text-left cursor-pointer transition-colors hover:bg-[var(--bg-hover)]",
+      ThemeVariants.colors.bg.surface,
+      ThemeVariants.colors.border.all.default,
+      ThemeVariants.borderRadius.lg,
+    )}
+  >
     <span
+      aria-hidden
       className={cn(
-        "flex flex-wrap items-center gap-2 min-w-0 text-sm font-semibold uppercase",
-        ThemeVariants.colors.text.secondary,
+        "w-11 h-11 shrink-0 flex items-center justify-center",
+        ThemeVariants.borderRadius.md,
+        ThemeVariants.colors.bg.hover,
+        ThemeVariants.colors.text.brand,
       )}
     >
-      <span className="flex items-center gap-2">
-        {icon}
-        {title}
-      </span>
-      {badges}
+      {icon}
     </span>
-  );
-
-  return (
-    <section
-      className={cn(
-        ThemeVariants.colors.bg.surface,
-        ThemeVariants.colors.border.all.default,
-        ThemeVariants.borderRadius.lg,
-      )}
-    >
-      <h3>
-        {collapsible ? (
-          <Accordion
-            onClick={() => setOpen((o) => !o)}
-            expanded={open}
-            controls={bodyId}
-            className="gap-3 p-4"
-          >
-            {heading}
-            <ChevronDown
-              size={20}
-              aria-hidden
-              className={cn(
-                "shrink-0 transition-transform duration-300",
-                ThemeVariants.colors.text.secondary,
-                open && "rotate-180",
-              )}
-            />
-          </Accordion>
-        ) : (
-          <span className="block p-4">{heading}</span>
+    <span className="flex-1 min-w-0">
+      <span className="block font-semibold">{title}</span>
+      <span
+        className={cn(
+          "block text-sm [overflow-wrap:anywhere]",
+          warning
+            ? ThemeVariants.colors.text.danger
+            : ThemeVariants.colors.text.secondary,
         )}
-      </h3>
-      <div id={bodyId} hidden={!open} className="flex flex-col gap-3 px-4 pb-4">
-        {children}
-      </div>
-    </section>
-  );
-};
-
-interface RestaurantNameSettingProps {
-  name?: string;
-  isEditMode: boolean;
-  onChange: (name: string) => void;
-}
-
-//Nome del locale: compare nella barra della cassa e nella home dei clienti
-const RestaurantNameSetting = ({
-  name,
-  isEditMode,
-  onChange,
-}: RestaurantNameSettingProps) =>
-  isEditMode ? (
-    <Input
-      type="text"
-      placeholder="Nome del locale"
-      value={name ?? ""}
-      setValue={onChange}
-      maxLength={RESTAURANT_NAME_MAX}
-      variant="secondary"
-      className="w-full text-sm"
-    />
-  ) : (
-    <span
-      className={`flex items-center min-h-10 text-2xl italic [overflow-wrap:anywhere] ${ThemeVariants.colors.text.brand} ${ThemeVariants.fontFamily.display}`}
-    >
-      {name ?? "…"}
+      >
+        {summary ?? "…"}
+      </span>
     </span>
-  );
+    <ChevronRight
+      size={20}
+      aria-hidden
+      className={`shrink-0 ${ThemeVariants.colors.text.secondary}`}
+    />
+  </button>
+);
 
-interface AppearanceSettingProps {
-  theme: RestaurantThemeConst;
-  brandColor: BrandColorConst;
-  isEditMode: boolean;
-  onChange: (changes: RestaurantProfileUpdate) => void;
-}
-
-//Tema e colore delle parti colorate: li sceglie il ristorante e valgono anche per i clienti
-const AppearanceSetting = ({
-  theme,
-  brandColor,
-  isEditMode,
-  onChange,
-}: AppearanceSettingProps) => {
-  const isDark = theme === RestaurantTheme.Dark;
-  const color = BRAND_PALETTE[brandColor];
-
-  return (
-    <>
-      {isEditMode ? (
-        <>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              iconLeft={<Sun size={15} />}
-              label={<span className="text-sm ml-1.5">Chiaro</span>}
-              dimension={ButtonDimensions.auto}
-              variant={isDark ? "secondary" : "primary"}
-              onClick={() => onChange({ theme: RestaurantTheme.Light })}
-              className="px-3 py-2"
-            />
-            <Button
-              iconLeft={<Moon size={15} />}
-              label={<span className="text-sm ml-1.5">Scuro</span>}
-              dimension={ButtonDimensions.auto}
-              variant={isDark ? "primary" : "secondary"}
-              onClick={() => onChange({ theme: RestaurantTheme.Dark })}
-              className="px-3 py-2"
-            />
-          </div>
-          <div>
-            <p
-              className={`text-sm mb-2 ${ThemeVariants.colors.text.secondary}`}
-            >
-              Colore:{" "}
-              <span
-                className={`font-semibold ${ThemeVariants.colors.text.brand}`}
-              >
-                {color.label}
-              </span>
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {BRAND_COLORS.map((c) => {
-                const selected = c === brandColor;
-                return (
-                  <button
-                    key={c}
-                    type="button"
-                    title={BRAND_PALETTE[c].label}
-                    aria-label={BRAND_PALETTE[c].label}
-                    aria-pressed={selected}
-                    onClick={() => onChange({ brandColor: c })}
-                    style={{ backgroundColor: BRAND_PALETTE[c].dark }}
-                    className={`w-9 h-9 sm:w-8 sm:h-8 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-110 ${selected ? "ring-2 ring-offset-2 ring-[var(--text-primary)] ring-offset-[var(--bg-surface)]" : ""}`}
-                  >
-                    {selected && <Check size={16} className="text-white" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </>
-      ) : (
-        <div className="flex flex-col gap-2 text-sm">
-          <p className="flex items-center gap-1.5">
-            <span className={ThemeVariants.colors.text.secondary}>Tema:</span>
-            {isDark ? <Moon size={15} /> : <Sun size={15} />}
-            <span className="font-semibold">{isDark ? "Scuro" : "Chiaro"}</span>
-          </p>
-          <p className="flex items-center gap-1.5">
-            <span className={ThemeVariants.colors.text.secondary}>Colore:</span>
-            <span
-              aria-hidden
-              style={{ backgroundColor: color.dark }}
-              className="w-4 h-4 rounded-full"
-            />
-            <span className="font-semibold">{color.label}</span>
-          </p>
-        </div>
-      )}
-      <p className={`text-sm ${ThemeVariants.colors.text.secondary}`}>
-        Valgono per la cassa e per le pagine dei clienti
-      </p>
-    </>
-  );
-};
-
-interface OpeningHoursSettingProps {
-  hours: WeeklyHours;
-  isEditMode: boolean;
-  onChange: (hours: WeeklyHours) => void;
-}
-
-//Giorni e orari di apertura del locale: le prenotazioni dei clienti devono starci dentro
-const OpeningHoursSetting = ({
-  hours,
-  isEditMode,
-  onChange,
-}: OpeningHoursSettingProps) => {
-  if (isEditMode)
-    return <WeeklyHoursEditor hours={hours} onChange={onChange} />;
-
-  //Un giorno per riga: pranzo sopra e cena sotto, divisi dal giorno dopo da una linea
-  return (
-    <ul className="flex flex-col">
-      {WEEKDAYS.map((d) => {
-        const open = openServices(hours[d]);
-        return (
-          <li
-            key={d}
-            className={cn(
-              "flex items-start justify-between gap-3 py-2 text-sm last:border-b-0",
-              ThemeVariants.colors.border.bottom.default,
-            )}
-          >
-            <span className="font-semibold flex mt-auto mb-auto">
-              {WEEKDAY_LABELS[d]}
-            </span>
-            {open.length > 0 ? (
-              <dl className="grid grid-cols-[auto_auto] gap-x-3 gap-y-1">
-                {SERVICES.map((s) => (
-                  <Fragment key={s}>
-                    <dt className={ThemeVariants.colors.text.secondary}>
-                      {SERVICE_LABELS[s]}
-                    </dt>
-                    <dd
-                      className={cn(
-                        "tabular-nums",
-                        !open.includes(s) &&
-                          ThemeVariants.colors.text.secondary,
-                      )}
-                    >
-                      {open.includes(s)
-                        ? formatRanges([hours[d][s]])
-                        : "Chiuso"}
-                    </dd>
-                  </Fragment>
-                ))}
-              </dl>
-            ) : (
-              <span className={ThemeVariants.colors.text.secondary}>
-                Chiuso
-              </span>
-            )}
-          </li>
-        );
-      })}
-    </ul>
-  );
-};
-
-//Profilo del ristorante (solo amministratore): nome del locale, tema e colore, orari di apertura,
-//ordini dal sito, asporto, personale e menù. Il personale si salva a parte, subito.
-//Si parte in lettura; Modifica rende modificabili tutte le box e Salva salva insieme le modifiche
-export const Profile = () => {
+//Pagina iniziale del profilo: un collegamento per argomento, con com'è adesso in breve
+const ProfileHome = ({
+  onOpen,
+}: {
+  onOpen: (section: PagesProfileConst) => void;
+}) => {
   const { data: restaurant } = useRestaurant();
   const { data: takeaway } = useTakeawaySettings();
-  const { mutateAsync: updateRestaurant } = useUpdateRestaurant();
-  const { mutateAsync: saveTakeaway } = useSaveTakeawaySettings();
-  const menu = useMenuDraft();
-  const showNotification = useNotification();
-  const { data: currentUser } = useCurrentUser();
+  const { data: staff } = useStaff();
+  const { data: menus } = useMenus();
 
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  //bozze delle modifiche, salvate tutte insieme
-  const [restaurantDraft, setRestaurantDraft] =
-    useState<RestaurantProfileUpdate>({});
-  const [takeawayDraft, setTakeawayDraft] = useState<TakeawaySettings | null>(
-    null,
-  );
-
-  const profile = restaurant && { ...restaurant, ...restaurantDraft };
-  const editRestaurant = (changes: RestaurantProfileUpdate) =>
-    setRestaurantDraft((d) => ({ ...d, ...changes }));
-
-  //Cosa impedisce di salvare, box per box
-  const nameError =
-    restaurantDraft.name?.trim() === "" ? "Nome mancante" : null;
-  const hoursError =
-    restaurantDraft.openingHours &&
-    !weeklyHoursValid(restaurantDraft.openingHours)
-      ? "Da correggere"
-      : null;
-  const takeawayDraftError =
-    takeawayDraft && takeawayError(takeawayDraft) ? "Da correggere" : null;
-  const kitchenDirty =
-    restaurantDraft.kitchenDispatch !== undefined ||
-    restaurantDraft.kitchenStations !== undefined;
-  const kitchenError =
-    kitchenDirty &&
-    profile &&
-    kitchenSettingsError(profile.kitchenDispatch, profile.kitchenStations ?? [])
-      ? "Da correggere"
-      : null;
-  const menuError = menu.isBusy
-    ? "Da confermare"
-    : menu.isDirty && menu.dishes.length === 0
-      ? "Menù vuoto"
-      : null;
-  const canSave =
-    !isSaving &&
-    !nameError &&
-    !hoursError &&
-    !takeawayDraftError &&
-    !kitchenError &&
-    !menuError;
-
-  const cancel = () => {
-    setRestaurantDraft({});
-    setTakeawayDraft(null);
-    menu.reset();
-    setIsEditMode(false);
-  };
-
-  //Salva le box modificate; se qualcosa non va si resta in modifica con le sole bozze non salvate
-  const save = async () => {
-    const tasks: { label: string; run: () => Promise<unknown> }[] = [];
-    if (Object.keys(restaurantDraft).length > 0) {
-      const { name, kitchenStations } = restaurantDraft;
-      const changes = {
-        ...restaurantDraft,
-        ...(name !== undefined && { name: name.trim() }),
-        ...(kitchenStations && {
-          kitchenStations: kitchenStations.map((s) => ({
-            ...s,
-            name: s.name.trim(),
-          })),
-        }),
-      };
-      tasks.push({
-        label: "profilo",
-        run: () => updateRestaurant(changes).then(() => setRestaurantDraft({})),
-      });
-    }
-    if (takeawayDraft)
-      tasks.push({
-        label: "asporto",
-        run: () =>
-          saveTakeaway(takeawayDraft).then(() => setTakeawayDraft(null)),
-      });
-    if (menu.isDirty) tasks.push({ label: "menù", run: menu.save });
-
-    setIsSaving(true);
-    const results = await Promise.allSettled(tasks.map((t) => t.run()));
-    setIsSaving(false);
-
-    const failed = tasks.filter((_, i) => results[i].status === "rejected");
-    if (failed.length > 0)
-      return showNotification(
-        `Errore nel salvataggio: ${failed.map((t) => t.label).join(", ")}`,
-        NotificationType.Err,
-      );
-    setIsEditMode(false);
-    if (tasks.length > 0)
-      showNotification("Modifiche salvate", NotificationType.Ok);
-  };
+  const openDays = restaurant
+    ? WEEKDAYS.filter((d) => openServices(restaurant.openingHours[d]).length)
+        .length
+    : 0;
+  const blocked = staff?.filter((m) => !m.enabled).length ?? 0;
+  const todayMenu = menus && activeMenu(menus);
 
   return (
     <div className="h-full overflow-y-auto px-4 pb-4 sm:px-6 sm:pb-6">
-      {isSaving && <Loader />}
-
-      {/* Intestazione fissa in alto, così Salva resta a portata anche scorrendo il menù */}
-      <div
-        className={`sticky top-0 z-10 flex flex-wrap items-center gap-3 -mx-4 px-4 py-3 mb-2 sm:-mx-6 sm:px-6 sm:py-4 sm:mb-3 ${ThemeVariants.colors.bg.base}`}
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <Store
-            size={24}
-            className={`shrink-0 ${ThemeVariants.colors.text.brand}`}
-          />
-          <Label
-            tag={LabelTags.h2}
-            label="Profilo"
-            size={LabelDimensions.xlarge}
-            weight={LabelWeight.bold}
-            noMargin
-            additionalClasses="max-sm:text-xl"
-          />
-        </div>
-        <div className="ml-auto">
-          {isEditMode ? (
-            <SaveChanges onSave={save} onCancel={cancel} disabled={!canSave} />
-          ) : (
-            <Button
-              iconLeft={<Pencil size={16} />}
-              label={<span className="text-sm ml-1">Modifica</span>}
-              dimension={ButtonDimensions.auto}
-              variant="primary"
-              onClick={() => setIsEditMode(true)}
-              disabled={!restaurant}
-              className="px-3 py-2 disabled:opacity-40 disabled:cursor-not-allowed"
-            />
+      <div className="flex items-center gap-3 min-w-0 py-3 mb-2 sm:py-4 sm:mb-3">
+        <Store
+          size={24}
+          className={`shrink-0 ${ThemeVariants.colors.text.brand}`}
+        />
+        <h2 className="flex flex-wrap items-baseline gap-x-2 min-w-0">
+          <span className="text-2xl max-sm:text-xl font-bold">Profilo</span>
+          {restaurant && (
+            <span
+              className={`text-2xl max-sm:text-xl italic min-w-0 [overflow-wrap:anywhere] ${ThemeVariants.colors.text.brand} ${ThemeVariants.fontFamily.display}`}
+            >
+              {restaurant.name}
+            </span>
           )}
-        </div>
+        </h2>
       </div>
 
-      <div className="flex flex-col gap-4">
-        <div className="grid gap-4 md:grid-cols-2 md:items-start">
-          <SettingsCard
-            icon={<Store size={15} />}
-            title="Nome del locale"
-            collapsible={false}
-            badges={
-              <EditStatus
-                dirty={restaurantDraft.name !== undefined}
-                error={nameError}
-              />
-            }
-          >
-            <RestaurantNameSetting
-              name={profile?.name}
-              isEditMode={isEditMode}
-              onChange={(name) => editRestaurant({ name })}
-            />
-          </SettingsCard>
-
-          <SettingsCard
-            icon={<Palette size={15} />}
-            title="Tema e colore"
-            badges={
-              <EditStatus
-                dirty={
-                  restaurantDraft.theme !== undefined ||
-                  restaurantDraft.brandColor !== undefined
-                }
-              />
-            }
-          >
-            {profile && (
-              <AppearanceSetting
-                theme={profile.theme}
-                brandColor={profile.brandColor}
-                isEditMode={isEditMode}
-                onChange={editRestaurant}
-              />
-            )}
-          </SettingsCard>
-        </div>
-
-        <div className="grid gap-4 xl:grid-cols-2 xl:items-start">
-          <SettingsCard
-            icon={<Clock size={15} />}
-            title="Giorni e orari di apertura"
-            badges={
-              <EditStatus
-                dirty={restaurantDraft.openingHours !== undefined}
-                error={hoursError}
-              />
-            }
-          >
-            {profile && (
-              <OpeningHoursSetting
-                hours={profile.openingHours}
-                isEditMode={isEditMode}
-                onChange={(openingHours) => editRestaurant({ openingHours })}
-              />
-            )}
-          </SettingsCard>
-
-          <div className="flex flex-col gap-4">
-            <SettingsCard
-              icon={<Smartphone size={15} />}
-              title="Ordini dei clienti"
-              badges={
-                <EditStatus
-                  dirty={
-                    restaurantDraft.orderingMode !== undefined ||
-                    restaurantDraft.paymentTiming !== undefined ||
-                    restaurantDraft.tableOrdering !== undefined ||
-                    restaurantDraft.tableQrCode !== undefined ||
-                    restaurantDraft.serviceMode !== undefined ||
-                    restaurantDraft.pickupCall !== undefined
-                  }
-                />
-              }
-            >
-              {profile && (
-                <OrderingSettings
-                  settings={profile}
-                  isEditMode={isEditMode}
-                  onChange={editRestaurant}
-                />
-              )}
-            </SettingsCard>
-
-            <SettingsCard
-              icon={<ShoppingBag size={15} />}
-              title="Asporto"
-              badges={
-                <EditStatus
-                  dirty={takeawayDraft !== null}
-                  error={takeawayDraftError}
-                />
-              }
-            >
-              {takeaway && (
-                <TakeawaySettingsBox
-                  settings={takeawayDraft ?? takeaway}
-                  isEditMode={isEditMode}
-                  onChange={setTakeawayDraft}
-                />
-              )}
-            </SettingsCard>
-
-            <SettingsCard
-              icon={<ChefHat size={15} />}
-              title="Cucina"
-              badges={<EditStatus dirty={kitchenDirty} error={kitchenError} />}
-            >
-              {profile && (
-                <KitchenSettings
-                  dispatch={!!profile.kitchenDispatch}
-                  stations={profile.kitchenStations ?? []}
-                  isEditMode={isEditMode}
-                  onChange={editRestaurant}
-                />
-              )}
-            </SettingsCard>
-          </div>
-        </div>
-
-        <SettingsCard icon={<Users size={15} />} title="Personale">
-          {currentUser && <StaffSettings actor={currentUser} />}
-        </SettingsCard>
-
-        <SettingsCard
-          icon={<UtensilsCrossed size={15} />}
-          title="Menù"
-          badges={
-            <>
-              {!menu.isLoading && (
-                <Badge
-                  label={menu.hasExistingMenu ? "Attivo" : "Non configurato"}
-                  variant={menu.hasExistingMenu ? "success" : "danger"}
-                />
-              )}
-              <EditStatus dirty={menu.isDirty} error={menuError} />
-            </>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <SectionLink
+          icon={<Palette size={22} />}
+          title="Nome, tema e colore"
+          summary={
+            restaurant &&
+            `${restaurant.name} · tema ${restaurant.theme === RestaurantTheme.Dark ? "scuro" : "chiaro"} · ${colorName(toBrandHex(restaurant.brandColor) ?? DEFAULT_BRAND_COLOR)}`
           }
-        >
-          <MenuEditor menu={menu} isEditMode={isEditMode} />
-        </SettingsCard>
+          onClick={() => onOpen(PagesProfile.APPEARANCE)}
+        />
+        <SectionLink
+          icon={<Clock size={22} />}
+          title="Orari e asporto"
+          summary={
+            restaurant &&
+            takeaway &&
+            `${openDays === WEEKDAYS.length ? "Aperto tutti i giorni" : openDays === 0 ? "Sempre chiuso" : `Aperto ${openDays} giorni su 7`} · ${takeaway.enabled ? "asporto attivo" : "niente asporto"}`
+          }
+          warning={!!restaurant && openDays === 0}
+          onClick={() => onOpen(PagesProfile.HOURS)}
+        />
+        <SectionLink
+          icon={<Smartphone size={22} />}
+          title="Ordini e cucina"
+          summary={
+            restaurant &&
+            `${ORDERING_MODE_LABELS[restaurant.orderingMode]} · ${usesCounterPickup(restaurant) ? "ritiro al banco" : "al tavolo"} · ${usesKitchenDispatch(restaurant) ? "smistamento dall'app" : "bigliettini"}`
+          }
+          onClick={() => onOpen(PagesProfile.ORDERS)}
+        />
+        <SectionLink
+          icon={<Users size={22} />}
+          title="Personale"
+          summary={
+            staff &&
+            `${staff.length === 1 ? "1 persona" : `${staff.length} persone`}${blocked > 0 ? ` · ${blocked} con accesso bloccato` : ""}`
+          }
+          onClick={() => onOpen(PagesProfile.STAFF)}
+        />
+        <SectionLink
+          icon={<UtensilsCrossed size={22} />}
+          title="Menù"
+          summary={
+            menus &&
+            `${menus.length === 1 ? "1 menù" : `${menus.length} menù`} · ${todayMenu ? `oggi: ${todayMenu.name}` : "nessun menù per oggi"}`
+          }
+          warning={!!menus && !todayMenu}
+          onClick={() => onOpen(PagesProfile.MENU)}
+        />
       </div>
     </div>
   );
+};
+
+//Profilo del ristorante (titolare e vice): una pagina con un collegamento per argomento
+//(nome e aspetto, orari e asporto, ordini e cucina, personale, menù). Ogni sezione si apre a
+//parte e ha la sua Modifica, che riguarda solo le sue box
+export const Profile = () => {
+  const [section, setSection] = useState<PagesProfileConst | null>(null);
+  const back = () => setSection(null);
+
+  switch (section) {
+    case PagesProfile.APPEARANCE:
+      return <AppearanceSection onBack={back} />;
+    case PagesProfile.HOURS:
+      return <HoursSection onBack={back} />;
+    case PagesProfile.ORDERS:
+      return <OrdersSection onBack={back} />;
+    case PagesProfile.STAFF:
+      return <StaffSection onBack={back} />;
+    case PagesProfile.MENU:
+      return <MenuSection onBack={back} />;
+    default:
+      return <ProfileHome onOpen={setSection} />;
+  }
 };

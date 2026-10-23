@@ -1,22 +1,36 @@
 import { faker } from "@faker-js/faker";
-import { generateFakeDish } from "../../menu/mock/menu";
+import { generateFakeDish, todayDishes } from "../../menu/mock/menu";
 import { readProfile } from "../../restaurant/mock/restaurant";
 import { OrderingMode } from "../../restaurant/types/restaurant";
 import {
   customerAsksTable,
+  customersOrderOnline,
+  hasPickupDesk,
   isPayFirstAtCashier,
+  marksOrdersPaid,
+  paysBeforeKitchen,
+  staffOrderNeedsTable,
+  takeawayOnlyDesk,
   usesCounterPickup,
+  usesKitchenDispatch,
 } from "../../restaurant/utils/ordering";
 import { byQueue, kitchenOrders } from "../../kitchen/utils/kitchen";
-import { currentMockUser } from "../../staff/mock/staff";
+import { requireManager, requireRole } from "../../staff/mock/auth";
 import { StaffRole } from "../../staff/types/staff";
+import { takesTableOrders } from "../../staff/utils/permissions";
 import { calcTotal } from "../../../helpers/calcTotal";
+import { isOpenNow, nowHHMM } from "../../../helpers/openingHours";
 import { createMockStore, fakeDelay } from "../../../mock/store";
 import { HttpError } from "../../../services/client/httpClient";
+import type { Dish } from "../../../types/menuOrder";
 import { PAYMENT_PARAM, PaymentOutcome } from "../utils/onlinePayment";
 import {
+  pickupTimeValid,
+  takeawayError,
+  takeawayToday,
+} from "../utils/takeawayUtils";
+import {
   OrderType,
-  PickupMode,
   type CartType,
   type CashierOrder,
   type NewOrder,
@@ -26,6 +40,7 @@ import {
   type StationTicket,
   type TakeawaySettings,
 } from "../types/orders";
+import { readTakeaway, takeawayStore } from "./takeaway";
 
 export const generateFakeOrders = (count = 20): Order[] =>
   Array.from({ length: count }, (_, i) => {
@@ -67,33 +82,11 @@ export const generateFakeOrders = (count = 20): Order[] =>
     };
   });
 
-const DEFAULT_TAKEAWAY: TakeawaySettings = {
-  enabled: true,
-  mode: PickupMode.Custom,
-  fixedTimes: { lunch: "12:30", dinner: "19:30" },
-  ranges: {
-    lunch: { from: "12:00", to: "14:30" },
-    dinner: { from: "19:00", to: "22:30" },
-  },
-};
-
-//Ordini e impostazioni dell'asporto finti, salvati nel browser
+//Ordini finti salvati nel browser
 const ordersStore = createMockStore("orders", () => generateFakeOrders(12));
-const takeawayStore = createMockStore<TakeawaySettings>(
-  "takeaway",
-  () => DEFAULT_TAKEAWAY,
-);
 
-//le impostazioni salvate prima di alcuni campi (pranzo e cena, attivo/disattivo) non li hanno: si usano quelli predefiniti
-const readTakeaway = (): TakeawaySettings => {
-  const { enabled, mode, fixedTimes, ranges } = {
-    ...DEFAULT_TAKEAWAY,
-    ...takeawayStore.get(),
-  };
-  return { enabled, mode, fixedTimes, ranges };
-};
-
-//Salva un nuovo ordine col primo numero libero (dal 100 in su)
+//Salva un nuovo ordine col primo numero libero (dal 100 in su). Il totale si calcola dai
+//piatti già ricontrollati sul menù (vedi fromMenu), mai da quello inviato
 const addOrder = (order: NewOrder, paid: boolean): number => {
   const orders = ordersStore.get();
   const orderNumber = Math.max(99, ...orders.map((o) => o.orderNumber)) + 1;
@@ -113,13 +106,16 @@ const addOrder = (order: NewOrder, paid: boolean): number => {
   return orderNumber;
 };
 
+const findOrder = (id: number) => {
+  const order = ordersStore.get().find((o) => o.id === id);
+  if (!order) throw new HttpError(404);
+  return order;
+};
+
 //Modifica un ordine salvato
 const updateOrder = (id: number, change: (o: Order) => Order) => {
-  const orders = ordersStore.get();
-  const order = orders.find((o) => o.id === id);
-  if (!order) throw new HttpError(404);
-  const updated = change(order);
-  ordersStore.set(orders.map((o) => (o.id === id ? updated : o)));
+  const updated = change(findOrder(id));
+  ordersStore.set(ordersStore.get().map((o) => (o.id === id ? updated : o)));
   return updated;
 };
 
@@ -143,50 +139,125 @@ const withReadyFromTickets = (o: Order): Order => {
   };
 };
 
-//Regole che il backend deve applicare agli ordini dei clienti (vedi API.md)
-const checkCustomerOrder = (order: NewOrder) => {
-  const profile = readProfile();
-  if (profile.orderingMode === OrderingMode.MenuOnly) throw new HttpError(403);
-  if (order.type === OrderType.Takeaway && !readTakeaway().enabled)
-    throw new HttpError(400);
-  if (!order.customerName?.trim()) throw new HttpError(400);
-  if (
-    order.type === OrderType.DineIn &&
-    customerAsksTable(profile) &&
-    !order.table?.trim()
-  )
-    throw new HttpError(400);
-  return profile;
+//Piatti ricontrollati: esistono tra quelli ammessi (il menù di oggi), la quantità è un intero
+//positivo e nome e prezzo sono quelli salvati, mai quelli inviati dal client
+const fromMenu = (items: CartType[], allowed: Dish[]): CartType[] => {
+  if (items.length === 0) throw new HttpError(400);
+  return items.map(({ dish, quantity }) => {
+    const saved = allowed.find((d) => d.id === dish.id);
+    if (!saved || !Number.isInteger(quantity) || quantity < 1)
+      throw new HttpError(400);
+    return { dish: saved, quantity };
+  });
 };
 
-//Regole sugli ordini creati dal personale: il cameriere prende solo ordini al tavolo, da
-//pagare alla cassa, e solo se si paga a fine pasto
-const checkStaffOrder = (order: CashierOrder) => {
+//Sul posto si ordina solo a locale aperto; l'asporto per un servizio di oggi non ancora finito,
+//e se i clienti ordinano dal sito all'orario unico o nelle fasce di ritiro
+const checkTiming = (order: NewOrder, pickupRules: boolean) => {
+  const profile = readProfile();
+  const now = nowHHMM();
+  if (order.type !== OrderType.Takeaway) {
+    if (!isOpenNow(profile.openingHours, now)) throw new HttpError(400);
+    return;
+  }
+  const slot = takeawayToday(profile.openingHours, readTakeaway(), now);
+  if (!slot || !order.customerName?.trim()) throw new HttpError(400);
+  if (pickupRules && !pickupTimeValid(slot, order.pickupTime, now))
+    throw new HttpError(400);
+};
+
+//Regole che il backend deve applicare agli ordini dei clienti (vedi API.md)
+const customerOrder = (order: NewOrder): NewOrder => {
+  const profile = readProfile();
+  if (profile.orderingMode === OrderingMode.MenuOnly) throw new HttpError(403);
+  if (!order.customerName?.trim()) throw new HttpError(400);
+  checkTiming(order, true);
+  const isTakeaway = order.type === OrderType.Takeaway;
+  const table = order.table?.trim();
+  if (!isTakeaway && customerAsksTable(profile) && !table)
+    throw new HttpError(400);
+  return {
+    type: isTakeaway ? OrderType.Takeaway : OrderType.DineIn,
+    items: fromMenu(order.items, todayDishes()),
+    customerName: order.customerName.trim(),
+    //il tavolo solo se si chiede, l'orario solo all'asporto
+    ...(isTakeaway
+      ? { pickupTime: order.pickupTime }
+      : customerAsksTable(profile) && { table }),
+  };
+};
+
+//Regole sugli ordini creati dal personale, per tutti (titolare compreso): mai col pagamento
+//online; sul posto a locale aperto, col tavolo a fine pasto (se si paga prima niente tavolo
+//né nome); la cassa crea ordini già pagati, tranne se i clienti ordinano dal sito e pagano
+//alla cassa a fine pasto; cameriere e caposala solo ordini al tavolo da pagare alla cassa,
+//e solo a fine pasto
+const staffOrder = (cashierOrder: CashierOrder): CashierOrder => {
+  const actor = requireRole(
+    StaffRole.Cashier,
+    StaffRole.HeadWaiter,
+    StaffRole.Waiter,
+  );
   const profile = readProfile();
   if (profile.orderingMode === OrderingMode.PayOnline) throw new HttpError(403);
-  if (order.type === OrderType.Takeaway && !readTakeaway().enabled)
+  const isTakeaway = cashierOrder.type === OrderType.Takeaway;
+  const tableStaff = takesTableOrders(actor.role);
+  checkTiming(cashierOrder, customersOrderOnline(profile));
+  const needsTable = !isTakeaway && staffOrderNeedsTable(profile);
+  const table = cashierOrder.table?.trim();
+  if (needsTable && !table) throw new HttpError(400);
+  if (tableStaff) {
+    if (isPayFirstAtCashier(profile)) throw new HttpError(403);
+    if (cashierOrder.paid || isTakeaway) throw new HttpError(400);
+  } else if (
+    !cashierOrder.paid &&
+    (!marksOrdersPaid(profile) || isPayFirstAtCashier(profile))
+  )
     throw new HttpError(400);
-  if (currentMockUser().role !== StaffRole.Waiter) return;
-  if (isPayFirstAtCashier(profile)) throw new HttpError(403);
-  if (order.paid || order.type !== OrderType.DineIn || !order.table?.trim())
-    throw new HttpError(400);
+  const name = cashierOrder.customerName?.trim();
+  return {
+    type: isTakeaway ? OrderType.Takeaway : OrderType.DineIn,
+    items: fromMenu(cashierOrder.items, todayDishes()),
+    paid: cashierOrder.paid,
+    ...((isTakeaway || needsTable) && name && { customerName: name }),
+    ...(isTakeaway
+      ? cashierOrder.pickupTime && { pickupTime: cashierOrder.pickupTime }
+      : needsTable && { table }),
+  };
+};
+
+//La cucina lavora solo sugli ordini che vede: se si paga prima, quelli pagati
+const checkKitchenSees = (order: Order) => {
+  if (paysBeforeKitchen(readProfile()) && !order.paid) throw new HttpError(400);
+};
+
+//Smistamento: solo se è attivo (con almeno una postazione)
+const requireDispatch = () => {
+  if (!usesKitchenDispatch(readProfile())) throw new HttpError(403);
 };
 
 export const fakeOrdersApi = {
   getOrders: async (): Promise<Order[]> => {
     await fakeDelay();
+    requireRole(
+      StaffRole.Cashier,
+      StaffRole.HeadWaiter,
+      StaffRole.Chef,
+      StaffRole.Kitchen,
+      StaffRole.Counter,
+    );
     return ordersStore.get();
   },
 
   createOrder: async (order: NewOrder): Promise<OrderCreated> => {
     await fakeDelay(1000);
-    const profile = checkCustomerOrder(order);
-    if (profile.orderingMode !== OrderingMode.PayOnline)
-      return { orderNumber: addOrder(order, false) };
+    const checked = customerOrder(order);
+    if (readProfile().orderingMode !== OrderingMode.PayOnline)
+      return { orderNumber: addOrder(checked, false) };
     //Pagamento online: non c'è un vero servizio di pagamento, si torna subito al sito
     //come dopo un pagamento riuscito (il backend segnerebbe l'ordine pagato alla sua conferma)
     return {
-      orderNumber: addOrder(order, true),
+      orderNumber: addOrder(checked, true),
       checkoutUrl: `/?${PAYMENT_PARAM}=${PaymentOutcome.Ok}`,
     };
   },
@@ -195,13 +266,19 @@ export const fakeOrdersApi = {
     cashierOrder: CashierOrder,
   ): Promise<{ orderNumber: number }> => {
     await fakeDelay();
-    checkStaffOrder(cashierOrder);
-    const { paid, ...order } = cashierOrder;
+    const { paid, ...order } = staffOrder(cashierOrder);
     return { orderNumber: addOrder(order, paid) };
   },
 
+  //Online gli ordini li paga il servizio di pagamento; con Solo menù si incassa soltanto
+  //(dai conti), non si rimette un ordine da pagare
   updatePayment: async (id: number, paid: boolean): Promise<void> => {
     await fakeDelay();
+    requireRole(StaffRole.Cashier);
+    const profile = readProfile();
+    if (profile.orderingMode === OrderingMode.PayOnline)
+      throw new HttpError(403);
+    if (!paid && !marksOrdersPaid(profile)) throw new HttpError(400);
     updateOrder(id, (o) => ({
       ...o,
       paid,
@@ -209,28 +286,55 @@ export const fakeOrdersApi = {
     }));
   },
 
+  //Solo senza smistamento: con lo smistamento il pronto lo danno le postazioni
   updateReady: async (id: number, ready: boolean): Promise<void> => {
     await fakeDelay(250);
+    requireRole(StaffRole.Chef, StaffRole.Kitchen);
+    if (usesKitchenDispatch(readProfile())) throw new HttpError(403);
+    checkKitchenSees(findOrder(id));
     updateOrder(id, (o) => ({
       ...o,
       readyAt: ready ? new Date().toISOString() : undefined,
     }));
   },
 
-  //cambiando i piatti le comande già mandate alle postazioni non valgono più: si rismista
+  //Piatti di un asporto: cambiandoli le comande già mandate alle postazioni non valgono più
+  //e si rismista. Si possono tenere i piatti già nell'ordine o prenderne dal menù di oggi
   updateItems: async (id: number, items: CartType[]): Promise<void> => {
     await fakeDelay();
+    requireRole(StaffRole.Cashier);
+    if (readProfile().orderingMode === OrderingMode.PayOnline)
+      throw new HttpError(403);
+    const order = findOrder(id);
+    if (order.type !== OrderType.Takeaway) throw new HttpError(400);
+    const checked = fromMenu(items, [
+      ...todayDishes(),
+      ...order.items.map((it) => it.dish),
+    ]);
     updateOrder(id, (o) => ({
       ...o,
-      items,
-      total: calcTotal(items),
+      items: checked,
+      total: calcTotal(checked),
       tickets: undefined,
       readyAt: undefined,
     }));
   },
 
+  //Solo se c'è un banco: col ritiro al banco tutti gli ordini, altrimenti solo l'asporto.
+  //Si consegna solo un ordine pronto
   updateDelivered: async (id: number, delivered: boolean): Promise<void> => {
     await fakeDelay(250);
+    requireRole(StaffRole.Cashier, StaffRole.Chef, StaffRole.Counter);
+    const profile = readProfile();
+    const takeaway = readTakeaway();
+    if (!hasPickupDesk(profile, takeaway)) throw new HttpError(403);
+    const order = findOrder(id);
+    if (
+      (takeawayOnlyDesk(profile, takeaway) &&
+        order.type !== OrderType.Takeaway) ||
+      (delivered && !order.readyAt)
+    )
+      throw new HttpError(400);
     updateOrder(id, (o) => ({
       ...o,
       deliveredAt: delivered ? new Date().toISOString() : undefined,
@@ -263,8 +367,11 @@ export const fakeOrdersApi = {
     items: number[],
   ): Promise<StationTicket> => {
     await fakeDelay(250);
+    requireRole(StaffRole.Chef);
+    requireDispatch();
     if (!readProfile().kitchenStations.some((s) => s.id === stationId))
       throw new HttpError(400);
+    checkKitchenSees(findOrder(id));
     const ticket: StationTicket = {
       id: `k-${Date.now()}`,
       stationId,
@@ -284,14 +391,20 @@ export const fakeOrdersApi = {
     return ticket;
   },
 
+  //Si ritira solo una comanda non ancora pronta
   recallTicket: async (id: number, ticketId: string): Promise<void> => {
     await fakeDelay(250);
-    updateOrder(id, (o) =>
-      withReadyFromTickets({
+    requireRole(StaffRole.Chef);
+    requireDispatch();
+    updateOrder(id, (o) => {
+      const ticket = (o.tickets ?? []).find((t) => t.id === ticketId);
+      if (!ticket) throw new HttpError(404);
+      if (ticket.readyAt) throw new HttpError(400);
+      return withReadyFromTickets({
         ...o,
         tickets: (o.tickets ?? []).filter((t) => t.id !== ticketId),
-      }),
-    );
+      });
+    });
   },
 
   updateTicketReady: async (
@@ -300,16 +413,20 @@ export const fakeOrdersApi = {
     ready: boolean,
   ): Promise<void> => {
     await fakeDelay(250);
-    updateOrder(id, (o) =>
-      withReadyFromTickets({
+    requireRole(StaffRole.Chef, StaffRole.Kitchen);
+    requireDispatch();
+    updateOrder(id, (o) => {
+      if (!(o.tickets ?? []).some((t) => t.id === ticketId))
+        throw new HttpError(404);
+      return withReadyFromTickets({
         ...o,
         tickets: (o.tickets ?? []).map((t) =>
           t.id === ticketId
             ? { ...t, readyAt: ready ? new Date().toISOString() : undefined }
             : t,
         ),
-      }),
-    );
+      });
+    });
   },
 
   getTakeawaySettings: async (): Promise<TakeawaySettings> => {
@@ -321,6 +438,8 @@ export const fakeOrdersApi = {
     settings: TakeawaySettings,
   ): Promise<TakeawaySettings> => {
     await fakeDelay(200);
+    requireManager();
+    if (takeawayError(settings)) throw new HttpError(400);
     takeawayStore.set(settings);
     return settings;
   },

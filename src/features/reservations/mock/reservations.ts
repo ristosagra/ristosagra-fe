@@ -1,5 +1,15 @@
 import { createMockStore, fakeDelay } from "../../../mock/store";
+import { HttpError } from "../../../services/client/httpClient";
+import {
+  isWithinRanges,
+  nowHHMM,
+  openRanges,
+  todayWeekday,
+} from "../../../helpers/openingHours";
 import { floorPlanStore } from "../../floorPlan/mock/floorPlan";
+import { readProfile } from "../../restaurant/mock/restaurant";
+import { requireRole } from "../../staff/mock/auth";
+import { StaffRole } from "../../staff/types/staff";
 import type {
   Availability,
   NewReservation,
@@ -48,9 +58,16 @@ const computeAvailability = (): Availability => {
   return { remainingSeats: Math.max(0, freeSeats - waiting) };
 };
 
+//Prenotazioni del personale: gestori, caposala e camerieri
+const requireFloorStaff = () =>
+  requireRole(StaffRole.HeadWaiter, StaffRole.Waiter);
+
+//Regole che il backend deve applicare (vedi API.md): arrivo oggi, negli orari di apertura e non
+//già passato; posti sufficienti (altrimenti 409)
 export const fakeReservationsApi = {
   getReservations: async (): Promise<Reservation[]> => {
     await fakeDelay();
+    requireFloorStaff();
     return reservationsStore.get();
   },
 
@@ -61,8 +78,17 @@ export const fakeReservationsApi = {
 
   createReservation: async (data: NewReservation): Promise<Reservation> => {
     await fakeDelay(800);
+    const today = openRanges(readProfile().openingHours[todayWeekday()]);
+    if (
+      !data.name.trim() ||
+      !Number.isInteger(data.people) ||
+      data.people < 1 ||
+      !isWithinRanges(today, data.arrivalTime) ||
+      data.arrivalTime < nowHHMM()
+    )
+      throw new HttpError(400);
     if (data.people > computeAvailability().remainingSeats)
-      throw new Error("Posti insufficienti");
+      throw new HttpError(409);
     const reservation: Reservation = {
       ...data,
       id: `r-${Date.now()}`,
@@ -77,15 +103,18 @@ export const fakeReservationsApi = {
     ...changes
   }: ReservationUpdate): Promise<Reservation> => {
     await fakeDelay();
-    const updated = reservationsStore
-      .get()
-      .map((r) => (r.id === id ? { ...r, ...changes } : r));
-    reservationsStore.set(updated);
-    return updated.find((r) => r.id === id)!;
+    requireFloorStaff();
+    const all = reservationsStore.get();
+    const current = all.find((r) => r.id === id);
+    if (!current) throw new HttpError(404);
+    const updated = { ...current, ...changes };
+    reservationsStore.set(all.map((r) => (r.id === id ? updated : r)));
+    return updated;
   },
 
   deleteReservation: async (id: string): Promise<void> => {
     await fakeDelay();
+    requireFloorStaff();
     reservationsStore.set(reservationsStore.get().filter((r) => r.id !== id));
   },
 };

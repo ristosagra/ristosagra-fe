@@ -1,5 +1,5 @@
+import { Spinner } from "../components/core/Spinner";
 import { useEffect } from "react";
-import { LoaderCircle } from "lucide-react";
 import { usePickupBoard } from "../features/orders/hook/useOrders";
 import { useRestaurant } from "../features/restaurant/hook/useRestaurant";
 import { useCurrentTime } from "../hooks/useCurrentTime";
@@ -58,13 +58,7 @@ export const PickupScreen = () => {
       </header>
 
       {isLoading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <LoaderCircle
-            size={48}
-            aria-label="Caricamento"
-            className={`animate-spin ${ThemeVariants.colors.text.brand}`}
-          />
-        </div>
+        <Spinner size={48} className="flex-1 items-center py-0" />
       ) : isError || !board ? (
         <p
           className={`flex-1 flex items-center justify-center text-center text-2xl ${ThemeVariants.colors.text.secondary}`}

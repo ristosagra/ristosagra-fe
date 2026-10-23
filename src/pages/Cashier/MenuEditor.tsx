@@ -10,8 +10,8 @@ import {
 } from "lucide-react";
 import type {
   DishData,
-  MenuDraft,
-} from "../../features/menu/hook/useMenuDraft";
+  MenusDraft,
+} from "../../features/menu/hook/useMenusDraft";
 import {
   getCategories,
   getCategoryOptions,
@@ -26,7 +26,6 @@ import { Accordion } from "../../components/core/Accordion";
 import { Button } from "../../components/core/Button";
 import { Input } from "../../components/core/Input";
 import { Label } from "../../components/core/Label";
-import { Loader } from "../../components/core/Loader";
 import { ThemeVariants } from "../../constant/colors";
 import { ButtonDimensions } from "../../constant/button";
 import { LabelTags, LabelDimensions, LabelWeight } from "../../constant/label";
@@ -384,18 +383,17 @@ const MenuCategory = ({
 };
 
 interface MenuEditorProps {
-  menu: MenuDraft;
+  //bozza dei menù: qui si lavora sui piatti di quello aperto
+  menu: MenusDraft;
   isEditMode: boolean;
 }
 
-//Menù del ristorante, nella sua box del Profilo: in lettura mostra piatti e allergeni,
+//Piatti di un menù, nella sezione Menù del Profilo: in lettura mostra piatti e allergeni,
 //in modifica si aggiungono, cambiano ed eliminano piatti e si rinominano le categorie
 export const MenuEditor = ({ menu, isEditMode }: MenuEditorProps) => {
   const { dishes, editingId, renamingCat } = menu;
   //categorie aperte: partono tutte chiuse
   const [openCats, setOpenCats] = useState<string[]>([]);
-
-  if (menu.isLoading) return <Loader />;
 
   const toggleCat = (cat: string) =>
     setOpenCats((open) =>
@@ -444,7 +442,7 @@ export const MenuEditor = ({ menu, isEditMode }: MenuEditorProps) => {
           />
           <Label
             tag={LabelTags.p}
-            label="Nessun menu disponibile"
+            label="Nessun piatto in questo menù"
             size={LabelDimensions.large}
             weight={LabelWeight.semibold}
             noMargin
@@ -453,8 +451,8 @@ export const MenuEditor = ({ menu, isEditMode }: MenuEditorProps) => {
             tag={LabelTags.p}
             label={
               isEditMode
-                ? "Aggiungi i tuoi piatti per creare il menu del ristorante"
-                : "Clicca Modifica per iniziare a creare il menu"
+                ? "Aggiungi i piatti di questo menù"
+                : "Clicca Modifica per aggiungere i piatti"
             }
             size={LabelDimensions.small}
             noMargin

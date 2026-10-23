@@ -5,7 +5,8 @@ import { Button } from "../../../components/core/Button";
 import { ButtonDimensions } from "../../../constant/button";
 import { useRestaurant } from "../../restaurant/hook/useRestaurant";
 import { usesCounterPickup } from "../../restaurant/utils/ordering";
-import { OrderType, type Order } from "../types/orders";
+import type { Order } from "../types/orders";
+import { orderPlace } from "../utils/orderPlace";
 
 //Bigliettino per il cliente, largo come la carta delle stampanti da cassa (80 mm):
 //numero d'ordine in grande, dove va, piatti, totale e se è pagato
@@ -27,13 +28,7 @@ const Ticket = ({
     <p className="text-center text-[44pt] font-bold leading-none">
       {order.orderNumber}
     </p>
-    <p className="text-center mt-1 font-bold">
-      {order.type === OrderType.Takeaway
-        ? `Asporto${order.pickupTime ? ` · ritiro ${order.pickupTime}` : ""}`
-        : order.table
-          ? `Tavolo ${order.table}`
-          : "Sul posto"}
-    </p>
+    <p className="text-center mt-1 font-bold">{orderPlace(order)}</p>
     {order.customerName && <p className="text-center">{order.customerName}</p>}
     <hr className="my-2 border-black border-dashed" />
     <ul>

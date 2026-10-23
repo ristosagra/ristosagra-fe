@@ -5,10 +5,10 @@ import {
   currentMockUser,
   mockToken,
   staffStore,
-} from "../features/staff/mock/staff";
+} from "../features/staff/mock/auth";
 
-//Accesso con le persone del personale finto (vedi features/staff/mock/staff.ts, una per ruolo:
-//admin, cassa, cameriere, cucina, con password uguale allo username). Solo con VITE_MOCKING:
+//Accesso con le persone del personale finto (vedi features/staff/mock/auth.ts, una per ruolo,
+//con password uguale allo username). Solo con VITE_MOCKING:
 //non finiscono nel bundle di produzione
 export const fakeAuthApi = {
   login: async (username: string, password: string): Promise<LoginResponse> => {

@@ -1,3 +1,4 @@
+import { Spinner } from "../../components/core/Spinner";
 import { useState } from "react";
 import {
   useOrders,
@@ -8,7 +9,6 @@ import { Label } from "../../components/core/Label";
 import { Container } from "../../components/core/Container";
 import {
   HandCoins,
-  LoaderCircle,
   ReceiptText,
   ShoppingBag,
   UtensilsCrossed,
@@ -20,10 +20,14 @@ import { ButtonDimensions } from "../../constant/button";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
 import { ThemeVariants } from "../../constant/colors";
 import { OrderType, type Order } from "../../features/orders/types/orders";
+import { matchesSearch } from "../../features/orders/utils/orderPlace";
 import { OrderCard } from "../../features/orders/components/OrderCard";
 import { useRestaurant } from "../../features/restaurant/hook/useRestaurant";
 import { OrderingMode } from "../../features/restaurant/types/restaurant";
-import { isPayFirstAtCashier } from "../../features/restaurant/utils/ordering";
+import {
+  isPayFirstAtCashier,
+  marksOrdersPaid,
+} from "../../features/restaurant/utils/ordering";
 
 //Quali liste mostrare: entrambe, solo asporto o solo ordini sul posto
 const OrdersFilter = {
@@ -55,6 +59,9 @@ export const CashierDashboard = () => {
   const { data: restaurant } = useRestaurant();
   //Col pagamento online gli ordini sono già pagati dal sito: la cassa li vede soltanto
   const readOnly = restaurant?.orderingMode === OrderingMode.PayOnline;
+  //Pagato / da pagare solo se i clienti ordinano dal sito e pagano alla cassa: online sono già
+  //pagati, con Solo menù la cassa crea l'ordine quando il cliente paga (a fine pasto: Conti)
+  const showPayment = marksOrdersPaid(restaurant);
   //Con l'asporto disattivato si vedono solo gli ordini in loco, senza filtri
   const takeawayEnabled = !!takeawaySettings?.enabled;
   const isLoading = ordersLoading || takeawayLoading;
@@ -62,12 +69,9 @@ export const CashierDashboard = () => {
   const hasBills = !readOnly && !isPayFirstAtCashier(restaurant);
   const showBills = hasBills && view === OrdersView.Bills;
 
-  const q = search.trim().toLowerCase();
+  //online un ordine esiste quando è pagato (quelli col pagamento non riuscito non contano)
   const filtered = orders.filter(
-    (order) =>
-      order.orderNumber.toString().includes(q) ||
-      (order.customerName ?? "").toLowerCase().includes(q) ||
-      (order.table ?? "").toLowerCase().includes(q),
+    (order) => (!readOnly || order.paid) && matchesSearch(order, search),
   );
   //Asporti in ordine di orario di ritiro
   const takeaway = filtered
@@ -105,6 +109,7 @@ export const CashierDashboard = () => {
             }
             menu={editable ? menu : undefined}
             readOnly={readOnly}
+            showPayment={showPayment}
           />
         ))}
         {list.length === 0 && (
@@ -140,6 +145,7 @@ export const CashierDashboard = () => {
               Sola lettura: i clienti pagano dal sito
             </p>
           ) : (
+            showPayment &&
             isPayFirstAtCashier(restaurant) && (
               <p className={`text-sm ${ThemeVariants.colors.text.secondary}`}>
                 Gli ordini vanno in cucina quando li segni pagati
@@ -209,13 +215,7 @@ export const CashierDashboard = () => {
       </div>
       <div className="sm:flex-1 sm:overflow-y-auto px-4 sm:px-5 pb-5">
         {isLoading ? (
-          <div className="flex justify-center py-10">
-            <LoaderCircle
-              size={32}
-              aria-label="Caricamento"
-              className={`animate-spin ${ThemeVariants.colors.text.brand}`}
-            />
-          </div>
+          <Spinner />
         ) : showBills ? (
           <TableBills orders={filtered} />
         ) : (

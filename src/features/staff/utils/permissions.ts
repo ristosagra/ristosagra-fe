@@ -1,13 +1,17 @@
 import { PagesCashier, type PagesCashierConst } from "../../../constant/pages";
+import type { TakeawaySettings } from "../../orders/types/orders";
 import {
   OrderingMode,
   type RestaurantProfile,
 } from "../../restaurant/types/restaurant";
 import {
+  hasPickupDesk,
   isPayFirstAtCashier,
-  usesCounterPickup,
+  takeawayOnlyDesk,
+  usesKitchenDispatch,
 } from "../../restaurant/utils/ordering";
 import {
+  STAFF_ROLE_LABELS,
   StaffRole,
   type SessionUser,
   type StaffMember,
@@ -25,10 +29,14 @@ export const isManager = (role: StaffRoleConst) =>
 export const canCreateOrders = (profile: RestaurantProfile | undefined) =>
   !!profile && profile.orderingMode !== OrderingMode.PayOnline;
 
-//Il cameriere prende ordini al tavolo solo se si paga a fine pasto (tipo ristorante):
-//tipo sagra si ordina dal sito o alla cassa e si paga prima di sedersi
-const waiterTakesOrders = (profile: RestaurantProfile | undefined) =>
+//Cameriere e caposala prendono ordini al tavolo solo se si paga a fine pasto (tipo
+//ristorante): se si paga prima si ordina dal sito o alla cassa
+const tableStaffTakesOrders = (profile: RestaurantProfile | undefined) =>
   canCreateOrders(profile) && !isPayFirstAtCashier(profile);
+
+//Prende ordini al tavolo, da pagare alla cassa: solo sul posto, col tavolo, senza incassare
+export const takesTableOrders = (role: StaffRoleConst) =>
+  role === StaffRole.Waiter || role === StaffRole.HeadWaiter;
 
 //Incassare (segnare gli ordini pagati) e modificare gli ordini
 export const canTakePayments = (role: StaffRoleConst) =>
@@ -41,12 +49,9 @@ export const canEditFloorPlan = isManager;
 export const canDispatch = (role: StaffRoleConst) =>
   isManager(role) || role === StaffRole.Chef;
 
-//Consegnare gli ordini al banco (col ritiro al banco)
-export const canHandOver = (role: StaffRoleConst) =>
-  isManager(role) ||
-  role === StaffRole.Cashier ||
-  role === StaffRole.Chef ||
-  role === StaffRole.Counter;
+//Il caposala vede la cucina (anche lo smistamento) in sola lettura, per sapere cosa è pronto
+export const kitchenReadOnly = (role: StaffRoleConst) =>
+  role === StaffRole.HeadWaiter;
 
 //Ordine delle voci nella barra
 const NAV_ORDER: PagesCashierConst[] = [
@@ -66,6 +71,11 @@ const ROLE_PAGES: Record<StaffRoleConst, PagesCashierConst[]> = {
     PagesCashier.CASH,
     PagesCashier.PICKUP,
   ],
+  [StaffRole.HeadWaiter]: [
+    PagesCashier.FLORPLAN,
+    PagesCashier.NEW_ORDER,
+    PagesCashier.KITCHEN,
+  ],
   [StaffRole.Waiter]: [PagesCashier.FLORPLAN, PagesCashier.NEW_ORDER],
   [StaffRole.Chef]: [PagesCashier.KITCHEN, PagesCashier.PICKUP],
   [StaffRole.Kitchen]: [PagesCashier.KITCHEN],
@@ -77,34 +87,64 @@ const HOME_PAGE: Record<StaffRoleConst, PagesCashierConst> = {
   [StaffRole.Admin]: PagesCashier.PROFILE,
   [StaffRole.Deputy]: PagesCashier.PROFILE,
   [StaffRole.Cashier]: PagesCashier.CASH,
+  [StaffRole.HeadWaiter]: PagesCashier.FLORPLAN,
   [StaffRole.Waiter]: PagesCashier.FLORPLAN,
   [StaffRole.Chef]: PagesCashier.KITCHEN,
   [StaffRole.Kitchen]: PagesCashier.KITCHEN,
   [StaffRole.Counter]: PagesCashier.PICKUP,
 };
 
-//Pagine che il ruolo può aprire, nell'ordine della barra
+//Pagine che il ruolo può aprire, nell'ordine della barra. Ritiro c'è col ritiro al banco
+//e, se l'ordine si porta al tavolo, per consegnare l'asporto
 export const staffPages = (
   role: StaffRoleConst,
   profile: RestaurantProfile | undefined,
+  takeaway: TakeawaySettings | undefined,
 ): PagesCashierConst[] =>
   NAV_ORDER.filter(
     (p) =>
       ROLE_PAGES[role].includes(p) &&
       (p !== PagesCashier.NEW_ORDER ||
-        (role === StaffRole.Waiter
-          ? waiterTakesOrders(profile)
+        (takesTableOrders(role)
+          ? tableStaffTakesOrders(profile)
           : canCreateOrders(profile))) &&
-      (p !== PagesCashier.PICKUP || usesCounterPickup(profile)),
+      (p !== PagesCashier.PICKUP || hasPickupDesk(profile, takeaway)),
   );
 
 export const staffHomePage = (role: StaffRoleConst) => HOME_PAGE[role];
+
+//Perché un ruolo non serve con le impostazioni del ristorante (null = serve): il capo cucina
+//solo con lo smistamento dall'app (con i bigliettini la cucina si divide a mano), il banco
+//solo se c'è qualcosa da consegnare al banco. Chi ha già quel ruolo lo tiene, ma non ha pagine
+export const roleUnavailableReason = (
+  role: StaffRoleConst,
+  profile: RestaurantProfile | undefined,
+  takeaway: TakeawaySettings | undefined,
+): string | null => {
+  if (role === StaffRole.Chef && !usesKitchenDispatch(profile))
+    return "serve solo con lo smistamento delle comande dall'app";
+  if (role === StaffRole.Counter && !hasPickupDesk(profile, takeaway))
+    return "serve solo col ritiro al banco o con l'asporto attivo";
+  return null;
+};
+
+//Nome del ruolo: se l'ordine si porta al tavolo il banco consegna solo l'asporto
+//(stesso ruolo e stesse credenziali: le due cose non capitano mai insieme)
+export const staffRoleLabel = (
+  role: StaffRoleConst,
+  profile: RestaurantProfile | undefined,
+  takeaway: TakeawaySettings | undefined,
+) =>
+  role === StaffRole.Counter && takeawayOnlyDesk(profile, takeaway)
+    ? "Banco ritiro asporto"
+    : STAFF_ROLE_LABELS[role];
 
 //Gestione del personale: il titolare gestisce tutti (e solo lui nomina i vice);
 //un vice gestisce gli altri ruoli e i propri dati, non il titolare né gli altri vice
 
 const STAFF_ROLES_BY_MANAGER: StaffRoleConst[] = [
   StaffRole.Cashier,
+  StaffRole.HeadWaiter,
   StaffRole.Waiter,
   StaffRole.Chef,
   StaffRole.Kitchen,
