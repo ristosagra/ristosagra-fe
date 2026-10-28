@@ -16,18 +16,8 @@ export type PaymentOutcomeConst =
 //Ordine in attesa di pagamento: finché la scheda è aperta, anche passando dalla pagina di pagamento
 const PENDING_KEY = "ristosagra.pendingPayment";
 
-//Accetta solo pagine di pagamento https (o del sito stesso, per i dati finti), mai javascript: o simili
-export const safeCheckoutUrl = (url: string): string | null => {
-  try {
-    const parsed = new URL(url, window.location.origin);
-    return parsed.protocol === "https:" ||
-      parsed.origin === window.location.origin
-      ? parsed.href
-      : null;
-  } catch {
-    return null;
-  }
-};
+//Accetta solo pagine di pagamento https o del sito stesso (vedi helpers/checkoutUrl.ts)
+export { safeCheckoutUrl } from "../../../helpers/checkoutUrl";
 
 //Salva l'ordine da pagare e manda il cliente alla pagina di pagamento: al ritorno serve per mostrargli il numero
 export const goToCheckout = (order: ConfirmedOrder, checkoutUrl: string) => {

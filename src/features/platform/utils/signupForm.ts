@@ -111,7 +111,7 @@ export const signupErrors = (d: SignupDraft): SignupErrors => {
   return {
     fields: compact({
       restaurantName: textError(d.restaurantName, RESTAURANT_NAME_MAX),
-      slug: slugError(d.slug) ?? undefined,
+      slug: !d.slug ? REQUIRED : (slugError(d.slug) ?? undefined),
       ownerName: textError(d.ownerName, PERSON_NAME_MAX),
       email: !email
         ? REQUIRED

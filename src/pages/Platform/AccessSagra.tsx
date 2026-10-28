@@ -9,7 +9,10 @@ import { ButtonDimensions } from "../../constant/button";
 import { ThemeVariants } from "../../constant/colors";
 import { ROOT_DOMAIN } from "../../constant/env";
 import { sagraUrl } from "../../helpers/site";
-import { normalizeSlugInput } from "../../features/platform/utils/slug";
+import {
+  normalizeSlugInput,
+  slugError,
+} from "../../features/platform/utils/slug";
 
 //Accesso a una sagra già registrata: si scrive il suo indirizzo e si va alla sua login
 export const AccessSagra = () => {
@@ -19,7 +22,8 @@ export const AccessSagra = () => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const slug = normalizeSlugInput(address, ROOT_DOMAIN);
-    if (!slug) return setError("Scrivi l'indirizzo della tua sagra");
+    const wrong = slug ? slugError(slug) : "Scrivi l'indirizzo della tua sagra";
+    if (wrong) return setError(wrong);
     window.location.assign(sagraUrl(slug, "/login"));
   };
 

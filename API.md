@@ -48,6 +48,8 @@ Se backend e frontend stanno su domini diversi, il backend deve consentire l'ori
 |---|---|---|---|
 | POST | `/api/auth/login` | pubblica | [Login](#login) |
 | GET | `/api/auth/me` | personale | [Login](#login) |
+| GET | `/api/signup/slug/:slug` | pubblica (dominio principale) | [Piattaforma](#piattaforma-registrazione-e-attivazione) |
+| POST | `/api/signup` | pubblica (dominio principale) | [Piattaforma](#piattaforma-registrazione-e-attivazione) |
 | GET | `/api/staff` | gestori | [Personale](#personale-e-ruoli) |
 | POST | `/api/staff` | gestori | [Personale](#personale-e-ruoli) |
 | PATCH | `/api/staff/:id` | gestori | [Personale](#personale-e-ruoli) |
@@ -117,6 +119,48 @@ Risposta `200`:
 Risposta `200`: [`SessionUser`](#sessionuser) di chi ha il token. Il frontend la chiama all'apertura dell'area del personale (e quando la finestra torna in primo piano), così nome e ruolo cambiati dall'amministratore valgono subito.
 
 - Persona eliminata o con `enabled: false`: `401` (il frontend chiude la sessione e torna al login). Lo stesso `401` va dato da **tutte** le chiamate con il suo token.
+- Sul sottodominio di una sagra (`X-Sagra`) lo username si cerca **solo tra il personale di quella sagra**: `cassa`, `cucina`… si ripetono tra sagre diverse. Il titolare registrato dalla piattaforma ha come username la sua email.
+
+---
+
+## Piattaforma: registrazione e attivazione
+
+Ristosagra serve più sagre. Il dominio principale (`VITE_ROOT_DOMAIN`, es. `ristosagra.it`) ha la presentazione, la registrazione (`/registrati`) e l'accesso (`/accedi`); ogni sagra vive su `<slug>.ristosagra.it` con il sito dei clienti, `/login`, `/dashboard` e `/pronti`. Ogni chiamata dal sottodominio porta `X-Sagra: <slug>` (vedi [Convenzioni](#convenzioni-generali)).
+
+Flusso: registrazione → pagamento dell'edizione (€99, valida 12 mesi, nessun rinnovo automatico) → login della sagra. Una sagra registrata ma non pagata si può preparare (vedi sotto) ma non va online.
+
+### `GET /api/signup/slug/:slug` — pubblica, dominio principale
+
+Risposta `200`: `{ "available": true }` se `<slug>.ristosagra.it` si può registrare. `false` anche per indirizzi non validi o riservati.
+
+- Indirizzo valido: 3–30 caratteri `a-z0-9-`, non inizia né finisce con `-`. Riservati (elenco minimo, il backend può averne altri): `www`, `demo`, `api`, `app`, `admin`, `mail`, `assets`, `static`.
+- Il frontend la chiama mentre si scrive (dopo 400 ms senza modifiche): limitare i tentativi per IP.
+
+### `POST /api/signup` — pubblica, dominio principale
+
+Il frontend non invia il token. Richiesta: [`SignupRequest`](#signuprequest).
+
+```json
+{
+  "restaurantName": "Sagra del Pesce",
+  "slug": "sagra-del-pesce",
+  "owner": { "name": "Anna Rossi", "email": "anna@esempio.it", "phone": "+39 333 1234567", "password": "••••••••" },
+  "billing": {
+    "holder": "Pro Loco di Ponte",
+    "taxCode": "01234567890",
+    "sdiCode": "0000000",
+    "address": { "street": "Via Roma 1", "zip": "37100", "city": "Verona", "province": "VR" }
+  }
+}
+```
+
+Risposta `200`: [`SignupResponse`](#signupresponse) `{ "slug": "sagra-del-pesce", "checkoutUrl": "https://checkout.…" }`.
+
+- Il backend crea la sagra **non attiva**, il titolare (`role: "admin"`, username = `owner.email`, password salvata come hash) e i dati per la fattura, poi il pagamento dell'edizione (vedi [Pagamento dell'edizione](#pagamento-delledizione)) e risponde con la sua pagina.
+- Regole (le stesse del form, `features/platform/utils/signupForm.ts`): nome della sagra 1–40 caratteri; slug come sopra; nome del titolare 1–60; email valida (max 254); telefono 6–20 caratteri tra cifre, spazi e `+`; password 8–200; intestatario 1–100; `taxCode` 11 cifre o 16 caratteri alfanumerici; `sdiCode` facoltativo, 7 caratteri; `pec` facoltativa, email valida; via 1–100; CAP 5 cifre; comune 1–60; provincia 2 lettere. Altrimenti `400`.
+- `409`: indirizzo già preso (il frontend lo mostra sul campo dell'indirizzo). La stessa email può registrare più sagre.
+- Limitare i tentativi per IP.
+- **Dati finti**: ogni sottodominio ha il suo `localStorage`, quindi `checkoutUrl` è subito la login della nuova sagra (`http://<slug>.localhost:5199/login?attivazione=ok`) con i dati della registrazione nel frammento `#mock-signup=…`, che i dati finti di quella sagra leggono al primo caricamento (`src/mock/signupHandoff.ts`). Il frammento non arriva mai a un server.
 
 ---
 
@@ -811,6 +855,47 @@ interface RestaurantProfile {
 interface KitchenStation {
   id: string;   // "st-<timestamp>", generato dal frontend
   name: string; // max 30, diverso dalle altre postazioni
+}
+```
+
+### SignupRequest
+
+```ts
+interface SignupRequest {
+  restaurantName: string; // max 40
+  slug: string;           // <slug>.ristosagra.it, 3–30 caratteri a-z0-9-
+  owner: { name: string; email: string; phone: string; password: string };
+  billing: BillingDetails;
+}
+```
+
+### SignupResponse
+
+```ts
+interface SignupResponse {
+  slug: string;
+  checkoutUrl: string; // pagina di pagamento dell'edizione (https)
+}
+```
+
+### BillingDetails
+
+Dati per la fattura elettronica.
+
+```ts
+interface BillingDetails {
+  holder: string;    // intestatario, max 100 (es. "Pro Loco di Ponte")
+  taxCode: string;   // codice fiscale (16) o P.IVA / CF numerico (11), maiuscolo
+  sdiCode?: string;  // codice destinatario, 7 caratteri
+  pec?: string;
+  address: BillingAddress;
+}
+
+interface BillingAddress {
+  street: string;    // max 100
+  zip: string;       // 5 cifre
+  city: string;      // max 60
+  province: string;  // 2 lettere maiuscole
 }
 ```
 
