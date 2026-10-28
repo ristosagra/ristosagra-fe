@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useRestaurant } from "../features/restaurant/hook/useRestaurant";
 import {
   DEFAULT_APPEARANCE,
+  DEFAULT_BRAND_COLOR,
   darkerShade,
   toBrandHex,
 } from "../features/restaurant/constant/brandColors";
@@ -55,6 +56,11 @@ export const applyCachedAppearance = () => {
     applyAppearance(DEFAULT_APPEARANCE.theme, DEFAULT_APPEARANCE.brandColor);
   }
 };
+
+//Piattaforma (landing e registrazione): non c'è un ristorante, si usa sempre il tema chiaro
+//col colore di Ristosagra
+export const applyPlatformAppearance = () =>
+  applyAppearance(RestaurantTheme.Light, DEFAULT_BRAND_COLOR);
 
 //Tema e colore scelti dal ristorante: uguali per cassa e clienti
 export const useTheme = () => {
