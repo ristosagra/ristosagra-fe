@@ -50,6 +50,9 @@ Se backend e frontend stanno su domini diversi, il backend deve consentire l'ori
 | GET | `/api/auth/me` | personale | [Login](#login) |
 | GET | `/api/signup/slug/:slug` | pubblica (dominio principale) | [Piattaforma](#piattaforma-registrazione-e-attivazione) |
 | POST | `/api/signup` | pubblica (dominio principale) | [Piattaforma](#piattaforma-registrazione-e-attivazione) |
+| GET | `/api/billing` | gestori | [Piattaforma](#piattaforma-registrazione-e-attivazione) |
+| PATCH | `/api/billing` | gestori | [Piattaforma](#piattaforma-registrazione-e-attivazione) |
+| POST | `/api/billing/checkout` | gestori | [Piattaforma](#piattaforma-registrazione-e-attivazione) |
 | GET | `/api/staff` | gestori | [Personale](#personale-e-ruoli) |
 | POST | `/api/staff` | gestori | [Personale](#personale-e-ruoli) |
 | PATCH | `/api/staff/:id` | gestori | [Personale](#personale-e-ruoli) |
@@ -162,6 +165,53 @@ Risposta `200`: [`SignupResponse`](#signupresponse) `{ "slug": "sagra-del-pesce"
 - Limitare i tentativi per IP.
 - **Dati finti**: ogni sottodominio ha il suo `localStorage`, quindi `checkoutUrl` è subito la login della nuova sagra (`http://<slug>.localhost:5199/login?attivazione=ok`) con i dati della registrazione nel frammento `#mock-signup=…`, che i dati finti di quella sagra leggono al primo caricamento (`src/mock/signupHandoff.ts`). Il frammento non arriva mai a un server.
 
+### Pagamento dell'edizione
+
+Come il [pagamento online](#pagamento-online) degli ordini, integrato **nel backend** (es. Stripe Checkout): il frontend non tocca mai i dati di pagamento.
+
+1. `POST /api/signup` o `POST /api/billing/checkout` creano il pagamento di €99 presso il servizio e rispondono con `checkoutUrl` (`https`).
+2. Il servizio rimanda a `https://<slug>.ristosagra.it/login?attivazione=ok` se ha pagato, a `?attivazione=annullata` se ha annullato. La login mostra l'esito e, con una sessione già aperta, passa all'area del personale.
+3. **La sagra diventa attiva solo quando il backend riceve la conferma dal servizio** (webhook firmato), mai per il ritorno su `?attivazione=ok`, che chiunque può aprire. Il frontend, dopo un ritorno `ok`, ricontrolla `GET /api/restaurant` ogni 5 s per circa 2 minuti mostrando "Pagamento in verifica…".
+4. Alla conferma: `paidUntil = max(adesso, paidUntil) + 12 mesi`; `active = paidUntil > adesso`. Nessun rinnovo automatico: alla scadenza la sagra torna non attiva e i dati restano.
+
+### Sagra non attiva
+
+Con `active: false` (registrata ma non pagata, o scaduta):
+
+| Chi | Cosa può fare |
+|---|---|
+| Titolare e vice (gestori) | Preparano la sagra: profilo, menù, personale, piantina, fatturazione, `GET /api/orders` (riepilogo). Nel frontend vedono solo Profilo e Piantina e un invito ad attivarla |
+| Altri ruoli | Possono fare il login, ma ogni altra chiamata riceve `402`; nel frontend non hanno pagine |
+| Clienti | Il sito e `/pronti` dicono "Questa sagra non è ancora online" |
+
+Il backend rifiuta con **`402`**, anche per i gestori: `POST /api/order`, `POST /api/orders`, tutte le modifiche agli ordini (`PATCH /api/orders/:id/…`, comande `POST`/`DELETE`/`PATCH /api/orders/:id/tickets…`) e `POST /api/reservations`.
+
+### `GET /api/billing` — gestori
+
+Risposta `200`: [`Billing`](#billing)
+
+```json
+{
+  "active": true,
+  "paidUntil": "2027-10-28T10:00:00.000Z",
+  "details": {
+    "holder": "Pro Loco di Ponte",
+    "taxCode": "01234567890",
+    "address": { "street": "Via Roma 1", "zip": "37100", "city": "Verona", "province": "VR" }
+  }
+}
+```
+
+### `PATCH /api/billing` — gestori
+
+Richiesta: [`BillingDetails`](#billingdetails) completo, stesse regole della registrazione (altrimenti `400`). Risposta `200`: [`Billing`](#billing).
+
+### `POST /api/billing/checkout` — gestori
+
+Corpo vuoto (`{}`). Risposta `200`: `{ "checkoutUrl": "https://checkout.…" }`, vedi [Pagamento dell'edizione](#pagamento-delledizione). `409` se la sagra è già attiva.
+
+- **Dati finti**: l'edizione si attiva subito e `checkoutUrl` è `/login?attivazione=ok` (stesso sito). Senza sottodominio (`VITE_ROOT_DOMAIN` vuoto: demo e sviluppo) la sagra è sempre attiva; un sottodominio aperto senza registrazione (es. `prova.localhost`) parte non attivo, con le credenziali di prova.
+
 ---
 
 ## Personale e ruoli
@@ -256,10 +306,13 @@ Risposta `200`: [`RestaurantProfile`](#restaurantprofile)
   "kitchenStations": [
     { "id": "st-primi", "name": "Primi" },
     { "id": "st-griglia", "name": "Griglia" }
-  ]
+  ],
+  "active": true
 }
 ```
 
+- `active`: la sagra ha un'edizione pagata e non scaduta (vedi [Sagra non attiva](#sagra-non-attiva)). Si legge soltanto: `PATCH /api/restaurant` la ignora.
+- `404` se la sagra di `X-Sagra` non esiste: sito dei clienti, login e `/pronti` mostrano "Questa sagra non esiste".
 - `openingHours` (vedi [`WeeklyHours`](#weeklyhours)): il frontend accetta prenotazioni solo per oggi, negli orari di apertura di oggi e per un orario non ancora passato. Gli stessi giorni e servizi valgono per l'[asporto](#impostazioni-asporto).
 - `orderingMode`, `paymentTiming`, `tableQrCode`: cosa possono fare i clienti dal sito e quando pagano, vedi [Modalità di ordine](#modalità-di-ordine).
 - `serviceMode`, `pickupCall`: l'ordine si porta al tavolo o si ritira al banco, vedi [Ritiro al banco](#ritiro-al-banco).
@@ -850,6 +903,7 @@ interface RestaurantProfile {
   pickupCall: "screen" | "voice";  // col banco: schermo Pronti o chiamata a voce
   kitchenDispatch: boolean;  // le comande passano dal capo cucina alle postazioni
   kitchenStations: KitchenStation[];
+  active: boolean;           // sola lettura: edizione pagata e non scaduta (vedi Piattaforma)
 }
 
 interface KitchenStation {
@@ -875,6 +929,16 @@ interface SignupRequest {
 interface SignupResponse {
   slug: string;
   checkoutUrl: string; // pagina di pagamento dell'edizione (https)
+}
+```
+
+### Billing
+
+```ts
+interface Billing {
+  active: boolean;           // edizione pagata e non scaduta
+  paidUntil: string | null;  // ISO, fine dell'edizione pagata; null se mai pagata
+  details: BillingDetails;
 }
 ```
 
@@ -1017,3 +1081,6 @@ Esempio ridotto:
 - Personale: password solo come hash (bcrypt/argon2), mai restituite; persone bloccate o eliminate ricevono `401` anche con un token ancora valido.
 - Valutare un cookie `httpOnly` al posto del token restituito nel corpo: richiede anche una piccola modifica a `src/services/auth/session.ts` e `credentials: "include"` nel client HTTP.
 - Quando il dominio del backend è definitivo, restringere `connect-src` nella Content-Security-Policy di `netlify.toml`.
+- Più sagre: separare i dati di ogni sagra su **tutte** le chiamate (sagra dal token per il personale, da `X-Sagra` per i clienti); un token di una sagra non deve funzionare su un'altra.
+- Attivazione: solo dal webhook firmato del servizio di pagamento, mai dal ritorno su `?attivazione=ok`; rifiutare con `402` ordini e prenotazioni delle sagre non attive (vedi [Sagra non attiva](#sagra-non-attiva)).
+- Registrazione: limitare i tentativi su `/api/signup` e `/api/signup/slug/:slug`, tenere l'elenco degli indirizzi riservati, salvare la password del titolare come hash.

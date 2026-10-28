@@ -11,10 +11,12 @@ const loadApi: () => Promise<typeof RestaurantService> = IS_MOCKING
   ? () => import("../mock/restaurant").then((m) => m.fakeRestaurantApi)
   : () => Promise.resolve(RestaurantService);
 
-export const useRestaurant = () =>
+//refetchInterval: per ricontrollare spesso (es. mentre si aspetta la conferma del pagamento)
+export const useRestaurant = (options?: { refetchInterval?: number | false }) =>
   useQuery({
     queryKey: ["restaurant"],
     queryFn: async () => (await loadApi()).getProfile(),
+    refetchInterval: options?.refetchInterval,
   });
 
 //Le modifiche si vedono subito (tema e colore compresi); se il salvataggio fallisce si torna indietro

@@ -20,6 +20,7 @@ import {
 } from "../../restaurant/utils/ordering";
 import { byQueue, kitchenOrders } from "../../kitchen/utils/kitchen";
 import { requireManager, requireRole } from "../../staff/mock/auth";
+import { requireActiveSagra } from "../../platform/mock/billingStore";
 import { StaffRole } from "../../staff/types/staff";
 import { takesTableOrders } from "../../staff/utils/permissions";
 import { calcTotal } from "../../../helpers/calcTotal";
@@ -265,6 +266,7 @@ export const fakeOrdersApi = {
 
   createOrder: async (order: NewOrder): Promise<OrderCreated> => {
     await fakeDelay(1000);
+    requireActiveSagra();
     const checked = customerOrder(order);
     if (readProfile().orderingMode !== OrderingMode.PayOnline)
       return { orderNumber: addOrder(checked, false) };
@@ -280,6 +282,7 @@ export const fakeOrdersApi = {
     cashierOrder: CashierOrder,
   ): Promise<{ orderNumber: number }> => {
     await fakeDelay();
+    requireActiveSagra();
     const { paid, ...order } = staffOrder(cashierOrder);
     return { orderNumber: addOrder(order, paid) };
   },
@@ -289,6 +292,7 @@ export const fakeOrdersApi = {
   updatePayment: async (id: number, paid: boolean): Promise<void> => {
     await fakeDelay();
     requireRole(StaffRole.Cashier);
+    requireActiveSagra();
     const profile = readProfile();
     if (profile.orderingMode === OrderingMode.PayOnline)
       throw new HttpError(403);
@@ -304,6 +308,7 @@ export const fakeOrdersApi = {
   updateReady: async (id: number, ready: boolean): Promise<void> => {
     await fakeDelay(250);
     requireRole(StaffRole.Chef, StaffRole.Kitchen);
+    requireActiveSagra();
     if (usesKitchenDispatch(readProfile())) throw new HttpError(403);
     checkKitchenSees(findOrder(id));
     updateOrder(id, (o) => ({
@@ -317,6 +322,7 @@ export const fakeOrdersApi = {
   updateItems: async (id: number, items: CartType[]): Promise<void> => {
     await fakeDelay();
     requireRole(StaffRole.Cashier);
+    requireActiveSagra();
     if (readProfile().orderingMode === OrderingMode.PayOnline)
       throw new HttpError(403);
     const order = findOrder(id);
@@ -340,6 +346,7 @@ export const fakeOrdersApi = {
   updateDelivered: async (id: number, delivered: boolean): Promise<void> => {
     await fakeDelay(250);
     requireRole(StaffRole.Cashier, StaffRole.Chef, StaffRole.Counter);
+    requireActiveSagra();
     const profile = readProfile();
     const takeaway = readTakeaway();
     if (!hasPickupDesk(profile, takeaway)) throw new HttpError(403);
@@ -383,6 +390,7 @@ export const fakeOrdersApi = {
   ): Promise<StationTicket> => {
     await fakeDelay(250);
     requireRole(StaffRole.Chef);
+    requireActiveSagra();
     requireDispatch();
     if (!readProfile().kitchenStations.some((s) => s.id === stationId))
       throw new HttpError(400);
@@ -410,6 +418,7 @@ export const fakeOrdersApi = {
   recallTicket: async (id: number, ticketId: string): Promise<void> => {
     await fakeDelay(250);
     requireRole(StaffRole.Chef);
+    requireActiveSagra();
     requireDispatch();
     updateOrder(id, (o) => {
       const ticket = (o.tickets ?? []).find((t) => t.id === ticketId);
@@ -429,6 +438,7 @@ export const fakeOrdersApi = {
   ): Promise<void> => {
     await fakeDelay(250);
     requireRole(StaffRole.Chef, StaffRole.Kitchen);
+    requireActiveSagra();
     requireDispatch();
     updateOrder(id, (o) => {
       if (!(o.tickets ?? []).some((t) => t.id === ticketId))

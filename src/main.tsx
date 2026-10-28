@@ -12,6 +12,7 @@ import {
 } from "./hooks/useTheme.ts";
 import { HttpError } from "./services/client/httpClient.ts";
 import { isPlatformHost } from "./helpers/site.ts";
+import { IS_MOCKING } from "./constant/env.ts";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,10 +31,18 @@ const queryClient = new QueryClient({
 if (isPlatformHost) applyPlatformAppearance();
 else applyCachedAppearance();
 
-createRoot(document.getElementById("root")!).render(
-  <QueryClientProvider client={queryClient}>
-    <NotificationProvider>
-      <App />
-    </NotificationProvider>
-  </QueryClientProvider>,
+//Dati finti: una sagra appena registrata porta i suoi dati nell'indirizzo, da salvare prima
+//che l'app li legga (il modulo si carica solo con VITE_MOCKING)
+const ready = IS_MOCKING
+  ? import("./mock/signupHandoff.ts").then((m) => m.consumeSignupHandoff())
+  : Promise.resolve();
+
+ready.then(() =>
+  createRoot(document.getElementById("root")!).render(
+    <QueryClientProvider client={queryClient}>
+      <NotificationProvider>
+        <App />
+      </NotificationProvider>
+    </QueryClientProvider>,
+  ),
 );
