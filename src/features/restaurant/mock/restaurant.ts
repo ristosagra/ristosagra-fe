@@ -5,6 +5,7 @@ import { sameEveryDay, weeklyHoursValid } from "../../../helpers/openingHours";
 import { WEEKDAYS } from "../../../constant/openingHours";
 import { kitchenSettingsError } from "../../kitchen/utils/kitchenSettings";
 import { requireManager } from "../../staff/mock/auth";
+import { isSagraActive } from "../../platform/mock/billingStore";
 import {
   OrderingMode,
   PaymentTiming,
@@ -24,7 +25,10 @@ const DEFAULT_OPENING_HOURS = sameEveryDay({
   dinner: { open: true, from: "19:00", to: "23:00" },
 });
 
-const DEFAULT_PROFILE: RestaurantProfile = {
+//Profilo salvato: l'attivazione non c'è, la calcola isSagraActive dal pagamento
+type StoredProfile = Omit<RestaurantProfile, "active">;
+
+const DEFAULT_PROFILE: StoredProfile = {
   name: "Ristosagra",
   ...DEFAULT_APPEARANCE,
   openingHours: DEFAULT_OPENING_HOURS,
@@ -42,17 +46,28 @@ const DEFAULT_PROFILE: RestaurantProfile = {
   ],
 };
 
-const restaurantStore = createMockStore<RestaurantProfile>(
+export const restaurantStore = createMockStore<StoredProfile>(
   "restaurant",
   () => DEFAULT_PROFILE,
 );
 
 //i profili salvati prima di alcune impostazioni (tema, orari, ordini...) non le hanno: si usano quelle predefinite.
-//Lo usano anche gli altri dati finti, che seguono le regole scelte dal ristorante
+//Lo usano anche gli altri dati finti, che seguono le regole scelte dal ristorante.
+//L'attivazione dipende dal pagamento dell'edizione, non da quello che è salvato
 export const readProfile = (): RestaurantProfile => ({
   ...DEFAULT_PROFILE,
   ...restaurantStore.get(),
+  active: isSagraActive(),
 });
+
+//Senza l'attivazione: non si salva nel profilo e non si cambia dal profilo
+const withoutActive = (
+  p: RestaurantProfile | RestaurantProfileUpdate,
+): Partial<RestaurantProfile> => {
+  const copy: Partial<RestaurantProfile> = { ...p };
+  delete copy.active;
+  return copy;
+};
 
 const isOneOf = (values: object, v: unknown) =>
   v === undefined || Object.values(values).includes(v);
@@ -87,9 +102,9 @@ export const fakeRestaurantApi = {
   ): Promise<RestaurantProfile> => {
     await fakeDelay();
     requireManager();
-    const updated = { ...readProfile(), ...changes };
+    const updated = { ...readProfile(), ...withoutActive(changes) };
     if (!profileValid(updated)) throw new HttpError(400);
-    restaurantStore.set(updated);
+    restaurantStore.set(withoutActive(updated) as StoredProfile);
     return updated;
   },
 };

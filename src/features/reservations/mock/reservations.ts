@@ -9,6 +9,7 @@ import {
 import { floorPlanStore } from "../../floorPlan/mock/floorPlan";
 import { readProfile } from "../../restaurant/mock/restaurant";
 import { requireRole } from "../../staff/mock/auth";
+import { requireActiveSagra } from "../../platform/mock/billingStore";
 import { StaffRole } from "../../staff/types/staff";
 import type {
   Availability,
@@ -78,6 +79,7 @@ export const fakeReservationsApi = {
 
   createReservation: async (data: NewReservation): Promise<Reservation> => {
     await fakeDelay(800);
+    requireActiveSagra();
     const today = openRanges(readProfile().openingHours[todayWeekday()]);
     if (
       !data.name.trim() ||

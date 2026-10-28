@@ -5,6 +5,8 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Toast } from "./components/core/Toast";
 import { Loader } from "./components/core/Loader";
 import { useTheme } from "./hooks/useTheme";
+import { isPlatformHost } from "./helpers/site";
+import { SagraGate } from "./features/platform/components/SagraGate";
 
 //Le pagine della cassa si scaricano solo quando servono: i clienti (dal cellulare)
 //non caricano piantina, editor del menù e gestione ordini
@@ -24,29 +26,64 @@ const PickupScreen = lazy(() =>
     default: m.PickupScreen,
   })),
 );
+//Landing, registrazione e accesso (dominio principale): chi è sul sito di una sagra non li scarica
+const PlatformApp = lazy(() =>
+  import("./pages/Platform/PlatformApp").then((m) => ({
+    default: m.PlatformApp,
+  })),
+);
 
-function App() {
+//Sito di una sagra: clienti, personale e schermo Pronti, col tema scelto dal ristorante
+const SagraRoutes = () => {
   useTheme();
 
+  return (
+    <Routes>
+      {/* Sagra inesistente o non ancora online: lo si dice al posto della pagina */}
+      <Route
+        path="/"
+        element={
+          <SagraGate>
+            <CustomerHome />
+          </SagraGate>
+        }
+      />
+      <Route
+        path="/login"
+        element={
+          <SagraGate allowInactive>
+            <CashierLogin />
+          </SagraGate>
+        }
+      />
+      <Route
+        path="/pronti"
+        element={
+          <SagraGate>
+            <PickupScreen />
+          </SagraGate>
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <CashierHome />
+          </ProtectedRoute>
+        }
+      />
+      {/* Indirizzi sconosciuti: si torna alla home dei clienti */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+};
+
+function App() {
   return (
     <BrowserRouter>
       <Toast />
       <Suspense fallback={<Loader />}>
-        <Routes>
-          <Route path="/" element={<CustomerHome />} />
-          <Route path="/login" element={<CashierLogin />} />
-          <Route path="/pronti" element={<PickupScreen />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <CashierHome />
-              </ProtectedRoute>
-            }
-          />
-          {/* Indirizzi sconosciuti: si torna alla home dei clienti */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        {isPlatformHost ? <PlatformApp /> : <SagraRoutes />}
       </Suspense>
     </BrowserRouter>
   );

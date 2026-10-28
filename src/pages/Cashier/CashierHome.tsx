@@ -23,10 +23,12 @@ import { useRestaurant } from "../../features/restaurant/hook/useRestaurant";
 import { useTakeawaySettings } from "../../features/orders/hook/useOrders";
 import {
   canEditFloorPlan,
+  isManager,
   staffHomePage,
   staffPages,
   staffRoleLabel,
 } from "../../features/staff/utils/permissions";
+import { ActivationBanner } from "../../features/platform/components/ActivationBanner";
 import { useCurrentUser } from "../../hooks/useAuth";
 import { useLogout } from "../../hooks/useLogout";
 import { Profile } from "./Profile";
@@ -161,6 +163,8 @@ export const CashierHome = () => {
           />
         </NavGroup>
       </NavBar>
+      {/* Sagra non attiva: titolare e vice la attivano da qui (in cima anche sul telefono) */}
+      {isManager(user.role) && <ActivationBanner />}
       <main
         className={`${ThemeVariants.colors.bg.base} flex-1 min-h-0 overflow-hidden`}
       >
@@ -172,13 +176,15 @@ export const CashierHome = () => {
         {current === PagesCashier.CASH && <CashierDashboard role={user.role} />}
         {current === PagesCashier.KITCHEN && <Kitchen role={user.role} />}
         {current === PagesCashier.PICKUP && <Pickup />}
-        {/* Es. Banco ritiro mentre l'ordine si porta al tavolo e l'asporto è spento */}
+        {/* Es. Banco ritiro mentre l'ordine si porta al tavolo e l'asporto è spento,
+            o la sagra non ancora attivata dal titolare */}
         {!current && (
           <p
             className={`h-full flex items-center justify-center p-6 text-center ${ThemeVariants.colors.text.secondary}`}
           >
-            Con le impostazioni attuali del ristorante non ci sono pagine per il
-            tuo ruolo.
+            {restaurant?.active === false
+              ? "La sagra non è ancora attiva: chiedi al titolare di attivarla."
+              : "Con le impostazioni attuali del ristorante non ci sono pagine per il tuo ruolo."}
           </p>
         )}
       </main>

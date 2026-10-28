@@ -4,6 +4,7 @@ import {
   ChevronRight,
   Clock,
   Palette,
+  Receipt,
   Smartphone,
   Store,
   Users,
@@ -15,6 +16,10 @@ import { MenuSection } from "./profile/MenuSection";
 import { OrdersSection } from "./profile/OrdersSection";
 import { StaffSection } from "./profile/StaffSection";
 import { SummarySection } from "./profile/SummarySection";
+import { BillingSection } from "./profile/BillingSection";
+import { useBilling } from "../../features/platform/hook/useBilling";
+import { formatPaidUntil } from "../../features/platform/utils/edition";
+import { ROOT_DOMAIN } from "../../constant/env";
 import { useMenus } from "../../features/menu/hook/useMenu";
 import { activeMenu } from "../../features/menu/utils/menuUtils";
 import {
@@ -113,6 +118,9 @@ const ProfileHome = ({
   const { data: staff } = useStaff();
   const { data: menus } = useMenus();
   const { data: orders } = useOrders();
+  //edizione e fattura solo sulla piattaforma (con una sola sagra non c'è niente da pagare)
+  const onPlatform = ROOT_DOMAIN !== "";
+  const { data: billing } = useBilling(onPlatform);
 
   const openDays = restaurant
     ? WEEKDAYS.filter((d) => openServices(restaurant.openingHours[d]).length)
@@ -206,13 +214,27 @@ const ProfileHome = ({
           warning={!!menus && !todayMenu}
           onClick={() => onOpen(PagesProfile.MENU)}
         />
+        {onPlatform && (
+          <SectionLink
+            icon={<Receipt size={22} />}
+            title="Edizione e fattura"
+            summary={
+              billing &&
+              (billing.active && billing.paidUntil
+                ? `Attiva fino al ${formatPaidUntil(billing.paidUntil)}`
+                : "Non attiva")
+            }
+            warning={!!billing && !billing.active}
+            onClick={() => onOpen(PagesProfile.BILLING)}
+          />
+        )}
       </div>
     </div>
   );
 };
 
 //Profilo del ristorante (titolare e vice): una pagina con un collegamento per argomento
-//(riepilogo di oggi, nome e aspetto, orari e asporto, ordini e cucina, personale, menù). Ogni
+//(riepilogo di oggi, nome e aspetto, orari e asporto, ordini e cucina, personale, menù, edizione e fattura). Ogni
 //sezione si apre a parte e ha la sua Modifica, che riguarda solo le sue box (il riepilogo si
 //legge soltanto)
 export const Profile = () => {
@@ -232,6 +254,8 @@ export const Profile = () => {
       return <StaffSection onBack={back} />;
     case PagesProfile.MENU:
       return <MenuSection onBack={back} />;
+    case PagesProfile.BILLING:
+      return <BillingSection onBack={back} />;
     default:
       return <ProfileHome onOpen={setSection} />;
   }

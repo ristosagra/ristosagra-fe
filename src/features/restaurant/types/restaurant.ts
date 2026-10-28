@@ -80,9 +80,15 @@ export interface RestaurantProfile {
   //le comande arrivano al capo cucina, che le manda alle postazioni
   kitchenDispatch: boolean;
   kitchenStations: KitchenStation[];
+  //edizione pagata e non scaduta (sola lettura): se falso la sagra non è online, il
+  //personale tranne i gestori non ha pagine e il backend rifiuta ordini e prenotazioni
+  active: boolean;
 }
 
-export type RestaurantProfileUpdate = Partial<RestaurantProfile>;
+//L'attivazione non si modifica dal profilo: la decide il pagamento dell'edizione
+export type RestaurantProfileUpdate = Partial<
+  Omit<RestaurantProfile, "active">
+>;
 
 //Lunghezza massima del nome, perché stia nella barra in alto
 export const RESTAURANT_NAME_MAX = 40;

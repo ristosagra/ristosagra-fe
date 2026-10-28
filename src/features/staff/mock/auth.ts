@@ -8,6 +8,7 @@ import {
   type StaffRoleConst,
 } from "../types/staff";
 import { isManager } from "../utils/permissions";
+import { requireActiveSagra } from "../../platform/mock/billingStore";
 
 //Personale finto salvato nel browser e chi ha fatto l'accesso, per tutti i dati finti: ogni
 //chiamata del personale controlla il ruolo come farà il backend (colonna Accesso di API.md),
@@ -73,11 +74,13 @@ export const currentMockUser = (): StaffMember => {
 //Gruppi di ruoli usati nella colonna Accesso: i gestori sono sempre compresi
 export const MANAGERS: StaffRoleConst[] = [StaffRole.Admin, StaffRole.Deputy];
 
-//La chiamata è ammessa solo per i gestori e i ruoli indicati, altrimenti 403
+//La chiamata è ammessa solo per i gestori e i ruoli indicati, altrimenti 403. Con la sagra
+//non attiva (edizione non pagata) gli altri ruoli ricevono 402: i gestori la preparano
 export const requireRole = (...roles: StaffRoleConst[]) => {
   const actor = currentMockUser();
-  if (!isManager(actor.role) && !roles.includes(actor.role))
-    throw new HttpError(403);
+  if (isManager(actor.role)) return actor;
+  if (!roles.includes(actor.role)) throw new HttpError(403);
+  requireActiveSagra();
   return actor;
 };
 
