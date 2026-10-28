@@ -99,6 +99,13 @@ const HOME_PAGE: Record<StaffRoleConst, PagesCashierConst> = {
   [StaffRole.Counter]: PagesCashier.PICKUP,
 };
 
+//Con la sagra non attiva (edizione non pagata) titolare e vice la preparano: solo queste
+//pagine. Gli altri ruoli non ne hanno
+const INACTIVE_MANAGER_PAGES: PagesCashierConst[] = [
+  PagesCashier.PROFILE,
+  PagesCashier.FLORPLAN,
+];
+
 //Pagine che il ruolo può aprire, nell'ordine della barra. Ritiro c'è col ritiro al banco
 //e, se l'ordine si porta al tavolo, per consegnare l'asporto
 export const staffPages = (
@@ -109,6 +116,8 @@ export const staffPages = (
   NAV_ORDER.filter(
     (p) =>
       ROLE_PAGES[role].includes(p) &&
+      (profile?.active !== false ||
+        (isManager(role) && INACTIVE_MANAGER_PAGES.includes(p))) &&
       (p !== PagesCashier.NEW_ORDER ||
         (takesTableOrders(role)
           ? tableStaffTakesOrders(profile)

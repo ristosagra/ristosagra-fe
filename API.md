@@ -115,7 +115,7 @@ Risposta `200`:
 - Username confrontato senza distinguere maiuscole e minuscole.
 - Il token viene salvato e inviato come `Bearer`. Se è un JWT con `exp`, il frontend considera scaduta la sessione dopo quella data.
 - Non esiste un endpoint di logout: il frontend cancella token e utente da solo. Se serve invalidarlo lato server, va aggiunto.
-- Limiti nel form: username max 100 caratteri, password max 200.
+- Limiti nel form: username max 254 caratteri (il titolare registrato dalla piattaforma usa l'email), password max 200.
 
 ### `GET /api/auth/me` — personale
 
