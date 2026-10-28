@@ -8,10 +8,12 @@ const loadApi: () => Promise<typeof BillingService> = IS_MOCKING
   ? () => import("../mock/billing").then((m) => m.fakeBillingApi)
   : () => Promise.resolve(BillingService);
 
-export const useBilling = () =>
+//enabled: false dove non serve (es. una sola sagra, senza piattaforma)
+export const useBilling = (enabled = true) =>
   useQuery({
     queryKey: ["billing"],
     queryFn: async () => (await loadApi()).getBilling(),
+    enabled,
   });
 
 export const useUpdateBilling = () => {
