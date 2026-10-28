@@ -13,6 +13,7 @@ Le chiamate sono definite in `src/features/<feature>/api/*.ts` e `src/services/a
 | Base URL | `VITE_API_URL` (es. `https://tuo-backend.railway.app`). Vuoto = stessa origine; in sviluppo Vite inoltra `/api` a `http://localhost:8080` |
 | Formato | JSON (`Content-Type: application/json`), UTF-8. Il frontend invia `Content-Type` solo nelle richieste con corpo |
 | Autenticazione | `Authorization: Bearer <token>` sulle chiamate del personale; ogni endpoint indica i [ruoli](#personale-e-ruoli) ammessi (colonna **Accesso**), gli altri ricevono `403` |
+| Sagra | Ogni sagra ha un sottodominio (`<slug>.ristosagra.it`, dominio da `VITE_ROOT_DOMAIN`). Da lì il frontend manda su **ogni** chiamata `X-Sagra: <slug>`: il backend usa i dati di quella sagra. Per le chiamate del personale vale la sagra del token e deve coincidere con l'header, altrimenti `403`. Dal dominio principale (landing) e con `VITE_ROOT_DOMAIN` vuoto (una sola sagra) l'header non c'è. Vedi [Piattaforma](#piattaforma-registrazione-e-attivazione) |
 | Orari | Stringa `"HH:MM"` 24 ore (es. `"20:30"`) |
 | Date | ISO 8601 (es. `"2026-10-15T19:42:00.000Z"`) |
 | Prezzi e totali | Numero in euro con decimali (es. `6.5`), non in centesimi |
@@ -27,6 +28,7 @@ Il frontend guarda solo lo **status HTTP**, il corpo degli errori viene ignorato
 |---|---|
 | 2xx | Successo |
 | 401 | Se la richiesta aveva un token: sessione scaduta → cancella il token e torna a `/login`. Sul login: "Credenziali errate" |
+| 402 | La sagra non è attiva (edizione non pagata o scaduta, vedi [Piattaforma](#piattaforma-registrazione-e-attivazione)): errore generico, l'interfaccia non offre quelle azioni |
 | 403 | Sul login: "Credenziali errate". Altrove: errore generico |
 | 409 | Sugli ordini (`POST /api/order`, `POST /api/orders`, `PATCH /api/orders/:id/items`): un piatto è [esaurito](#piatti-esauriti). Il frontend rilegge il menù e segna il piatto da togliere |
 | altri 4xx | Errore mostrato all'utente, nessun nuovo tentativo |
@@ -34,7 +36,7 @@ Il frontend guarda solo lo **status HTTP**, il corpo degli errori viene ignorato
 
 ### CORS
 
-Se backend e frontend stanno su domini diversi, il backend deve consentire l'origine del frontend con i metodi `GET, POST, PATCH, DELETE` e gli header `Authorization, Content-Type`.
+Se backend e frontend stanno su domini diversi, il backend deve consentire l'origine del frontend (il dominio principale e tutti i sottodomini delle sagre) con i metodi `GET, POST, PATCH, DELETE` e gli header `Authorization, Content-Type, X-Sagra`. Per via di `X-Sagra` anche le GET pubbliche hanno la richiesta preliminare (preflight): rispondere con `Access-Control-Max-Age` alto (es. `86400`). Con l'API sotto lo stesso dominio del sito (proxy di Netlify su `/api/*`) il preflight non c'è.
 
 ---
 

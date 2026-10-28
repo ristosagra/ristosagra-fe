@@ -1,5 +1,6 @@
 import { API_URL } from "../../constant/env";
 import { clearSession, getToken } from "../auth/session";
+import { sagraSlug } from "../../helpers/site";
 
 //Oltre questo tempo la richiesta viene interrotta (reti mobili lente o assenti)
 const TIMEOUT_MS = 15000;
@@ -30,6 +31,9 @@ const request = async <T>(
   // Content-Type solo se c'è un corpo: sulle GET pubbliche evita la richiesta preliminare CORS
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = `Bearer ${token}`;
+  //La sagra del sottodominio: il backend sceglie i suoi dati da qui (per il personale
+  //vale quella del token, che deve coincidere)
+  if (sagraSlug) headers["X-Sagra"] = sagraSlug;
 
   const res = await fetch(`${API_URL}${endpoint}`, {
     method,
