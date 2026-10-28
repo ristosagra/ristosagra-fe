@@ -30,6 +30,8 @@ export const PagesProfile = {
   ORDERS: "orders",
   STAFF: "staff",
   MENU: "menu",
+  //edizione pagata (scadenza, attivazione) e dati per la fattura
+  BILLING: "billing",
 } as const;
 
 export type PagesProfileConst =

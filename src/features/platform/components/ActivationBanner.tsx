@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../../components/core/Button";
 import { Spinner } from "../../../components/core/Spinner";
 import { ButtonDimensions } from "../../../constant/button";
@@ -29,14 +30,16 @@ export const ActivationBanner = () => {
   });
   const active = restaurant?.active;
   const showNotification = useNotification();
+  const queryClient = useQueryClient();
   const { start, sending } = useStartActivation();
 
-  //Conferma arrivata mentre si aspettava
+  //Conferma arrivata mentre si aspettava: anche la scadenza nel Profilo va riletta
   useEffect(() => {
     if (!active || activationPendingSince() === null) return;
     clearActivationPending();
+    queryClient.invalidateQueries({ queryKey: ["billing"] });
     showNotification("La sagra è online", NotificationType.Ok);
-  }, [active, showNotification]);
+  }, [active, showNotification, queryClient]);
 
   if (!restaurant || active) return null;
 
