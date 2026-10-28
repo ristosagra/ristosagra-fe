@@ -6,6 +6,7 @@ import { Toast } from "./components/core/Toast";
 import { Loader } from "./components/core/Loader";
 import { useTheme } from "./hooks/useTheme";
 import { isPlatformHost } from "./helpers/site";
+import { SagraGate } from "./features/platform/components/SagraGate";
 
 //Le pagine della cassa si scaricano solo quando servono: i clienti (dal cellulare)
 //non caricano piantina, editor del menù e gestione ordini
@@ -38,9 +39,31 @@ const SagraRoutes = () => {
 
   return (
     <Routes>
-      <Route path="/" element={<CustomerHome />} />
-      <Route path="/login" element={<CashierLogin />} />
-      <Route path="/pronti" element={<PickupScreen />} />
+      {/* Sagra inesistente o non ancora online: lo si dice al posto della pagina */}
+      <Route
+        path="/"
+        element={
+          <SagraGate>
+            <CustomerHome />
+          </SagraGate>
+        }
+      />
+      <Route
+        path="/login"
+        element={
+          <SagraGate allowInactive>
+            <CashierLogin />
+          </SagraGate>
+        }
+      />
+      <Route
+        path="/pronti"
+        element={
+          <SagraGate>
+            <PickupScreen />
+          </SagraGate>
+        }
+      />
       <Route
         path="/dashboard"
         element={
