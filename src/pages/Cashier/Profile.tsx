@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  ChartColumn,
   ChevronRight,
   Clock,
   Palette,
@@ -13,9 +14,14 @@ import { HoursSection } from "./profile/HoursSection";
 import { MenuSection } from "./profile/MenuSection";
 import { OrdersSection } from "./profile/OrdersSection";
 import { StaffSection } from "./profile/StaffSection";
+import { SummarySection } from "./profile/SummarySection";
 import { useMenus } from "../../features/menu/hook/useMenu";
 import { activeMenu } from "../../features/menu/utils/menuUtils";
-import { useTakeawaySettings } from "../../features/orders/hook/useOrders";
+import {
+  useOrders,
+  useTakeawaySettings,
+} from "../../features/orders/hook/useOrders";
+import { daySummary } from "../../features/orders/utils/daySummary";
 import {
   DEFAULT_BRAND_COLOR,
   colorName,
@@ -28,6 +34,7 @@ import {
   usesCounterPickup,
   usesKitchenDispatch,
 } from "../../features/restaurant/utils/ordering";
+import { presetOf } from "../../features/restaurant/utils/presets";
 import { useStaff } from "../../features/staff/hook/useStaff";
 import { ThemeVariants } from "../../constant/colors";
 import { WEEKDAYS } from "../../constant/openingHours";
@@ -105,6 +112,7 @@ const ProfileHome = ({
   const { data: takeaway } = useTakeawaySettings();
   const { data: staff } = useStaff();
   const { data: menus } = useMenus();
+  const { data: orders } = useOrders();
 
   const openDays = restaurant
     ? WEEKDAYS.filter((d) => openServices(restaurant.openingHours[d]).length)
@@ -112,6 +120,10 @@ const ProfileHome = ({
     : 0;
   const blocked = staff?.filter((m) => !m.enabled).length ?? 0;
   const todayMenu = menus && activeMenu(menus);
+  const today = orders && daySummary(orders, restaurant);
+  //modo già pronto scelto (sagra, sagra al tavolo, ristorante), se le scelte sono le sue
+  const preset =
+    restaurant && takeaway && presetOf(restaurant, takeaway.enabled);
 
   return (
     <div className="h-full overflow-y-auto px-4 pb-4 sm:px-6 sm:pb-6">
@@ -133,6 +145,17 @@ const ProfileHome = ({
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <SectionLink
+          icon={<ChartColumn size={22} />}
+          title="Riepilogo di oggi"
+          summary={
+            today &&
+            (today.orders === 0
+              ? "Ancora nessun ordine"
+              : `${today.orders === 1 ? "1 ordine" : `${today.orders} ordini`} · €${today.revenue.toFixed(2)} incassati`)
+          }
+          onClick={() => onOpen(PagesProfile.SUMMARY)}
+        />
         <SectionLink
           icon={<Palette size={22} />}
           title="Nome, tema e colore"
@@ -158,7 +181,9 @@ const ProfileHome = ({
           title="Ordini e cucina"
           summary={
             restaurant &&
-            `${ORDERING_MODE_LABELS[restaurant.orderingMode]} · ${usesCounterPickup(restaurant) ? "ritiro al banco" : "al tavolo"} · ${usesKitchenDispatch(restaurant) ? "smistamento dall'app" : "bigliettini"}`
+            (preset
+              ? preset.label
+              : `${ORDERING_MODE_LABELS[restaurant.orderingMode]} · ${usesCounterPickup(restaurant) ? "ritiro al banco" : "al tavolo"} · ${usesKitchenDispatch(restaurant) ? "smistamento dall'app" : "bigliettini"}`)
           }
           onClick={() => onOpen(PagesProfile.ORDERS)}
         />
@@ -187,13 +212,16 @@ const ProfileHome = ({
 };
 
 //Profilo del ristorante (titolare e vice): una pagina con un collegamento per argomento
-//(nome e aspetto, orari e asporto, ordini e cucina, personale, menù). Ogni sezione si apre a
-//parte e ha la sua Modifica, che riguarda solo le sue box
+//(riepilogo di oggi, nome e aspetto, orari e asporto, ordini e cucina, personale, menù). Ogni
+//sezione si apre a parte e ha la sua Modifica, che riguarda solo le sue box (il riepilogo si
+//legge soltanto)
 export const Profile = () => {
   const [section, setSection] = useState<PagesProfileConst | null>(null);
   const back = () => setSection(null);
 
   switch (section) {
+    case PagesProfile.SUMMARY:
+      return <SummarySection onBack={back} />;
     case PagesProfile.APPEARANCE:
       return <AppearanceSection onBack={back} />;
     case PagesProfile.HOURS:

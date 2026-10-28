@@ -3,11 +3,14 @@ import type { Dish } from "../../../types/menuOrder";
 import type { RestaurantMenu } from "../types/menu";
 
 export const MenuService = {
-  //piatti del menù di oggi, quello che vedono clienti e cassa
+  //piatti del menù di oggi, quello che vedono clienti e cassa (con gli esauriti)
   getMenu: (): Promise<Dish[]> => httpClient.get("/api/menu"),
   //tutti i menù con i loro giorni, per il profilo
   getMenus: (): Promise<RestaurantMenu[]> => httpClient.get("/api/menus"),
   //elenco completo dei menù: sostituisce quello salvato
   saveMenus: (menus: RestaurantMenu[]): Promise<RestaurantMenu[]> =>
     httpClient.patch("/api/menus", menus),
+  //piatto del menù di oggi finito (o di nuovo disponibile), durante il servizio
+  setSoldOut: (dishId: number, soldOut: boolean): Promise<void> =>
+    httpClient.patch(`/api/menu/${dishId}/sold-out`, { soldOut }),
 };

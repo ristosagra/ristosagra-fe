@@ -169,7 +169,7 @@ export const CashierHome = () => {
           <RestaurantFloorPlan canEditLayout={canEditFloorPlan(user.role)} />
         )}
         {current === PagesCashier.NEW_ORDER && <NewOrder role={user.role} />}
-        {current === PagesCashier.CASH && <CashierDashboard />}
+        {current === PagesCashier.CASH && <CashierDashboard role={user.role} />}
         {current === PagesCashier.KITCHEN && <Kitchen role={user.role} />}
         {current === PagesCashier.PICKUP && <Pickup />}
         {/* Es. Banco ritiro mentre l'ordine si porta al tavolo e l'asporto è spento */}

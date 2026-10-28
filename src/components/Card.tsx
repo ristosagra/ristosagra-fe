@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { ThemeVariants } from "../constant/colors";
+import { cn } from "../helpers/cn";
 import { Button } from "./core/Button";
 import { CardContainer } from "./core/CardContainer";
 import { Label } from "./core/Label";
@@ -21,20 +22,26 @@ interface CardProps {
   isCart?: boolean;
   //false = menù solo da guardare, senza pulsanti per aggiungere
   canOrder?: boolean;
+  //nel carrello: perché il piatto non si può più ordinare (es. "Esaurito")
+  unavailable?: string;
 }
 
+//Piatto esaurito: al posto dei pulsanti per aggiungere c'è il motivo (anche nel menù solo
+//da guardare)
 export const Card = ({
   dish,
   cartItems,
   setCartItems,
   isCart = false,
   canOrder = true,
+  unavailable,
 }: CardProps) => {
   const [showAllergens, setShowAllergens] = useState(false);
   const cartItem = isCart
     ? cartItems.find((item) => item.dish.id === dish.id)
     : undefined;
   const price = cartItem ? dish.price * cartItem.quantity : dish.price;
+  const soldOut = isCart ? unavailable : dish.soldOut ? "Esaurito" : undefined;
 
   const removeItem = () =>
     setCartItems((prev) => prev.filter((i) => i.dish.id !== dish.id));
@@ -42,7 +49,7 @@ export const Card = ({
   return (
     <CardContainer>
       <div className="flex justify-between items-start gap-3">
-        <div className="min-w-0">
+        <div className={cn("min-w-0", soldOut && "opacity-60")}>
           <Label
             label={dish.name}
             tag={LabelTags.h3}
@@ -94,12 +101,25 @@ export const Card = ({
           color={ThemeVariants.colors.text.brand}
           noMargin
         />
-        {canOrder && (
-          <Counter
-            dish={dish}
-            cartItems={cartItems}
-            setCartItems={setCartItems}
-          />
+        {soldOut ? (
+          <span
+            className={cn(
+              "shrink-0 px-4 py-2 text-sm font-bold",
+              ThemeVariants.borderRadius.full,
+              ThemeVariants.colors.border.all.danger,
+              ThemeVariants.colors.text.danger,
+            )}
+          >
+            {soldOut}
+          </span>
+        ) : (
+          canOrder && (
+            <Counter
+              dish={dish}
+              cartItems={cartItems}
+              setCartItems={setCartItems}
+            />
+          )
         )}
       </div>
     </CardContainer>

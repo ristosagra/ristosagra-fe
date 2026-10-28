@@ -15,16 +15,20 @@ import {
   stationWork,
   type StationWork,
 } from "../utils/kitchen";
+import { PrintKitchenSlipButton } from "./KitchenSlip";
 import { OrderHeader, TicketLines } from "./TicketParts";
 import { ticketCardClass } from "../utils/ticketStyle";
 
+//Comanda della postazione: segnata pronta con un tocco, e da stampare su carta
 const StationTicketCard = ({
   work: { order, ticket },
   queuedAt,
+  stationName,
   readOnly,
 }: {
   work: StationWork;
   queuedAt: string;
+  stationName?: string;
   //caposala: vede, non segna pronto
   readOnly: boolean;
 }) => {
@@ -55,16 +59,23 @@ const StationTicketCard = ({
       />
       <TicketLines order={order} lines={ticket.items} />
       {!readOnly && (
-        <Button
-          iconLeft={isReady ? <Undo2 size={18} /> : <Check size={18} />}
-          label={isReady ? "Rimetti da preparare" : "Pronto"}
-          onClick={toggle}
-          dimension={ButtonDimensions.auto}
-          variant={isReady ? "secondary" : "primary"}
-          disabled={isPending}
-          fullWidth
-          className="h-12 mt-auto disabled:opacity-50 disabled:cursor-wait"
-        />
+        <div className="flex gap-2 mt-auto">
+          <Button
+            iconLeft={isReady ? <Undo2 size={18} /> : <Check size={18} />}
+            label={isReady ? "Rimetti da preparare" : "Pronto"}
+            onClick={toggle}
+            dimension={ButtonDimensions.auto}
+            variant={isReady ? "secondary" : "primary"}
+            disabled={isPending}
+            className="flex-1 min-w-0 h-12 disabled:opacity-50 disabled:cursor-wait"
+          />
+          <PrintKitchenSlipButton
+            order={order}
+            lines={ticket.items}
+            stationName={stationName}
+            queuedAt={queuedAt}
+          />
+        </div>
       )}
     </article>
   );
@@ -87,6 +98,10 @@ export const StationBoard = ({
   search: string;
   readOnly: boolean;
 }) => {
+  //nome della postazione, sulla comanda di carta
+  const stationName = profile?.kitchenStations.find(
+    (s) => s.id === stationId,
+  )?.name;
   const work = stationWork(orders, stationId).filter((w) =>
     matchesSearch(w.order, search),
   );
@@ -119,6 +134,7 @@ export const StationBoard = ({
               key={w.ticket.id}
               work={w}
               queuedAt={queueTime(w.order, profile)}
+              stationName={stationName}
               readOnly={readOnly}
             />
           ))}
@@ -133,6 +149,7 @@ export const StationBoard = ({
                 key={w.ticket.id}
                 work={w}
                 queuedAt={queueTime(w.order, profile)}
+                stationName={stationName}
                 readOnly={readOnly}
               />
             ))}

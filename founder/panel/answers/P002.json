@@ -1,0 +1,13 @@
+{
+  "id": "P002",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "Da noi il 4G nel campo va e viene, e voi dite che serve internet: con mille persone a cena e la coda alla cassa io non rischio di fermare tutto. Il prezzo non è il problema, il problema è cosa succede la sera che cade la linea.",
+  "objection": "Se salta la connessione in piena serata la cucina non vede più gli ordini e la cassa si blocca, e io ho il direttivo e i volontari che mi guardano. Qui nessuno dice cosa si fa senza internet, e un telefono per l'assistenza non basta se intanto la coda è fuori dal cancello.",
+  "would_change_my_mind": "Una prova scritta che si continua a lavorare anche quando la linea cade (carta di riserva o modo di funzionamento senza internet) e un tecnico vostro presente in campo almeno le serate di punta, più il nome di un'altra Pro Loco come la nostra che l'ha già usato senza intoppi.",
+  "price_too_cheap": 50,
+  "price_cheap": 120,
+  "price_expensive": 350,
+  "price_too_expensive": 800
+}

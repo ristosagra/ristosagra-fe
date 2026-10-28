@@ -1,0 +1,13 @@
+{
+  "id": "P015",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "habit",
+  "reason": "Ho già un gestionale per la sagra e lo riconfermo ogni anno, funziona e i volontari sanno usarlo. I nostri clienti pagano in contanti, quindi il pagamento dal telefono non mi serve e non cambio per qualcosa che non risolve un problema che ho.",
+  "objection": "Serve internet e nel campo il 4G va e viene: se cade la linea a metà serata con la coda alla cassa, la cucina senza comande di carta si ferma e io ho cento persone in fila. Con quello che ho adesso questo rischio non lo corro.",
+  "would_change_my_mind": "Se continuasse a funzionare in cassa e in cucina anche quando la connessione cade, e poi si sincronizzasse da solo quando torna.",
+  "price_too_cheap": 15,
+  "price_cheap": 40,
+  "price_expensive": 70,
+  "price_too_expensive": 120
+}

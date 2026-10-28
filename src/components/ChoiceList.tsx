@@ -7,12 +7,15 @@ export interface Choice<T> {
   value: T;
   label: string;
   description: string;
+  //etichetta accanto al nome (es. "Consigliato")
+  badge?: string;
 }
 
 interface ChoiceListProps<T extends string> {
   label: string;
   choices: Choice<T>[];
-  value: T;
+  //null = nessuna opzione scelta (es. impostazioni fatte a mano, che non sono un modo già pronto)
+  value: T | null;
   onChange: (value: T) => void;
   //perché la scelta non vale con le altre impostazioni: al posto delle opzioni c'è il motivo
   disabledReason?: string | null;
@@ -29,7 +32,10 @@ export const ChoiceList = <T extends string>({
   disabledReason,
   extras,
 }: ChoiceListProps<T>) => {
-  const current = choices.find((c) => c.value === value) ?? choices[0];
+  const current =
+    value === null
+      ? undefined
+      : (choices.find((c) => c.value === value) ?? choices[0]);
 
   if (disabledReason)
     return (
@@ -49,7 +55,7 @@ export const ChoiceList = <T extends string>({
       <p className="text-sm font-semibold">{label}</p>
       <div role="radiogroup" aria-label={label} className="flex flex-col gap-2">
         {choices.map((c) => {
-          const selected = c.value === current.value;
+          const selected = c.value === current?.value;
           return (
             <Fragment key={c.value}>
               <button
@@ -78,7 +84,21 @@ export const ChoiceList = <T extends string>({
                   {selected && <Check size={13} />}
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-sm font-semibold">{c.label}</span>
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-semibold">
+                    {c.label}
+                    {c.badge && (
+                      <span
+                        className={cn(
+                          "px-2 py-0.5 text-xs",
+                          ThemeVariants.borderRadius.full,
+                          ThemeVariants.colors.border.all.brand,
+                          ThemeVariants.colors.text.brand,
+                        )}
+                      >
+                        {c.badge}
+                      </span>
+                    )}
+                  </span>
                   <span
                     className={`block text-sm ${ThemeVariants.colors.text.secondary}`}
                   >

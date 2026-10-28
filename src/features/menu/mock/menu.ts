@@ -7,7 +7,8 @@ import { HttpError } from "../../../services/client/httpClient";
 import type { Dish } from "../../../types/menuOrder";
 import type { RestaurantMenu } from "../types/menu";
 import { menusError } from "../utils/menuUtils";
-import { requireManager } from "../../staff/mock/auth";
+import { requireManager, requireRole } from "../../staff/mock/auth";
+import { StaffRole } from "../../staff/types/staff";
 
 export const generateFakeDish = (): Dish => ({
   id: faker.number.int({ min: 1000, max: 99999 }),
@@ -55,10 +56,42 @@ export const todayDishes = (): Dish[] => {
   return menusStore.get().find((m) => m.days.includes(today))?.dishes ?? [];
 };
 
+//Giorno di calendario locale, es. "2026-10-27"
+const dayKey = (d = new Date()) =>
+  `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+
+//Piatti esauriti, salvati a parte dai menù (salvare i menù dal profilo non li tocca). Valgono
+//solo per la giornata in cui sono stati segnati: il giorno dopo tornano tutti disponibili
+const soldOutStore = createMockStore<{ day: string; dishIds: number[] }>(
+  "soldOut",
+  () => ({ day: dayKey(), dishIds: [] }),
+);
+
+//Id dei piatti esauriti oggi
+export const soldOutToday = (): number[] => {
+  const saved = soldOutStore.get();
+  return saved.day === dayKey() ? saved.dishIds : [];
+};
+
 export const fakeMenuApi = {
   getMenu: async (): Promise<Dish[]> => {
     await fakeDelay();
-    return todayDishes();
+    const soldOut = soldOutToday();
+    return todayDishes().map((d) =>
+      soldOut.includes(d.id) ? { ...d, soldOut: true } : d,
+    );
+  },
+
+  //Durante il servizio: solo i piatti del menù di oggi
+  setSoldOut: async (dishId: number, soldOut: boolean): Promise<void> => {
+    await fakeDelay(250);
+    requireRole(StaffRole.Cashier, StaffRole.Chef);
+    if (!todayDishes().some((d) => d.id === dishId)) throw new HttpError(404);
+    const others = soldOutToday().filter((id) => id !== dishId);
+    soldOutStore.set({
+      day: dayKey(),
+      dishIds: soldOut ? [...others, dishId] : others,
+    });
   },
 
   getMenus: async (): Promise<RestaurantMenu[]> => {

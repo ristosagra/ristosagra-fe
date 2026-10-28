@@ -23,6 +23,8 @@ export type PagesCashierConst =
 
 //Sezioni del profilo del ristorante, aperte dalla pagina Profilo: ognuna si modifica a parte
 export const PagesProfile = {
+  //riepilogo della giornata (incasso, ordini, piatti venduti, tempi): solo da leggere
+  SUMMARY: "summary",
   APPEARANCE: "appearance",
   HOURS: "hours",
   ORDERS: "orders",

@@ -1,0 +1,13 @@
+{
+  "id": "P001",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "Noi abbiamo già un gestionale e la cucina a postazioni funziona. Non cambio per un sito che non ho mai visto usare da nessun'altra sagra qui intorno: se me ne parla bene un collega di un'altra Pro Loco ne riparliamo, altrimenti no.",
+  "objection": "Non so se un'altra sagra della zona lo usa già, e con migliaia di coperti non rischio una serata su una cosa che nessuno ha provato. In più serve internet e non so cosa succede se cade la linea nel momento peggiore.",
+  "would_change_my_mind": "Che un'altra sagra grande della zona lo usasse già e me ne parlasse bene, meglio ancora se potessi vedere la loro cucina in funzione una sera.",
+  "price_too_cheap": 150,
+  "price_cheap": 350,
+  "price_expensive": 800,
+  "price_too_expensive": 1500
+}

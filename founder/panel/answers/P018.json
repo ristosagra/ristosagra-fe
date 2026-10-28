@@ -1,0 +1,13 @@
+{
+  "id": "P018",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "Io non compro niente che non abbia già in uso un'altra sagra qui intorno e di cui mi parlino bene, e qui non c'è scritto che qualcuno la usi. Poi ne parliamo al direttivo a maggio, e per ora per me non è una cosa da portare.",
+  "objection": "I nostri volontari anziani in cassa e in cucina non sapranno usarlo, e se al picco di sabato sera cade la connessione o si pianta uno schermo mi ritrovo con la coda fuori e nessuna comanda di carta.",
+  "would_change_my_mind": "Una sagra della zona che lo ha usato l'anno scorso e che mi dice di persona che i volontari ci sono riusciti e che nelle serate piene non si è mai fermato.",
+  "price_too_cheap": 40,
+  "price_cheap": 100,
+  "price_expensive": 400,
+  "price_too_expensive": 1000
+}

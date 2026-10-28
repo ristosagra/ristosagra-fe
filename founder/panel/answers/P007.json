@@ -1,0 +1,13 @@
+{
+  "id": "P007",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "Noi abbiamo già un gestionale che funziona e migliaia di coperti a serata: non cambio un sistema che conosco per uno nuovo, e 99 euro mi sembrano pochi per qualcosa da cui dipende tutta la serata. Se va in tilt con la fila alla cassa, il problema è mio, non loro.",
+  "objection": "Serve internet, e in una sagra grande il campo o il tendone non sempre ha buona linea. Se cade la connessione cosa faccio, con la cucina senza comande di carta e la gente in coda? L'assistenza al telefono non è un tecnico presente: voglio qualcuno che arrivi, o un modo di andare avanti a carta senza perdere gli ordini. E poi: dobbiamo comprare tablet e stampanti per le postazioni della cucina?",
+  "would_change_my_mind": "Un funzionamento senza internet (o con carta di riserva che non perde gli ordini) e un tecnico presente in sagra per le serate di punta, oltre a una sagra di dimensioni come la nostra che l'ha già usato un'intera edizione. Oppure provarlo gratis su una serata piccola, senza togliere il gestionale che abbiamo.",
+  "price_too_cheap": 120,
+  "price_cheap": 350,
+  "price_expensive": 1000,
+  "price_too_expensive": 2500
+}

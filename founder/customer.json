@@ -1,0 +1,38 @@
+{
+  "business": "Ristosagra, sito web per gestire una sagra: ordini dal telefono e in cassa, cucina, ritiro",
+  "target": "Presidenti e membri del direttivo di Pro Loco e associazioni che organizzano ogni anno una sagra in Italia, con volontari in cassa e in cucina",
+  "where": "Italia, sagre di paese",
+  "age": [30, 72],
+  "segments": [
+    {"name": "Sagra piccola: 2-4 serate, poche centinaia di coperti a sera, una o due casse", "share": 0.45, "income": [18000, 40000]},
+    {"name": "Sagra media: 5-10 serate, 500-1500 coperti a sera, più casse e coda al picco", "share": 0.35, "income": [22000, 50000]},
+    {"name": "Sagra grande: migliaia di coperti, cucina divisa in postazioni, già abituata a un gestionale", "share": 0.20, "income": [28000, 65000]}
+  ],
+  "behaviours": [
+    {"name": "Carta e bigliettini da sempre", "share": 0.25, "how": "Usa blocchetti numerati e calcolatrice da vent'anni e cambia solo se qualcuno lo convince di persona."},
+    {"name": "Ha già un gestionale", "share": 0.20, "how": "Usa già un software per sagre, gratuito o a noleggio, e lo riconferma ogni anno per abitudine."},
+    {"name": "Bilancio stretto", "share": 0.15, "how": "Ogni spesa passa dal direttivo; cerca prima le soluzioni gratuite."},
+    {"name": "Ha paura del guasto", "share": 0.12, "how": "Ha visto una serata andare in tilt; vuole carta di riserva, un tecnico presente e nessun rischio."},
+    {"name": "Il giovane del direttivo", "share": 0.12, "how": "Si occupa lui della tecnologia, prova le novità e confronta i prodotti online."},
+    {"name": "Chiede al commercialista", "share": 0.08, "how": "Prima di cambiare cassa vuole sapere cosa dice il commercialista su scontrini e incassi."},
+    {"name": "Segue il passaparola", "share": 0.08, "how": "Compra solo se un'altra sagra della zona lo usa già e ne parla bene."}
+  ],
+  "objections": [
+    "E se cade internet il sabato sera?",
+    "I volontari anziani non sapranno usarlo",
+    "Ci sono programmi gratuiti, perché pagare?",
+    "E lo scontrino fiscale? Cosa dice il commercialista?",
+    "I nostri clienti pagano in contanti, il pagamento online non serve",
+    "Chi ci aiuta se qualcosa non va durante la serata?",
+    "Non lo usa nessuno che conosco",
+    "Dobbiamo comprare tablet e stampanti?"
+  ],
+  "habits": [
+    "la sagra è a fine agosto e il direttivo decide le spese a maggio",
+    "in cassa ci sono due pensionati che lo fanno da vent'anni",
+    "nel campo della sagra il 4G va e viene",
+    "l'anno scorso la coda alla cassa arrivava al parcheggio",
+    "di giorno lavori e alla Pro Loco ci pensi la sera",
+    "l'utile della sagra finanzia le attività del paese per tutto l'anno"
+  ]
+}

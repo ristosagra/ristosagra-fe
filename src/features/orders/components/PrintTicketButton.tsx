@@ -1,8 +1,4 @@
-import { useState } from "react";
-import { createPortal, flushSync } from "react-dom";
-import { Printer } from "lucide-react";
-import { Button } from "../../../components/core/Button";
-import { ButtonDimensions } from "../../../constant/button";
+import { PrintButton } from "../../../components/PrintButton";
 import { useRestaurant } from "../../restaurant/hook/useRestaurant";
 import { usesCounterPickup } from "../../restaurant/utils/ordering";
 import type { Order } from "../types/orders";
@@ -66,7 +62,7 @@ const Ticket = ({
 );
 
 //Stampa il bigliettino da dare al cliente (es. tipo sagra: lo mette sul tavolo e
-//gli portano l'ordine). Il foglio esiste solo mentre si stampa
+//gli portano l'ordine)
 export const PrintTicketButton = ({
   order,
   className,
@@ -75,36 +71,18 @@ export const PrintTicketButton = ({
   className?: string;
 }) => {
   const { data: restaurant } = useRestaurant();
-  const [printing, setPrinting] = useState(false);
-
-  const print = () => {
-    //il bigliettino deve essere già nella pagina quando si apre la stampa
-    flushSync(() => setPrinting(true));
-    window.addEventListener("afterprint", () => setPrinting(false), {
-      once: true,
-    });
-    window.print();
-  };
 
   return (
-    <>
-      <Button
-        iconLeft={<Printer size={15} />}
-        label="Stampa bigliettino"
-        onClick={print}
-        dimension={ButtonDimensions.auto}
-        variant="secondary"
-        className={className}
-      />
-      {printing &&
-        createPortal(
-          <Ticket
-            order={order}
-            restaurantName={restaurant?.name}
-            counterPickup={usesCounterPickup(restaurant)}
-          />,
-          document.body,
-        )}
-    </>
+    <PrintButton
+      label="Stampa bigliettino"
+      className={className}
+      sheet={
+        <Ticket
+          order={order}
+          restaurantName={restaurant?.name}
+          counterPickup={usesCounterPickup(restaurant)}
+        />
+      }
+    />
   );
 };

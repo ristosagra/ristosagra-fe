@@ -53,6 +53,11 @@ export const canDispatch = (role: StaffRoleConst) =>
 export const kitchenReadOnly = (role: StaffRoleConst) =>
   role === StaffRole.HeadWaiter;
 
+//Segnare un piatto esaurito (o di nuovo disponibile) durante il servizio: chi si accorge che
+//è finito, cioè la cassa e il capo cucina (oltre a titolare e vice)
+export const canMarkSoldOut = (role: StaffRoleConst) =>
+  isManager(role) || role === StaffRole.Cashier || role === StaffRole.Chef;
+
 //Ordine delle voci nella barra
 const NAV_ORDER: PagesCashierConst[] = [
   PagesCashier.PROFILE,

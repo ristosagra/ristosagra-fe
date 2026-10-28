@@ -1,0 +1,23 @@
+{
+  "business": "Ristosagra (scenario base: 2 kit offline tuoi, prestati alle sagre)",
+  "unit": "edizione",
+  "price": 99,
+  "variable": [
+    {"label": "Tasse e contributi forfettario, ~24% del prezzo (stima, da verificare col commercialista)", "cost": 23.76},
+    {"label": "Trasporto del kit alla sagra e ritorno (stima)", "cost": 20}
+  ],
+  "fixed_monthly": [
+    {"label": "Commercialista online forfettario (FlexTax, 399 euro/anno IVA inclusa)", "cost": 33.25},
+    {"label": "Server cloud Hetzner (5,99 euro/mese + IVA 22%)", "cost": 7.31},
+    {"label": "Dominio (stima, 15 euro/anno)", "cost": 1.25}
+  ],
+  "startup": [
+    {"label": "2 kit offline: mini-PC, router, UPS, cavi (stima 2 x 425 euro, fascia 250-600 da docs/offline.md)", "cost": 850},
+    {"label": "Visite e demo a 20 contatti (carburante, stima)", "cost": 150},
+    {"label": "Edizione pilota gratuita: trasporto kit (stima)", "cost": 20}
+  ],
+  "days_per_month": 1,
+  "capacity_per_day": 8,
+  "plan_per_day": 1,
+  "ramp_per_day": [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0]
+}

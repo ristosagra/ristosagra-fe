@@ -28,6 +28,9 @@ import {
   isPayFirstAtCashier,
   marksOrdersPaid,
 } from "../../features/restaurant/utils/ordering";
+import { SoldOutButton } from "../../features/menu/components/SoldOutButton";
+import type { StaffRoleConst } from "../../features/staff/types/staff";
+import { canMarkSoldOut } from "../../features/staff/utils/permissions";
 
 //Quali liste mostrare: entrambe, solo asporto o solo ordini sul posto
 const OrdersFilter = {
@@ -47,7 +50,7 @@ const FILTERS: { key: OrdersFilterConst; label: string }[] = [
 const OrdersView = { List: "list", Bills: "bills" } as const;
 type OrdersViewConst = (typeof OrdersView)[keyof typeof OrdersView];
 
-export const CashierDashboard = () => {
+export const CashierDashboard = ({ role }: { role: StaffRoleConst }) => {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<OrdersFilterConst>(OrdersFilter.All);
   const [view, setView] = useState<OrdersViewConst>(OrdersView.List);
@@ -204,13 +207,16 @@ export const CashierDashboard = () => {
               ))}
             </div>
           )}
-          <Input
-            type="search"
-            placeholder="Cerca numero, nome o tavolo..."
-            value={search}
-            setValue={setSearch}
-            className="w-full sm:w-56"
-          />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Input
+              type="search"
+              placeholder="Cerca numero, nome o tavolo..."
+              value={search}
+              setValue={setSearch}
+              className="flex-1 min-w-0 sm:w-56"
+            />
+            {canMarkSoldOut(role) && <SoldOutButton />}
+          </div>
         </div>
       </div>
       <div className="sm:flex-1 sm:overflow-y-auto px-4 sm:px-5 pb-5">

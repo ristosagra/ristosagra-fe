@@ -1,0 +1,13 @@
+{
+  "id": "P003",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "habit",
+  "reason": "Ho già il mio gestionale e lo rinnovo ogni anno, funziona e i ragazzi in cassa lo conoscono a memoria. Per cambiare mi servirebbe un motivo grosso, e 99 euro non sono il problema: il problema è rischiare una serata da mille coperti.",
+  "objection": "Chi mi aiuta se qualcosa non va durante la serata? E se cade internet nel campo della sagra a metà del picco, con la coda alla cassa, io cosa faccio? I due pensionati in cassa non cambiano sistema a 70 anni.",
+  "would_change_my_mind": "Un'altra sagra della mia dimensione che l'ha usato per un'edizione intera, con più casse e oltre mille coperti a sera, e il suo presidente che mi risponde al telefono e mi dice che l'assistenza è venuta davvero quando serviva.",
+  "price_too_cheap": 40,
+  "price_cheap": 90,
+  "price_expensive": 300,
+  "price_too_expensive": 700
+}

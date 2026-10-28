@@ -28,6 +28,7 @@ Il frontend guarda solo lo **status HTTP**, il corpo degli errori viene ignorato
 | 2xx | Successo |
 | 401 | Se la richiesta aveva un token: sessione scaduta → cancella il token e torna a `/login`. Sul login: "Credenziali errate" |
 | 403 | Sul login: "Credenziali errate". Altrove: errore generico |
+| 409 | Sugli ordini (`POST /api/order`, `POST /api/orders`, `PATCH /api/orders/:id/items`): un piatto è [esaurito](#piatti-esauriti). Il frontend rilegge il menù e segna il piatto da togliere |
 | altri 4xx | Errore mostrato all'utente, nessun nuovo tentativo |
 | 5xx / rete | Le letture vengono ritentate fino a 2 volte; le scritture no |
 
@@ -54,6 +55,7 @@ Se backend e frontend stanno su domini diversi, il backend deve consentire l'ori
 | GET | `/api/menu` | pubblica | [Menù](#menù) |
 | GET | `/api/menus` | gestori | [Menù](#menù) |
 | PATCH | `/api/menus` | gestori | [Menù](#menù) |
+| PATCH | `/api/menu/:dishId/sold-out` | gestori, cashier, chef | [Piatti esauriti](#piatti-esauriti) |
 | POST | `/api/order` | pubblica | [Ordini](#ordini) |
 | POST | `/api/orders` | gestori, cashier, headWaiter, waiter | [Ordini](#ordini) |
 | GET | `/api/orders` | gestori, cashier, headWaiter, chef, kitchen, counter | [Ordini](#ordini) |
@@ -124,10 +126,10 @@ Il titolare (`admin`) decide chi lavora nel ristorante, con quale ruolo, usernam
 |---|---|---|---|
 | Amministratore | `admin` | Profilo (impostazioni, personale, menù), Piantina, Nuovo ordine, Ordini, Cucina | Uno solo, sempre attivo |
 | Vice amministratore | `deputy` | Come il titolare | Nominato ed eliminabile solo dal titolare |
-| Cassa | `cashier` | Nuovo ordine, Ordini (lista e conti per tavolo) | Crea ordini al bancone e incassa |
+| Cassa | `cashier` | Nuovo ordine, Ordini (lista e conti per tavolo) | Crea ordini al bancone e incassa; segna i [piatti esauriti](#piatti-esauriti) |
 | Caposala | `headWaiter` | Piantina (prenotazioni ai tavoli), Nuovo ordine, Cucina in sola lettura (anche lo smistamento) | Come il cameriere per gli ordini; in cucina vede cosa è pronto e cosa manca ma non segna né smista nulla (niente `PATCH` della cucina) |
 | Cameriere | `waiter` | Piantina (prenotazioni ai tavoli), Nuovo ordine | Ordini solo sul posto, con tavolo obbligatorio, da pagare alla cassa (`paid: false`); solo col pagamento a fine pasto |
-| Capo cucina | `chef` | Cucina (smistamento e postazioni) | Manda le comande alle postazioni; serve solo con lo smistamento (`kitchenDispatch`) |
+| Capo cucina | `chef` | Cucina (smistamento e postazioni) | Manda le comande alle postazioni; serve solo con lo smistamento (`kitchenDispatch`); segna i [piatti esauriti](#piatti-esauriti) |
 | Cucina | `kitchen` | Cucina (le postazioni) | Prepara le comande e le segna pronte |
 | Banco ritiro | `counter` | Ritiro | Col ritiro al banco: chiama i numeri pronti e consegna gli ordini (la pagina Ritiro la vedono anche gestori, cassa e capo cucina). Se l'ordine si porta al tavolo e l'asporto è attivo diventa **Banco ritiro asporto**: stesso ruolo e stesse credenziali, consegna solo l'asporto (vedi [Ritiro al banco](#ritiro-al-banco)) |
 
@@ -216,6 +218,7 @@ Risposta `200`: [`RestaurantProfile`](#restaurantprofile)
 - `orderingMode`, `paymentTiming`, `tableQrCode`: cosa possono fare i clienti dal sito e quando pagano, vedi [Modalità di ordine](#modalità-di-ordine).
 - `serviceMode`, `pickupCall`: l'ordine si porta al tavolo o si ritira al banco, vedi [Ritiro al banco](#ritiro-al-banco).
 - `kitchenDispatch`, `kitchenStations`: come lavora la cucina, vedi [Cucina e smistamento](#cucina-e-smistamento).
+- **Modi già pronti** ("Come funziona la tua festa?" nel profilo: Sagra col ritiro al banco, Sagra con servizio al tavolo, Ristorante): esistono solo nel frontend, che con un tocco compila questi campi e `TakeawaySettings.enabled` e li salva con le chiamate di sempre (`PATCH /api/restaurant` e `PATCH /api/takeaway/settings`). Il backend non ne sa nulla.
 
 ### `PATCH /api/restaurant` — gestori
 
@@ -237,9 +240,10 @@ Il ristorante può avere **più menù**, ognuno usato in alcuni giorni della set
 
 ### `GET /api/menu` — pubblica
 
-Risposta `200`: [`Dish[]`](#dish) del menù attivo oggi. Array vuoto se nessun menù ha il giorno di oggi (o non ci sono menù).
+Risposta `200`: [`Dish[]`](#dish) del menù attivo oggi, con `soldOut: true` sui [piatti esauriti](#piatti-esauriti). Array vuoto se nessun menù ha il giorno di oggi (o non ci sono menù).
 
 - "Oggi" è il giorno dell'ora locale del ristorante, come per gli [orari](#weeklyhours).
+- Il frontend la ripete ogni **60 s** (clienti, cassa, cucina), per vedere presto i piatti finiti.
 - **L'ordine dell'array conta**: le categorie compaiono nell'ordine del loro primo piatto e i piatti nell'ordine dell'array. Il backend deve conservarlo.
 
 ### `GET /api/menus` — gestori
@@ -252,7 +256,24 @@ Richiesta: `RestaurantMenu[]` con l'**elenco completo** dei menù (sostituisce q
 
 - I menù nuovi hanno un `id` generato dal frontend (`"m-<timestamp>"`), che il backend conserva.
 - **I piatti nuovi hanno `id` negativo** (`-1`, `-2`, …), provvisorio: il backend assegna l'id definitivo, **unico tra tutti i menù** (gli ordini indicano i piatti con `dish.id`), e lo restituisce. Duplicando un menù i suoi piatti arrivano come nuovi.
+- `soldOut` non fa parte dei menù salvati: se arriva in questa richiesta va ignorato (gli esauriti si cambiano solo con [`PATCH /api/menu/:dishId/sold-out`](#piatti-esauriti)).
 - Validare lato server (regole simulate in `src/features/menu/mock/menu.ts`), altrimenti `400`: almeno un menù; `name` 1–40 caratteri, diverso da quello degli altri menù (senza distinguere maiuscole); almeno un piatto per menù; `days` solo `"mon"`…`"sun"` e ogni giorno al massimo in un menù. Piatti: `name` 1–80 caratteri, `description` max 300, `category` max 40, `price` tra 0 e 10000, `allergens` solo valori dell'[elenco ufficiale](#allergeni).
+
+### Piatti esauriti
+
+Durante il servizio chi si accorge che un piatto è finito (cassa, capo cucina, titolare e vice) lo segna **esaurito** con un tocco, dal pulsante "Esauriti" di Nuovo ordine, Ordini e Cucina; con un altro tocco torna disponibile. Basta sì/no: niente quantità né scorte.
+
+#### `PATCH /api/menu/:dishId/sold-out` — gestori, cashier, chef
+
+Richiesta: `{ "soldOut": true }` (esaurito) o `{ "soldOut": false }` (di nuovo disponibile). Risposta: nessun corpo richiesto.
+
+Regole (simulate dai dati finti in `src/features/menu/mock/menu.ts` e `src/features/orders/mock/orders.ts`):
+
+- Solo un piatto del [menù di oggi](#get-apimenu--pubblica), altrimenti `404`. `dishId` è il `Dish.id` (numero).
+- Gli esauriti valgono **per la giornata** in cui sono stati segnati: il giorno dopo tornano tutti disponibili da soli (una sagra rifornisce la cucina per la sera dopo, e nessuno deve ricordarsi di riaccenderli). Si salvano a parte dai menù: salvare i menù dal profilo non li cambia.
+- [`GET /api/menu`](#get-apimenu--pubblica) li restituisce con `soldOut: true`: i clienti vedono "Esaurito" al posto di "Aggiungi" (anche col solo menù), la cassa non li può toccare in Nuovo ordine.
+- Un ordine con un piatto esaurito si rifiuta con **`409`**: [`POST /api/order`](#post-apiorder--pubblica), [`POST /api/orders`](#post-apiorders--gestori-cashier-headwaiter-waiter) e, modificando un asporto ([`PATCH /api/orders/:id/items`](#patch-apiordersiditems--gestori-cashier)), aggiungere il piatto o aumentarne la quantità (se l'ordine lo aveva già lo si può tenere o diminuire).
+- Il carrello del cliente o l'ordine in Nuovo ordine che contiene un piatto diventato esaurito lo mostra segnato, con "Togli il piatto finito", e non si invia finché non è tolto.
 
 ---
 
@@ -322,7 +343,7 @@ Ordine inviato dal cliente. Richiesta: [`NewOrder`](#neworder)
   - con `orderingMode: "menuOnly"` i clienti non possono ordinare: `403`;
   - `customerName` obbligatorio (1–60 caratteri) per ogni ordine;
   - sul posto (`type: "dinein"`): solo mentre il locale è aperto; `table` obbligatorio (1–20 caratteri) quando il cliente ordina già seduto (vedi [Modalità di ordine](#modalità-di-ordine)), altrimenti assente; niente `pickupTime`;
-  - piatti: solo del [menù di oggi](#menù), `quantity` intero > 0 (nome e prezzo si prendono dal menù salvato);
+  - piatti: solo del [menù di oggi](#menù), `quantity` intero > 0 (nome e prezzo si prendono dal menù salvato); un piatto [esaurito](#piatti-esauriti): `409`;
   - asporto: solo se l'asporto è attivo ([`enabled`](#impostazioni-asporto)); niente `table`. `pickupTime` non deve essere già passato e deve riguardare un servizio (pranzo o cena) in cui il locale è aperto oggi. Con `mode: "fixed"` deve essere l'orario unico di quel servizio, con `mode: "custom"` deve stare nella sua fascia.
 - Risposta `200`: [`OrderCreated`](#ordercreated)
   - pagamento alla cassa: `{ "orderNumber": 112 }` — numero da mostrare alla cassa;
@@ -362,13 +383,14 @@ Ordine creato dal personale (modalità `menuOnly` e `payAtCashier`): dalla cassa
 - Asporto: `customerName` obbligatorio. Se i clienti ordinano dal sito (`payAtCashier`) `pickupTime` segue le stesse regole dei clienti (orario unico o dentro le fasce, non già passato); con `menuOnly` l'orario si concorda ed è facoltativo.
 - `paid`: `true` se il cliente ha già pagato. Solo gestori e `cashier` incassano: per `headWaiter` e `waiter` deve essere `false`. La cassa sceglie pagato o da pagare solo con `payAtCashier` a fine pasto; con `menuOnly` o se si paga prima (tipo sagra, ritiro al banco) deve essere `true`, altrimenti `400`.
 - `headWaiter` e `waiter`: solo `type: "dinein"` con `table` obbligatorio, e solo col pagamento a fine pasto (`paymentTiming: "afterMeal"`), altrimenti `403`.
-- Risposta `200`: `{ "orderNumber": 114 }`. Stesse verifiche su piatti, prezzi e totale di `POST /api/order`.
+- Risposta `200`: `{ "orderNumber": 114 }`. Stesse verifiche su piatti, prezzi e totale di `POST /api/order` (piatto [esaurito](#piatti-esauriti): `409`).
 - Con `orderingMode: "payOnline"` rifiutare (`403`).
 
 ### `GET /api/orders` — gestori, cashier, headWaiter, chef, kitchen, counter
 
 Risposta `200`: [`Order[]`](#order). Il frontend la ripete ogni **30 s** (la cucina ogni **10 s**).
 
+- Deve restituire **tutti gli ordini della giornata**, anche quelli pronti, consegnati o pagati, con `paidAt`, `readyAt` e `deliveredAt`: il **Riepilogo di oggi** del profilo (titolare e vice) si calcola da qui, nel frontend (`src/features/orders/utils/daySummary.ts`): incasso degli ordini pagati, ordini sul posto e da asporto, piatti venduti, ordini per fascia oraria e tempi della cucina (dalla coda, `paidAt` se si paga prima o `createdAt`, a `readyAt`; col ritiro al banco da `readyAt` a `deliveredAt`). Se si paga prima contano solo gli ordini pagati, come in cucina. Per un riepilogo di più serate (un'edizione intera) servirà un parametro di data o un endpoint apposito.
 - La cassa ha anche la vista **Conti**: gli ordini sul posto non pagati raggruppati per `table` (quelli senza tavolo uno per uno), con i piatti e il totale da incassare; "Incassa" chiama `PATCH /api/orders/:id/payment` su ognuno.
 
 ### `PATCH /api/orders/:id/ready` — gestori, chef, kitchen
@@ -391,7 +413,7 @@ Segna l'ordine come pagato o da pagare. Richiesta: `{ "paid": true }`. Risposta:
 
 ### `PATCH /api/orders/:id/items` — gestori, cashier
 
-Modifica i piatti di un ordine **da asporto** (gli altri: `400`). Si possono tenere i piatti già nell'ordine o aggiungerne dal menù di oggi. Richiesta: `{ "items": CartType[] }` con l'elenco **completo** dei piatti dopo la modifica. Risposta: nessun corpo richiesto.
+Modifica i piatti di un ordine **da asporto** (gli altri: `400`). Si possono tenere i piatti già nell'ordine o aggiungerne dal menù di oggi; un piatto [esaurito](#piatti-esauriti) si può tenere o diminuire, non aggiungere né aumentare (`409`). Richiesta: `{ "items": CartType[] }` con l'elenco **completo** dei piatti dopo la modifica. Risposta: nessun corpo richiesto.
 
 - Il backend deve ricalcolare `total` (il frontend lo legge da `GET /api/orders`).
 - Con `orderingMode: "payOnline"` il frontend non la usa (sola lettura): il backend la rifiuta (`403`).
@@ -598,6 +620,7 @@ interface Dish {
   price: number;         // euro, 0–10000
   category: string;      // testo libero, max 40 (predefinite: Antipasti, Primi, Secondi, Dolci, Bevande)
   allergens?: string[];  // vedi Allergeni
+  soldOut?: boolean;     // solo in GET /api/menu: esaurito per oggi (vedi Piatti esauriti)
 }
 ```
 
@@ -899,7 +922,7 @@ Esempio ridotto:
 
 ## Da fare lato backend (sicurezza)
 
-- Ricalcolare prezzi e totali degli ordini dal menù salvato (mai dai dati del client).
+- Ricalcolare prezzi e totali degli ordini dal menù salvato (mai dai dati del client), e rifiutare i piatti [esauriti](#piatti-esauriti) (`409`).
 - Far rispettare la [modalità di ordine](#modalità-di-ordine) e tutte le impostazioni del profilo anche lato server, **per ogni ruolo compreso il titolare** (es. niente ordini dei clienti con `menuOnly`, cassa in sola lettura con `payOnline`, ordini sul posto solo negli orari di apertura, smistamento solo se attivo). I dati finti in `src/features/*/mock/` simulano queste regole e i ruoli della colonna **Accesso**.
 - Pagamento online: segnare gli ordini come pagati solo alla conferma del servizio di pagamento (webhook firmato o verifica server-to-server), mai dal ritorno del cliente su `?pagamento=ok`. Le chiavi del servizio restano solo nel backend.
 - Validare tutti i campi con i limiti indicati sopra: quelli del frontend si possono aggirare.

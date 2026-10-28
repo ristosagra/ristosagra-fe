@@ -1,0 +1,13 @@
+{
+  "id": "P013",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "Da noi nel campo il 4G va e viene, e se cade la connessione il sabato sera con la fila alla cassa ci troviamo senza niente, mentre blocchetti e calcolatrice funzionano sempre. Poi i volontari sono abituati alla carta da vent'anni e di programmi gratuiti ce ne sono.",
+  "objection": "Serve internet e da noi non è sicuro: se si blocca in piena serata non ho un piano B, e la responsabilità è mia davanti al direttivo.",
+  "would_change_my_mind": "Che qualcuno venga di persona a provarlo nel nostro campo con la nostra connessione, e che mi dicano chiaro cosa succede se la rete cade (continua a funzionare o torno subito alla carta senza perdere gli ordini).",
+  "price_too_cheap": 15,
+  "price_cheap": 40,
+  "price_expensive": 100,
+  "price_too_expensive": 180
+}

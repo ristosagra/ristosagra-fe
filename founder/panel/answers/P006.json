@@ -1,0 +1,13 @@
+{
+  "id": "P006",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "Con mille coperti a sera e più casse in coda non rischio il sabato sera su una cosa che vive di internet, e che per di più non sostituisce il registratore di cassa: avrei due sistemi da far tornare invece di uno. Il prezzo non mi spaventa, ma queste spese le decide il direttivo a maggio e senza il parere del commercialista non porto niente in riunione.",
+  "objection": "E se cade internet il sabato sera? Ho la fila alle casse e la cucina che aspetta, e non posso dire ai volontari e ai clienti di aspettare che torni la rete. In più devo capire con il commercialista come si accordano scontrini e incassi tra questo e la cassa.",
+  "would_change_my_mind": "Che mi mostrassero una sagra grande come la mia che l'ha usata una stagione intera e che, quando la rete è caduta, ha continuato a lavorare senza perdere ordini.",
+  "price_too_cheap": 30,
+  "price_cheap": 70,
+  "price_expensive": 250,
+  "price_too_expensive": 600
+}

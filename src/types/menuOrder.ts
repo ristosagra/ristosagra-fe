@@ -5,4 +5,6 @@ export interface Dish {
   price: number;
   category: string;
   allergens?: string[];
+  //finito per oggi (solo nel menù di oggi, GET /api/menu): non si può ordinare
+  soldOut?: boolean;
 }

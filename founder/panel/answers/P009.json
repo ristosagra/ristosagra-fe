@@ -1,0 +1,13 @@
+{
+  "id": "P009",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "Con migliaia di coperti non posso appoggiare la serata a una cosa che funziona solo se c'è internet, e da noi nel campo il 4G va e viene. Blocchetti numerati e calcolatrice non si fermano mai, e poi lo scontrino lo devo comunque battere sul registratore, quindi mi ritrovo due sistemi da far convivere.",
+  "objection": "Se cade la connessione il sabato sera alle otto, con la coda fuori e la cucina piena, chi mi risolve il problema? E lo scontrino fiscale: voi non lo sostituite, quindi cosa dice il commercialista e dove sta il vantaggio vero?",
+  "would_change_my_mind": "Che qualcuno venga di persona a farmi vedere che regge anche senza connessione (o con il 4G che va e viene) e che si integra con il registratore di cassa, magari provandolo prima su una serata piccola, senza rischiare quelle grosse.",
+  "price_too_cheap": 40,
+  "price_cheap": 90,
+  "price_expensive": 350,
+  "price_too_expensive": 800
+}

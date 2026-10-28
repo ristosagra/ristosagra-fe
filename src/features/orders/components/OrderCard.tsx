@@ -30,6 +30,7 @@ import { useOrderPayment, useUpdateOrderItems } from "../hook/useOrders";
 import { PrintTicketButton } from "./PrintTicketButton";
 import { useNotification } from "../../../hooks/useNotification";
 import { NotificationType } from "../../../types/notification";
+import { HttpError } from "../../../services/client/httpClient";
 
 interface OrderCardProps {
   order: Order;
@@ -44,7 +45,8 @@ interface OrderCardProps {
 }
 
 //Ordine nella lista della cassa, con il nome del cliente e il tavolo (sul posto) o l'orario
-//di ritiro (asporto). Gli asporti si possono modificare aggiungendo o togliendo piatti.
+//di ritiro (asporto). Gli asporti si possono modificare aggiungendo o togliendo piatti (quelli
+//esauriti si possono togliere ma non aggiungere).
 export const OrderCard = ({
   order,
   expanded,
@@ -78,6 +80,10 @@ export const OrderCard = ({
     ? ThemeVariants.colors.border.top.brand
     : ThemeVariants.colors.border.top.default;
 
+  //piatto finito per oggi: se ne può solo togliere
+  const isSoldOut = (dishId: number) =>
+    menu.some((d) => d.id === dishId && d.soldOut);
+
   const changeQuantity = (index: number, delta: number) =>
     setDraft((d) =>
       (d ?? order.items)
@@ -89,7 +95,7 @@ export const OrderCard = ({
 
   const addDish = () => {
     const dish = menu.find((d) => String(d.id) === dishToAdd);
-    if (!dish) return;
+    if (!dish || dish.soldOut) return;
     setDraft((d) => {
       const list = d ?? order.items;
       return list.some((it) => it.dish.id === dish.id)
@@ -113,9 +119,11 @@ export const OrderCard = ({
             NotificationType.Ok,
           );
         },
-        onError: () =>
+        onError: (error) =>
           showNotification(
-            "Errore nel salvataggio dell'ordine",
+            error instanceof HttpError && error.status === 409
+              ? "Un piatto aggiunto è finito: toglilo e salva di nuovo"
+              : "Errore nel salvataggio dell'ordine",
             NotificationType.Err,
           ),
       },
@@ -287,8 +295,13 @@ export const OrderCard = ({
                     onClick={() => changeQuantity(index, 1)}
                     dimension={ButtonDimensions.small}
                     variant="secondary"
-                    className="max-sm:h-9"
-                    ariaLabel={`Aumenta ${item.dish.name}`}
+                    disabled={isSoldOut(item.dish.id)}
+                    className="max-sm:h-9 disabled:opacity-40 disabled:cursor-not-allowed"
+                    ariaLabel={
+                      isSoldOut(item.dish.id)
+                        ? `${item.dish.name} è esaurito`
+                        : `Aumenta ${item.dish.name}`
+                    }
                   />
                 </div>
               ) : (
@@ -315,8 +328,9 @@ export const OrderCard = ({
               >
                 <option value="">Aggiungi un piatto…</option>
                 {menu.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name} · €{d.price.toFixed(2)}
+                  <option key={d.id} value={d.id} disabled={d.soldOut}>
+                    {d.name} ·{" "}
+                    {d.soldOut ? "esaurito" : `€${d.price.toFixed(2)}`}
                   </option>
                 ))}
               </select>

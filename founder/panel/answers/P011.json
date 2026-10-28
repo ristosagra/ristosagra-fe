@@ -1,0 +1,13 @@
+{
+  "id": "P011",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "price",
+  "reason": "Novantanove euro non sono la fine del mondo, ma ogni spesa deve passare dal direttivo e io prima devo dimostrare che non esiste qualcosa di gratis o che non basta il foglio e la penna come sempre. Con poche centinaia di coperti a sera e due casse, le comande di carta le sappiamo gestire.",
+  "objection": "Ci sono programmi gratuiti, perché pagare? E poi serve internet per tutta la serata, e io non so se dove facciamo la sagra la rete regge. I volontari alla cassa e in cucina devono imparare un sistema nuovo, e se si pianta in piena serata perdiamo gli incassi che servono a finanziare le attività del paese.",
+  "would_change_my_mind": "Poter provarlo gratis in una serata vera o in una prova e vedere che un volontario lo impara in dieci minuti, e sapere cosa succede se cade la connessione. Oppure un prezzo che il direttivo approva senza discutere, tipo una cifra simbolica la prima edizione.",
+  "price_too_cheap": 10,
+  "price_cheap": 30,
+  "price_expensive": 60,
+  "price_too_expensive": 90
+}

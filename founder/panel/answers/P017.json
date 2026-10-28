@@ -1,0 +1,13 @@
+{
+  "id": "P017",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "Non conosco nessuna Pro Loco che lo usa, e io da sola non cambio come facciamo cassa senza sapere cosa ne pensa il commercialista. I 99 euro non sono il problema, il problema è se poi mi trovo con incassi online che non quadrano con gli scontrini.",
+  "objection": "Non sostituisce il registratore di cassa, quindi gli ordini pagati dal telefono come li batto e come li registro per il commercialista? E se la sera di sabato cade la rete con 300 coperti e i volontari sono già in confusione, siamo senza comande.",
+  "would_change_my_mind": "Che il commercialista mi dica per iscritto che per scontrini e incassi va bene così, oppure che un'altra Pro Loco della zona lo abbia già usato e mi racconti com'è andata.",
+  "price_too_cheap": 20,
+  "price_cheap": 50,
+  "price_expensive": 150,
+  "price_too_expensive": 300
+}

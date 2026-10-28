@@ -1,0 +1,13 @@
+{
+  "id": "P020",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "habit",
+  "reason": "Abbiamo già il nostro programma per la sagra e lo rinnoviamo ogni anno perché i volontari lo sanno usare; cambiare a ridosso dell'edizione non ci conviene. E qui serve internet, nel campo il 4G va e viene.",
+  "objection": "Se cade la linea in mezzo alla serata, con la fila alla cassa e la cucina ferma, chi mi aiuta? Al telefono mi rispondono, ma la cucina senza schermi e senza ordini non va avanti.",
+  "would_change_my_mind": "Che continui a lavorare anche quando cade la connessione, e poterlo provare gratis in una serata piccola prima di pagare.",
+  "price_too_cheap": 20,
+  "price_cheap": 50,
+  "price_expensive": 130,
+  "price_too_expensive": 250
+}

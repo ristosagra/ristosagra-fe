@@ -1,11 +1,22 @@
 import { useState } from "react";
-import { CreditCard, MapPin, ShoppingBag, UtensilsCrossed } from "lucide-react";
+import {
+  CreditCard,
+  MapPin,
+  PackageX,
+  ShoppingBag,
+  UtensilsCrossed,
+} from "lucide-react";
 import { Container } from "../../components/core/Container";
 import { Label } from "../../components/core/Label";
 import { Card } from "../../components/Card";
 import { Button } from "../../components/core/Button";
 import { Input } from "../../components/core/Input";
 import { Loader } from "../../components/core/Loader";
+import { useMenu } from "../../features/menu/hook/useMenu";
+import {
+  unavailableItems,
+  unavailableReason,
+} from "../../features/menu/utils/menuUtils";
 import {
   useOrderNumber,
   useTakeawaySettings,
@@ -47,6 +58,7 @@ import {
   todayHoursLabel,
 } from "../../helpers/openingHours";
 import { NotificationType } from "../../types/notification";
+import { HttpError } from "../../services/client/httpClient";
 import { PERSON_NAME_MAX, TABLE_NAME_MAX } from "../../constant/limits";
 
 interface CartProps {
@@ -82,6 +94,8 @@ export default function Cart({
 }: CartProps) {
   const { mutate: confirmOrder, isPending } = useOrderNumber();
   const { data: takeaway } = useTakeawaySettings();
+  //il menù di oggi, per accorgersi dei piatti finiti mentre erano nel carrello
+  const { data: menu, refetch: refetchMenu } = useMenu();
   const showNotification = useNotification();
   const now = useCurrentTime();
 
@@ -122,7 +136,15 @@ export default function Cart({
       ? scannedTable
       : cleanTableName(typedTable);
 
+  //piatti del carrello finiti nel frattempo: vanno tolti prima di inviare l'ordine
+  const unavailable = unavailableItems(cartItems, menu);
+  const removeUnavailable = () =>
+    setCartItems((items) =>
+      items.filter((it) => unavailableReason(it.dish.id, menu) === null),
+    );
+
   const canConfirm =
+    unavailable.length === 0 &&
     !closed &&
     !!customerName.trim() &&
     (isTakeaway ? !!fixedTime || customTimeValid : !askTable || !!table);
@@ -182,11 +204,20 @@ export default function Cart({
         setCartItems([]);
         setPage(PagesCustomer.RESERVATION);
       },
-      onError: () =>
+      onError: (error) => {
+        //un piatto è finito mentre si ordinava: il menù riletto lo segna nel carrello
+        if (error instanceof HttpError && error.status === 409) {
+          refetchMenu();
+          return showNotification(
+            "Un piatto è appena finito: controlla il carrello",
+            NotificationType.Err,
+          );
+        }
         showNotification(
           "Errore nell'invio dell'ordine, riprova",
           NotificationType.Err,
-        ),
+        );
+      },
     });
   };
 
@@ -202,9 +233,37 @@ export default function Cart({
             cartItems={cartItems}
             setCartItems={setCartItems}
             isCart
+            unavailable={unavailableReason(item.dish.id, menu) ?? undefined}
           />
         ))}
       </div>
+
+      {unavailable.length > 0 && (
+        <div
+          role="alert"
+          className={`max-w-2xl mx-auto mt-3 p-4 rounded-2xl flex flex-col gap-3 ${ThemeVariants.colors.bg.surface} ${ThemeVariants.colors.border.all.danger}`}
+        >
+          <p
+            className={`text-sm font-semibold ${ThemeVariants.colors.text.danger}`}
+          >
+            {unavailable.length === 1
+              ? `${unavailable[0].dish.name} è finito: toglilo per inviare l'ordine.`
+              : `${unavailable.map((it) => it.dish.name).join(", ")} sono finiti: toglili per inviare l'ordine.`}
+          </p>
+          <Button
+            iconLeft={<PackageX size={16} />}
+            label={
+              unavailable.length === 1
+                ? "Togli il piatto finito"
+                : "Togli i piatti finiti"
+            }
+            onClick={removeUnavailable}
+            dimension={ButtonDimensions.auto}
+            variant="secondary"
+            className="h-11 px-4 self-start"
+          />
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto space-y-3 mt-3">
         {/* Dati dell'ordine: sul posto (col tavolo) o da asporto con ritiro in loco */}

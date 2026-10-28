@@ -1,0 +1,13 @@
+{
+  "id": "P016",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "I'm the one in the direttivo who likes trying new tech, and 99 euro isn't the problem. But with 1000 coperti on a Saturday night I'm not going to bet the evening on something nobody I know has used, with two pensioners at the till who have done it the same way for twenty years.",
+  "objection": "Se salta internet o si impalla qualcosa al picco, con la coda lunga e i volontari che non sono pratici, la serata è rovinata e la colpa è mia che l'ho proposto. Non lo usa nessuno che conosco.",
+  "would_change_my_mind": "Un'altra Pro Loco con numeri simili ai nostri che l'ha usato per un'intera sagra e mi dice che ha retto ai picchi, magari con una serata di prova gratuita prima di decidere.",
+  "price_too_cheap": 40,
+  "price_cheap": 100,
+  "price_expensive": 400,
+  "price_too_expensive": 900
+}

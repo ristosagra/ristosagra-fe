@@ -1,0 +1,13 @@
+{
+  "id": "P014",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "Da noi nel campo il 4G va e viene, e voi scrivete chiaro che serve internet. Con 1000 coperti il sabato sera, se la rete cade restiamo senza casse e senza cucina, e io torno ai blocchetti numerati che in vent'anni non mi hanno mai lasciato a piedi.",
+  "objection": "E se cade internet il sabato sera? Con più casse e la coda al picco non posso fermarmi: se il sito non va, chi ci mette una pezza? I volontari con il telefono in mano in cucina, poi, non li ho mai visti.",
+  "would_change_my_mind": "Che le casse e la cucina continuino a funzionare anche senza internet e si risincronizzino quando torna la rete, provato dal vivo da uno di voi in una sagra come la mia.",
+  "price_too_cheap": 30,
+  "price_cheap": 79,
+  "price_expensive": 250,
+  "price_too_expensive": 500
+}

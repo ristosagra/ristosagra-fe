@@ -21,8 +21,10 @@ import {
 } from "../../features/kitchen/utils/kitchen";
 import {
   canDispatch,
+  canMarkSoldOut,
   kitchenReadOnly,
 } from "../../features/staff/utils/permissions";
+import { SoldOutButton } from "../../features/menu/components/SoldOutButton";
 import type { StaffRoleConst } from "../../features/staff/types/staff";
 import { ThemeVariants } from "../../constant/colors";
 import { LabelDimensions, LabelTags, LabelWeight } from "../../constant/label";
@@ -96,7 +98,8 @@ const SimpleKitchen = ({
 //Cucina. Senza smistamento tutti vedono tutte le comande. Con lo smistamento il capo cucina
 //(e titolare/vice) le manda alle postazioni dalla scheda Smistamento; ogni postazione ha la sua
 //scheda, scelta una volta sul dispositivo. Se si paga prima, solo gli ordini pagati. Il caposala
-//vede tutto (Smistamento compreso) in sola lettura. Si cerca per nome, tavolo o numero
+//vede tutto (Smistamento compreso) in sola lettura. Si cerca per nome, tavolo o numero; il capo
+//cucina (e titolare/vice) segna i piatti esauriti
 export const Kitchen = ({ role }: { role: StaffRoleConst }) => {
   const { data: orders = [], isLoading } = useOrders(KITCHEN_REFRESH_MS);
   const { data: restaurant } = useRestaurant();
@@ -164,14 +167,17 @@ export const Kitchen = ({ role }: { role: StaffRoleConst }) => {
                 : `${waiting} comande da preparare`}
             {readOnly && " · sola lettura"}
           </p>
-          <Input
-            type="search"
-            placeholder="Cerca nome, tavolo o numero..."
-            value={search}
-            setValue={setSearch}
-            className="w-full sm:w-64"
-            ariaLabel="Cerca per nome, tavolo o numero"
-          />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Input
+              type="search"
+              placeholder="Cerca nome, tavolo o numero..."
+              value={search}
+              setValue={setSearch}
+              className="flex-1 min-w-0 sm:w-64"
+              ariaLabel="Cerca per nome, tavolo o numero"
+            />
+            {canMarkSoldOut(role) && <SoldOutButton />}
+          </div>
         </div>
 
         {/* Con lo smistamento: Smistamento e una scheda per postazione, col numero in coda */}

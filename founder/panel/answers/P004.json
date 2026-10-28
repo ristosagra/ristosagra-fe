@@ -1,0 +1,13 @@
+{
+  "id": "P004",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "habit",
+  "reason": "Il gestionale ce l'abbiamo già e lo rinnoviamo ogni anno, funziona e i due in cassa lo conoscono a memoria da vent'anni. Cambiare per un sito nuovo mi porta solo problemi da risolvere in piena serata.",
+  "objection": "Dobbiamo comprare tablet e stampanti? E se la rete cade un sabato sera con la coda fuori, chi li rimette in piedi i due pensionati in cassa? Per me è un rischio, per risparmiare una coda che oggi non è un vero problema.",
+  "would_change_my_mind": "Una Pro Loco vicina che conosco di persona, che l'ha usato per un'edizione intera senza intoppi, e qualcuno che viene la prima sera a montarlo con noi.",
+  "price_too_cheap": 15,
+  "price_cheap": 35,
+  "price_expensive": 80,
+  "price_too_expensive": 150
+}

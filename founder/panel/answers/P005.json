@@ -1,0 +1,13 @@
+{
+  "id": "P005",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "habit",
+  "reason": "Blocchetti numerati e calcolatrice li uso da vent'anni e a fine serata i conti tornano. Per cambiare qualcuno deve venire a farmelo vedere di persona, e un sito trovato così non basta.",
+  "objection": "E lo scontrino fiscale? Dite che non sostituisce il registratore di cassa, quindi in cassa faccio due cose invece di una. Se uno paga dal telefono chi emette lo scontrino, e che cosa dice il commercialista? In più la connessione nel parco della sagra non la garantisco, e con i volontari anziani in cassa se si pianta il sito la coda è peggio di prima.",
+  "would_change_my_mind": "Che qualcuno venga a spiegarmi di persona, davanti al direttivo, come funziona con lo scontrino fiscale e con il commercialista, e che mi lasci provarlo una serata piccola senza pagare prima. Se poi regge anche senza internet, o con un piano B su carta, ne parliamo.",
+  "price_too_cheap": 20,
+  "price_cheap": 49,
+  "price_expensive": 150,
+  "price_too_expensive": 250
+}

@@ -1,0 +1,13 @@
+{
+  "id": "P010",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "trust",
+  "reason": "Non è che 99 euro siano tanti per una sagra come la nostra, ma ogni spesa deve passare dal direttivo e io non ho nessuno che l'abbia già usato da cui farmi dire che regge con mille coperti a sera. Intanto vado avanti con quello che abbiamo, che costa zero.",
+  "objection": "Chi ci aiuta se qualcosa non va durante la serata? Se salta la connessione o la cucina non vede gli ordini al picco, con la coda che arriva al parcheggio e i volontari in cassa non possiamo fermarci ad aspettare una risposta.",
+  "would_change_my_mind": "Il nome di un'altra Pro Loco di dimensioni simili che l'ha usato per un'intera sagra e mi conferma che l'assistenza al telefono ha risposto davvero in serata, e che c'è un modo per andare avanti in cassa se cade internet. Meglio ancora se posso provarlo gratis in una serata di prova prima di portarlo al direttivo.",
+  "price_too_cheap": 40,
+  "price_cheap": 90,
+  "price_expensive": 250,
+  "price_too_expensive": 450
+}

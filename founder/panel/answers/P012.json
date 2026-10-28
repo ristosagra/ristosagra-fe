@@ -1,0 +1,13 @@
+{
+  "id": "P012",
+  "buys": false,
+  "purchases_first_month": 0,
+  "reason_code": "habit",
+  "reason": "Noi andiamo avanti con blocchetti numerati e calcolatrice da vent'anni e funziona: i soldi non sono il problema, il problema è cambiare il modo di lavorare di una squadra di volontari a poche settimane dalla sagra. Una cosa vista su internet non mi basta per rischiare la serata.",
+  "objection": "I volontari anziani non sapranno usarlo, e se la sera la rete va via o qualcosa si blocca con la coda davanti, chi mi aiuta? Il registratore di cassa poi resta comunque, quindi alla fine lavoriamo il doppio.",
+  "would_change_my_mind": "Che un'altra Pro Loco vicina che conosco di persona lo avesse già usato e mi venisse a mostrare dal vivo, davanti ai miei volontari, che anche i più anziani in cassa ce la fanno, magari con una prova gratuita in una serata piccola.",
+  "price_too_cheap": 20,
+  "price_cheap": 50,
+  "price_expensive": 150,
+  "price_too_expensive": 300
+}

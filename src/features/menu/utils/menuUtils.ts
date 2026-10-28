@@ -5,6 +5,7 @@ import {
 } from "../../../constant/openingHours";
 import { openServices, todayWeekday } from "../../../helpers/openingHours";
 import type { Dish } from "../../../types/menuOrder";
+import type { CartType } from "../../orders/types/orders";
 import type { WeekdayConst, WeeklyHours } from "../../../types/openingHours";
 import { DISH_CATEGORIES } from "../constant/menu";
 import type { RestaurantMenu } from "../types/menu";
@@ -82,3 +83,21 @@ export const openDaysWithoutMenu = (
 
 //Id di un menù nuovo (il backend lo conserva così com'è)
 export const newMenuId = () => `m-${Date.now()}`;
+
+//Perché un piatto del carrello (o di un ordine in preparazione) non si può più ordinare:
+//esaurito o tolto dal menù di oggi. Finché il menù non è arrivato si può
+export const unavailableReason = (
+  dishId: number,
+  menu: Dish[] | undefined,
+): string | null => {
+  if (!menu) return null;
+  const dish = menu.find((d) => d.id === dishId);
+  return !dish ? "Non più nel menù" : dish.soldOut ? "Esaurito" : null;
+};
+
+//Righe che non si possono più ordinare (vedi unavailableReason)
+export const unavailableItems = (
+  items: CartType[],
+  menu: Dish[] | undefined,
+): CartType[] =>
+  items.filter((it) => unavailableReason(it.dish.id, menu) !== null);

@@ -1,0 +1,222 @@
+[
+ {
+  "id": "P001",
+  "name": "Rafael",
+  "age": 42,
+  "segment": "Sagra grande: migliaia di coperti, cucina divisa in postazioni, già abituata a un gestionale",
+  "income": 33000,
+  "behaviour": "Segue il passaparola",
+  "behaviour_how": "Compra solo se un'altra sagra della zona lo usa già e ne parla bene.",
+  "objection": "Dobbiamo comprare tablet e stampanti?",
+  "habit": "di giorno lavori e alla Pro Loco ci pensi la sera"
+ },
+ {
+  "id": "P002",
+  "name": "Rosa",
+  "age": 54,
+  "segment": "Sagra media: 5-10 serate, 500-1500 coperti a sera, più casse e coda al picco",
+  "income": 29000,
+  "behaviour": "Ha paura del guasto",
+  "behaviour_how": "Ha visto una serata andare in tilt; vuole carta di riserva, un tecnico presente e nessun rischio.",
+  "objection": "Chi ci aiuta se qualcosa non va durante la serata?",
+  "habit": "nel campo della sagra il 4G va e viene"
+ },
+ {
+  "id": "P003",
+  "name": "Bilal",
+  "age": 56,
+  "segment": "Sagra media: 5-10 serate, 500-1500 coperti a sera, più casse e coda al picco",
+  "income": 39000,
+  "behaviour": "Ha già un gestionale",
+  "behaviour_how": "Usa già un software per sagre, gratuito o a noleggio, e lo riconferma ogni anno per abitudine.",
+  "objection": "Chi ci aiuta se qualcosa non va durante la serata?",
+  "habit": "in cassa ci sono due pensionati che lo fanno da vent'anni"
+ },
+ {
+  "id": "P004",
+  "name": "Sam",
+  "age": 67,
+  "segment": "Sagra piccola: 2-4 serate, poche centinaia di coperti a sera, una o due casse",
+  "income": 21000,
+  "behaviour": "Ha già un gestionale",
+  "behaviour_how": "Usa già un software per sagre, gratuito o a noleggio, e lo riconferma ogni anno per abitudine.",
+  "objection": "Dobbiamo comprare tablet e stampanti?",
+  "habit": "in cassa ci sono due pensionati che lo fanno da vent'anni"
+ },
+ {
+  "id": "P005",
+  "name": "Victor",
+  "age": 38,
+  "segment": "Sagra piccola: 2-4 serate, poche centinaia di coperti a sera, una o due casse",
+  "income": 22000,
+  "behaviour": "Carta e bigliettini da sempre",
+  "behaviour_how": "Usa blocchetti numerati e calcolatrice da vent'anni e cambia solo se qualcuno lo convince di persona.",
+  "objection": "E lo scontrino fiscale? Cosa dice il commercialista?",
+  "habit": "l'anno scorso la coda alla cassa arrivava al parcheggio"
+ },
+ {
+  "id": "P006",
+  "name": "Fatima",
+  "age": 59,
+  "segment": "Sagra media: 5-10 serate, 500-1500 coperti a sera, più casse e coda al picco",
+  "income": 24000,
+  "behaviour": "Chiede al commercialista",
+  "behaviour_how": "Prima di cambiare cassa vuole sapere cosa dice il commercialista su scontrini e incassi.",
+  "objection": "E se cade internet il sabato sera?",
+  "habit": "la sagra è a fine agosto e il direttivo decide le spese a maggio"
+ },
+ {
+  "id": "P007",
+  "name": "Zoe",
+  "age": 50,
+  "segment": "Sagra grande: migliaia di coperti, cucina divisa in postazioni, già abituata a un gestionale",
+  "income": 56000,
+  "behaviour": "Ha paura del guasto",
+  "behaviour_how": "Ha visto una serata andare in tilt; vuole carta di riserva, un tecnico presente e nessun rischio.",
+  "objection": "Dobbiamo comprare tablet e stampanti?",
+  "habit": "di giorno lavori e alla Pro Loco ci pensi la sera"
+ },
+ {
+  "id": "P008",
+  "name": "Mira",
+  "age": 44,
+  "segment": "Sagra piccola: 2-4 serate, poche centinaia di coperti a sera, una o due casse",
+  "income": 28000,
+  "behaviour": "Il giovane del direttivo",
+  "behaviour_how": "Si occupa lui della tecnologia, prova le novità e confronta i prodotti online.",
+  "objection": "Chi ci aiuta se qualcosa non va durante la serata?",
+  "habit": "l'utile della sagra finanzia le attività del paese per tutto l'anno"
+ },
+ {
+  "id": "P009",
+  "name": "Jasper",
+  "age": 43,
+  "segment": "Sagra grande: migliaia di coperti, cucina divisa in postazioni, già abituata a un gestionale",
+  "income": 56000,
+  "behaviour": "Carta e bigliettini da sempre",
+  "behaviour_how": "Usa blocchetti numerati e calcolatrice da vent'anni e cambia solo se qualcuno lo convince di persona.",
+  "objection": "E lo scontrino fiscale? Cosa dice il commercialista?",
+  "habit": "nel campo della sagra il 4G va e viene"
+ },
+ {
+  "id": "P010",
+  "name": "Tariq",
+  "age": 31,
+  "segment": "Sagra media: 5-10 serate, 500-1500 coperti a sera, più casse e coda al picco",
+  "income": 29000,
+  "behaviour": "Bilancio stretto",
+  "behaviour_how": "Ogni spesa passa dal direttivo; cerca prima le soluzioni gratuite.",
+  "objection": "Chi ci aiuta se qualcosa non va durante la serata?",
+  "habit": "l'anno scorso la coda alla cassa arrivava al parcheggio"
+ },
+ {
+  "id": "P011",
+  "name": "Luca",
+  "age": 32,
+  "segment": "Sagra piccola: 2-4 serate, poche centinaia di coperti a sera, una o due casse",
+  "income": 27000,
+  "behaviour": "Bilancio stretto",
+  "behaviour_how": "Ogni spesa passa dal direttivo; cerca prima le soluzioni gratuite.",
+  "objection": "Ci sono programmi gratuiti, perché pagare?",
+  "habit": "l'utile della sagra finanzia le attività del paese per tutto l'anno"
+ },
+ {
+  "id": "P012",
+  "name": "Quinn",
+  "age": 30,
+  "segment": "Sagra piccola: 2-4 serate, poche centinaia di coperti a sera, una o due casse",
+  "income": 27000,
+  "behaviour": "Carta e bigliettini da sempre",
+  "behaviour_how": "Usa blocchetti numerati e calcolatrice da vent'anni e cambia solo se qualcuno lo convince di persona.",
+  "objection": "I volontari anziani non sapranno usarlo",
+  "habit": "l'utile della sagra finanzia le attività del paese per tutto l'anno"
+ },
+ {
+  "id": "P013",
+  "name": "Talia",
+  "age": 44,
+  "segment": "Sagra piccola: 2-4 serate, poche centinaia di coperti a sera, una o due casse",
+  "income": 36000,
+  "behaviour": "Carta e bigliettini da sempre",
+  "behaviour_how": "Usa blocchetti numerati e calcolatrice da vent'anni e cambia solo se qualcuno lo convince di persona.",
+  "objection": "Ci sono programmi gratuiti, perché pagare?",
+  "habit": "nel campo della sagra il 4G va e viene"
+ },
+ {
+  "id": "P014",
+  "name": "Marcus",
+  "age": 33,
+  "segment": "Sagra media: 5-10 serate, 500-1500 coperti a sera, più casse e coda al picco",
+  "income": 48000,
+  "behaviour": "Carta e bigliettini da sempre",
+  "behaviour_how": "Usa blocchetti numerati e calcolatrice da vent'anni e cambia solo se qualcuno lo convince di persona.",
+  "objection": "E se cade internet il sabato sera?",
+  "habit": "nel campo della sagra il 4G va e viene"
+ },
+ {
+  "id": "P015",
+  "name": "Andre",
+  "age": 40,
+  "segment": "Sagra piccola: 2-4 serate, poche centinaia di coperti a sera, una o due casse",
+  "income": 38000,
+  "behaviour": "Ha già un gestionale",
+  "behaviour_how": "Usa già un software per sagre, gratuito o a noleggio, e lo riconferma ogni anno per abitudine.",
+  "objection": "I nostri clienti pagano in contanti, il pagamento online non serve",
+  "habit": "nel campo della sagra il 4G va e viene"
+ },
+ {
+  "id": "P016",
+  "name": "Aria",
+  "age": 32,
+  "segment": "Sagra media: 5-10 serate, 500-1500 coperti a sera, più casse e coda al picco",
+  "income": 25000,
+  "behaviour": "Il giovane del direttivo",
+  "behaviour_how": "Si occupa lui della tecnologia, prova le novità e confronta i prodotti online.",
+  "objection": "Non lo usa nessuno che conosco",
+  "habit": "in cassa ci sono due pensionati che lo fanno da vent'anni"
+ },
+ {
+  "id": "P017",
+  "name": "Harper",
+  "age": 31,
+  "segment": "Sagra piccola: 2-4 serate, poche centinaia di coperti a sera, una o due casse",
+  "income": 30000,
+  "behaviour": "Chiede al commercialista",
+  "behaviour_how": "Prima di cambiare cassa vuole sapere cosa dice il commercialista su scontrini e incassi.",
+  "objection": "Non lo usa nessuno che conosco",
+  "habit": "di giorno lavori e alla Pro Loco ci pensi la sera"
+ },
+ {
+  "id": "P018",
+  "name": "Nico",
+  "age": 68,
+  "segment": "Sagra media: 5-10 serate, 500-1500 coperti a sera, più casse e coda al picco",
+  "income": 40000,
+  "behaviour": "Segue il passaparola",
+  "behaviour_how": "Compra solo se un'altra sagra della zona lo usa già e ne parla bene.",
+  "objection": "I volontari anziani non sapranno usarlo",
+  "habit": "la sagra è a fine agosto e il direttivo decide le spese a maggio"
+ },
+ {
+  "id": "P019",
+  "name": "Nora",
+  "age": 68,
+  "segment": "Sagra grande: migliaia di coperti, cucina divisa in postazioni, già abituata a un gestionale",
+  "income": 53000,
+  "behaviour": "Bilancio stretto",
+  "behaviour_how": "Ogni spesa passa dal direttivo; cerca prima le soluzioni gratuite.",
+  "objection": "E se cade internet il sabato sera?",
+  "habit": "in cassa ci sono due pensionati che lo fanno da vent'anni"
+ },
+ {
+  "id": "P020",
+  "name": "Freya",
+  "age": 33,
+  "segment": "Sagra piccola: 2-4 serate, poche centinaia di coperti a sera, una o due casse",
+  "income": 38000,
+  "behaviour": "Ha già un gestionale",
+  "behaviour_how": "Usa già un software per sagre, gratuito o a noleggio, e lo riconferma ogni anno per abitudine.",
+  "objection": "Chi ci aiuta se qualcosa non va durante la serata?",
+  "habit": "nel campo della sagra il 4G va e viene"
+ }
+]

@@ -3,6 +3,7 @@ import { useState } from "react";
 import {
   Check,
   ChevronUp,
+  PackageX,
   Plus,
   ShoppingBag,
   UtensilsCrossed,
@@ -13,8 +14,13 @@ import { Input } from "../../components/core/Input";
 import { Label } from "../../components/core/Label";
 import { Loader } from "../../components/core/Loader";
 import { SettingSwitch } from "../../components/SettingSwitch";
+import { SoldOutButton } from "../../features/menu/components/SoldOutButton";
 import { useMenu } from "../../features/menu/hook/useMenu";
-import { groupDishesByCategory } from "../../features/menu/utils/menuUtils";
+import {
+  groupDishesByCategory,
+  unavailableItems,
+  unavailableReason,
+} from "../../features/menu/utils/menuUtils";
 import {
   useCreateCashierOrder,
   useTakeawaySettings,
@@ -50,11 +56,13 @@ import {
 } from "../../helpers/incrementDecrement";
 import { useNotification } from "../../hooks/useNotification";
 import { NotificationType } from "../../types/notification";
+import { HttpError } from "../../services/client/httpClient";
 import type { Dish } from "../../types/menuOrder";
 import { useFloorPlan } from "../../features/floorPlan/hook/useFloorPlan";
 import { tableNames } from "../../features/floorPlan/helpers/tableNames";
 import type { StaffRoleConst } from "../../features/staff/types/staff";
 import {
+  canMarkSoldOut,
   canTakePayments,
   takesTableOrders,
 } from "../../features/staff/utils/permissions";
@@ -75,9 +83,11 @@ const TABLES_LIST_ID = "nuovo-ordine-tavoli";
 //(tipo sagra o ritiro al banco) il tavolo non si sa ancora e vale il numero d'ordine. Valgono le
 //regole del profilo come per i clienti, anche per l'amministratore: sul posto solo a locale
 //aperto, l'asporto per un servizio di oggi non ancora finito e, se i clienti ordinano dal sito,
-//all'orario unico o nelle fasce di ritiro (con Solo menù l'orario si concorda)
+//all'orario unico o nelle fasce di ritiro (con Solo menù l'orario si concorda). I piatti
+//esauriti non si possono aggiungere: se uno finisce mentre si compone l'ordine va tolto
 export const NewOrder = ({ role }: { role: StaffRoleConst }) => {
-  const { data: menu = [], isLoading } = useMenu();
+  const { data: todayMenu, isLoading, refetch: refetchMenu } = useMenu();
+  const menu = todayMenu ?? [];
   const { data: takeaway } = useTakeawaySettings();
   const { data: restaurant } = useRestaurant();
   const { data: floorPlan } = useFloorPlan();
@@ -130,6 +140,8 @@ export const NewOrder = ({ role }: { role: StaffRoleConst }) => {
   const grouped = Object.entries(
     groupDishesByCategory(menu.filter((d) => d.name.toLowerCase().includes(q))),
   );
+  //piatti dell'ordine finiti nel frattempo
+  const unavailable = unavailableItems(items, todayMenu);
   //all'asporto serve il nome, per chiamare il cliente quando ritira; sul posto il tavolo
   const missing = closed
     ? todayHours
@@ -137,26 +149,33 @@ export const NewOrder = ({ role }: { role: StaffRoleConst }) => {
       : "Oggi il locale è chiuso: non si creano ordini"
     : items.length === 0
       ? null
-      : isTakeaway && !customerName.trim()
-        ? "Scrivi il nome di chi ritira"
-        : isTakeaway &&
-            pickupRules &&
-            !pickupRules.fixedTime &&
-            !pickupTimeValid(pickupRules, pickupTime, now)
-          ? `Scegli l'orario di ritiro: ${formatRanges(pickupRules.ranges)}`
-          : !isTakeaway && needsTable && !cleanTableName(table)
-            ? "Scrivi il tavolo"
-            : null;
+      : unavailable.length > 0
+        ? `Togli ${unavailable.map((it) => it.dish.name).join(", ")}: ${unavailable.length === 1 ? "è finito" : "sono finiti"}`
+        : isTakeaway && !customerName.trim()
+          ? "Scrivi il nome di chi ritira"
+          : isTakeaway &&
+              pickupRules &&
+              !pickupRules.fixedTime &&
+              !pickupTimeValid(pickupRules, pickupTime, now)
+            ? `Scegli l'orario di ritiro: ${formatRanges(pickupRules.ranges)}`
+            : !isTakeaway && needsTable && !cleanTableName(table)
+              ? "Scrivi il tavolo"
+              : null;
   const canCreate = items.length > 0 && !missing && !isPending;
 
   const quantityOf = (dish: Dish) =>
     items.find((it) => it.dish.id === dish.id)?.quantity ?? 0;
   const add = (dish: Dish) => {
+    if (dish.soldOut) return;
     setCreated(null);
     incrementFunction({ dish, setCartItems: setItems });
   };
   const remove = (dish: Dish) =>
     decrementFunction({ dish, setCartItems: setItems });
+  const removeUnavailable = () =>
+    setItems((list) =>
+      list.filter((it) => unavailableReason(it.dish.id, todayMenu) === null),
+    );
 
   const reset = () => {
     setItems([]);
@@ -194,11 +213,20 @@ export const NewOrder = ({ role }: { role: StaffRoleConst }) => {
         setSummaryOpen(true);
         reset();
       },
-      onError: () =>
+      onError: (error) => {
+        //un piatto è finito proprio adesso: il menù riletto lo segna nell'ordine
+        if (error instanceof HttpError && error.status === 409) {
+          refetchMenu();
+          return showNotification(
+            "Un piatto è appena finito: controlla l'ordine",
+            NotificationType.Err,
+          );
+        }
         showNotification(
           "Errore nella creazione dell'ordine",
           NotificationType.Err,
-        ),
+        );
+      },
     });
   };
 
@@ -220,13 +248,16 @@ export const NewOrder = ({ role }: { role: StaffRoleConst }) => {
             fontFamily={ThemeVariants.fontFamily.display}
             noMargin
           />
-          <Input
-            type="search"
-            placeholder="Cerca un piatto..."
-            value={search}
-            setValue={setSearch}
-            className="w-full sm:w-56"
-          />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Input
+              type="search"
+              placeholder="Cerca un piatto..."
+              value={search}
+              setValue={setSearch}
+              className="flex-1 min-w-0 sm:w-56"
+            />
+            {canMarkSoldOut(role) && <SoldOutButton />}
+          </div>
         </div>
 
         {isLoading ? (
@@ -258,26 +289,36 @@ export const NewOrder = ({ role }: { role: StaffRoleConst }) => {
                           "flex items-center gap-2 pr-2",
                           ThemeVariants.borderRadius.md,
                           ThemeVariants.colors.bg.surface,
-                          quantity > 0
-                            ? ThemeVariants.colors.border.all.brand
-                            : ThemeVariants.colors.border.all.default,
+                          dish.soldOut
+                            ? ThemeVariants.colors.border.all.danger
+                            : quantity > 0
+                              ? ThemeVariants.colors.border.all.brand
+                              : ThemeVariants.colors.border.all.default,
                         )}
                       >
                         <button
                           type="button"
                           onClick={() => add(dish)}
-                          className="flex-1 min-w-0 flex flex-col items-start px-3 py-2.5 text-left cursor-pointer"
+                          disabled={dish.soldOut}
+                          className="flex-1 min-w-0 flex flex-col items-start px-3 py-2.5 text-left cursor-pointer disabled:cursor-not-allowed"
                         >
-                          <span className="font-semibold [overflow-wrap:anywhere]">
+                          <span
+                            className={cn(
+                              "font-semibold [overflow-wrap:anywhere]",
+                              dish.soldOut && "line-through opacity-60",
+                            )}
+                          >
                             {dish.name}
                           </span>
                           <span
-                            className={`text-sm ${ThemeVariants.colors.text.brand}`}
+                            className={`text-sm ${dish.soldOut ? ThemeVariants.colors.text.danger : ThemeVariants.colors.text.brand}`}
                           >
-                            €{dish.price.toFixed(2)}
+                            {dish.soldOut
+                              ? "Esaurito"
+                              : `€${dish.price.toFixed(2)}`}
                           </span>
                         </button>
-                        {quantity > 0 ? (
+                        {dish.soldOut ? null : quantity > 0 ? (
                           <CounterCard
                             quantity={quantity}
                             increment={() => add(dish)}
@@ -389,25 +430,52 @@ export const NewOrder = ({ role }: { role: StaffRoleConst }) => {
             </p>
           ) : (
             <ul className="flex flex-col">
-              {items.map((it) => (
-                <li
-                  key={it.dish.id}
-                  className={`flex justify-between gap-3 py-1.5 text-sm ${ThemeVariants.colors.border.bottom.default}`}
-                >
-                  <span className="min-w-0 [overflow-wrap:anywhere]">
-                    <span
-                      className={`font-bold ${ThemeVariants.colors.text.brand}`}
-                    >
-                      {it.quantity}×
-                    </span>{" "}
-                    {it.dish.name}
-                  </span>
-                  <span className="shrink-0 tabular-nums">
-                    €{(it.dish.price * it.quantity).toFixed(2)}
-                  </span>
-                </li>
-              ))}
+              {items.map((it) => {
+                const reason = unavailableReason(it.dish.id, todayMenu);
+                return (
+                  <li
+                    key={it.dish.id}
+                    className={`flex justify-between gap-3 py-1.5 text-sm ${ThemeVariants.colors.border.bottom.default}`}
+                  >
+                    <span className="min-w-0 [overflow-wrap:anywhere]">
+                      <span
+                        className={`font-bold ${ThemeVariants.colors.text.brand}`}
+                      >
+                        {it.quantity}×
+                      </span>{" "}
+                      {it.dish.name}
+                      {reason && (
+                        <span
+                          className={`font-semibold ${ThemeVariants.colors.text.danger}`}
+                        >
+                          {" "}
+                          · {reason.toLowerCase()}
+                        </span>
+                      )}
+                    </span>
+                    <span className="shrink-0 tabular-nums">
+                      €{(it.dish.price * it.quantity).toFixed(2)}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
+          )}
+          {unavailable.length > 0 && (
+            <Button
+              iconLeft={<PackageX size={15} />}
+              label={
+                <span className="text-sm ml-1.5">
+                  {unavailable.length === 1
+                    ? "Togli il piatto finito"
+                    : "Togli i piatti finiti"}
+                </span>
+              }
+              onClick={removeUnavailable}
+              dimension={ButtonDimensions.auto}
+              variant="secondary"
+              className={`h-10 px-3 self-start ${ThemeVariants.colors.border.all.danger}`}
+            />
           )}
 
           {canTakeaway && (

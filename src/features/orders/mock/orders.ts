@@ -1,5 +1,9 @@
 import { faker } from "@faker-js/faker";
-import { generateFakeDish, todayDishes } from "../../menu/mock/menu";
+import {
+  generateFakeDish,
+  soldOutToday,
+  todayDishes,
+} from "../../menu/mock/menu";
 import { readProfile } from "../../restaurant/mock/restaurant";
 import { OrderingMode } from "../../restaurant/types/restaurant";
 import {
@@ -140,13 +144,23 @@ const withReadyFromTickets = (o: Order): Order => {
 };
 
 //Piatti ricontrollati: esistono tra quelli ammessi (il menù di oggi), la quantità è un intero
-//positivo e nome e prezzo sono quelli salvati, mai quelli inviati dal client
-const fromMenu = (items: CartType[], allowed: Dish[]): CartType[] => {
+//positivo e nome e prezzo sono quelli salvati, mai quelli inviati dal client. Un piatto esaurito
+//non si ordina (409): se ne possono tenere al massimo quanti ne aveva già l'ordine (keep)
+const fromMenu = (
+  items: CartType[],
+  allowed: Dish[],
+  keep: CartType[] = [],
+): CartType[] => {
   if (items.length === 0) throw new HttpError(400);
+  const soldOut = soldOutToday();
   return items.map(({ dish, quantity }) => {
     const saved = allowed.find((d) => d.id === dish.id);
     if (!saved || !Number.isInteger(quantity) || quantity < 1)
       throw new HttpError(400);
+    const kept = keep
+      .filter((it) => it.dish.id === dish.id)
+      .reduce((n, it) => n + it.quantity, 0);
+    if (soldOut.includes(dish.id) && quantity > kept) throw new HttpError(409);
     return { dish: saved, quantity };
   });
 };
@@ -307,10 +321,11 @@ export const fakeOrdersApi = {
       throw new HttpError(403);
     const order = findOrder(id);
     if (order.type !== OrderType.Takeaway) throw new HttpError(400);
-    const checked = fromMenu(items, [
-      ...todayDishes(),
-      ...order.items.map((it) => it.dish),
-    ]);
+    const checked = fromMenu(
+      items,
+      [...todayDishes(), ...order.items.map((it) => it.dish)],
+      order.items,
+    );
     updateOrder(id, (o) => ({
       ...o,
       items: checked,

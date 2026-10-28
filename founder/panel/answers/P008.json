@@ -1,0 +1,13 @@
+{
+  "id": "P008",
+  "buys": true,
+  "purchases_first_month": 1,
+  "reason_code": "trust",
+  "reason": "Cento euro a edizione, per noi che siamo una sagra piccola, sono pochi rispetto a quello che incassiamo, e l'assistenza al telefono durante le serate risponde alla mia prima domanda: chi chiamo se si pianta tutto. Sono quello che prova le novità nel direttivo, quindi lo proporrei per questa edizione, magari senza buttare via le comande di carta il primo anno.",
+  "objection": "Se alle otto di sera la connessione salta o il telefono dei volontari fa i capricci, abbiamo la fila davanti e la cucina ferma. Voglio sapere cosa faccio in quel momento e che qualcuno risponda davvero al telefono, non una segreteria.",
+  "would_change_my_mind": "Se il pagamento online avesse commissioni che mangiano l'utile e nessuno me le dicesse chiaro prima, o se non ci fosse un modo semplice di tornare alla carta quando salta la rete, dico no.",
+  "price_too_cheap": 25,
+  "price_cheap": 60,
+  "price_expensive": 180,
+  "price_too_expensive": 350
+}
